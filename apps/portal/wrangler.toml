@@ -1,5 +1,7 @@
-# Portal (cx.<domain>): a static-assets-only Worker (A-146). No secrets: the bundle holds
-# only the Supabase URL and the public anon/publishable key.
+# Portal: a static-assets-only Worker (A-146) on the workers.dev subdomain (D-37):
+#   staging     https://serene-pulse-portal-staging.<subdomain>.workers.dev
+#   production  https://serene-pulse-portal.<subdomain>.workers.dev
+# No secrets: the bundle holds only the Supabase URL and the public anon/publishable key.
 name = "serene-pulse-portal-local"
 compatibility_date = "2026-10-01"
 workers_dev = false
@@ -10,8 +12,10 @@ not_found_handling = "single-page-application"
 
 [env.staging]
 name = "serene-pulse-portal-staging"
-routes = [{ pattern = "cx-staging.__ROOT_DOMAIN__", custom_domain = true }]
+workers_dev = true
+preview_urls = false
 
 [env.production]
 name = "serene-pulse-portal"
-routes = [{ pattern = "cx.__ROOT_DOMAIN__", custom_domain = true }]
+workers_dev = true
+preview_urls = false

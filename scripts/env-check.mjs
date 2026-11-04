@@ -23,9 +23,8 @@ const GENERATED = ['SURVEY_HMAC_KEY', 'PII_KEK', 'PII_HMAC_KEY', 'JOBS_SHARED_SE
 const perEnv = (keys) => keys.flatMap((k) => [`${k}_STAGING`, `${k}_PRODUCTION`]);
 const REQUIRED_BY = {
   'MS-01 Platform foundation': [
-    'SERENE_ROOT_DOMAIN',
+    'WORKERS_SUBDOMAIN',
     'CLOUDFLARE_ACCOUNT_ID',
-    'CLOUDFLARE_ZONE_ID',
     'CLOUDFLARE_API_TOKEN',
     'CF_WEB_ANALYTICS_TOKEN',
     'R2_BACKUP_BUCKET',
@@ -128,10 +127,10 @@ if (env.SUPABASE_PROJECT_REF_STAGING && env.SUPABASE_PROJECT_REF_PRODUCTION)
     env.SUPABASE_PROJECT_REF_STAGING !== env.SUPABASE_PROJECT_REF_PRODUCTION,
     'Staging and production must be different Supabase projects',
   );
-if (env.SERENE_ROOT_DOMAIN)
+if (env.WORKERS_SUBDOMAIN)
   check(
-    /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(env.SERENE_ROOT_DOMAIN),
-    'SERENE_ROOT_DOMAIN should be a bare domain like example.com.gh (no https://, no subdomain)',
+    /^[a-z0-9-]+$/.test(env.WORKERS_SUBDOMAIN),
+    'WORKERS_SUBDOMAIN is only the account part, e.g. myaccount (not myaccount.workers.dev)',
   );
 
 let allReady = true;

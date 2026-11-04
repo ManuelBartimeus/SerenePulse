@@ -51,7 +51,7 @@ function github() {
   const repo = env.GITHUB_REPOSITORY;
   const gh = { extraEnv: { GH_TOKEN: env.GITHUB_PAT } };
 
-  const repoVars = { SERENE_ROOT_DOMAIN: env.SERENE_ROOT_DOMAIN, R2_BACKUP_BUCKET: env.R2_BACKUP_BUCKET };
+  const repoVars = { WORKERS_SUBDOMAIN: env.WORKERS_SUBDOMAIN, R2_BACKUP_BUCKET: env.R2_BACKUP_BUCKET };
   for (const [k, v] of Object.entries(repoVars)) {
     if (!v) {
       console.log(`  - skip variable ${k} (empty)`);
@@ -83,6 +83,8 @@ function github() {
       SUPABASE_URL: forEnv(env, 'SUPABASE_URL', e),
       SUPABASE_ANON_KEY: forEnv(env, 'SUPABASE_ANON_KEY', e),
       SENTRY_DSN_PORTAL: env.SENTRY_DSN_PORTAL,
+      TURNSTILE_SITE_KEY: forEnv(env, 'TURNSTILE_SITE_KEY', e),
+      CF_WEB_ANALYTICS_TOKEN: env.CF_WEB_ANALYTICS_TOKEN,
       ...(e === 'production'
         ? { BACKUP_AGE_PUBLIC_KEY: env.BACKUP_AGE_PUBLIC_KEY, R2_BACKUP_BUCKET: env.R2_BACKUP_BUCKET }
         : {}),
@@ -181,7 +183,11 @@ function supabase() {
       if (dryRun) return console.log(`  ✓ vault ${name} (dry run)`);
       const res = await fetch(`${url}/rest/v1/rpc/vault_upsert_secret`, {
         method: 'POST',
-        headers: { apikey: key, authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+        headers: {
+          apikey: key,
+          'content-type': 'application/json',
+          ...(key.startsWith('eyJ') ? { authorization: `Bearer ${key}` } : {}),
+        },
         body: JSON.stringify({ p_name: name, p_secret: secret }),
       });
       if (!res.ok) throw new Error(`vault ${name}: HTTP ${res.status} (have migrations been pushed?)`);

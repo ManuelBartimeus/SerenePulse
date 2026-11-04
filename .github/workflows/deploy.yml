@@ -55,11 +55,6 @@ jobs:
             echo "No Edge Functions yet."
           fi
 
-      - name: Set hostnames from the SERENE_ROOT_DOMAIN repository variable
-        run: |
-          test -n "${{ vars.SERENE_ROOT_DOMAIN }}" || { echo "SERENE_ROOT_DOMAIN repository variable is not set"; exit 1; }
-          sed -i "s/__ROOT_DOMAIN__/${{ vars.SERENE_ROOT_DOMAIN }}/g" apps/survey-worker/wrangler.toml apps/portal/wrangler.toml
-
       - name: Build portal
         run: pnpm --filter @serene/portal build
         env:
@@ -73,7 +68,12 @@ jobs:
 
       - name: Deploy survey Worker
         working-directory: apps/survey-worker
-        run: pnpm exec wrangler deploy --env "$TARGET" --var "GIT_SHA:${GITHUB_SHA::12}" --var "SUPABASE_URL:${{ vars.SUPABASE_URL }}"
+        run: >-
+          pnpm exec wrangler deploy --env "$TARGET"
+          --var "GIT_SHA:${GITHUB_SHA::12}"
+          --var "SUPABASE_URL:${{ vars.SUPABASE_URL }}"
+          --var "TURNSTILE_SITE_KEY:${{ vars.TURNSTILE_SITE_KEY }}"
+          --var "CF_WEB_ANALYTICS_TOKEN:${{ vars.CF_WEB_ANALYTICS_TOKEN }}"
 
       - name: Deploy portal
         working-directory: apps/portal
@@ -81,9 +81,10 @@ jobs:
 
       - name: Smoke test
         run: |
-          host=$([ "$TARGET" = production ] && echo "feedback" || echo "feedback-staging")
+          test -n "${{ vars.WORKERS_SUBDOMAIN }}" || { echo "WORKERS_SUBDOMAIN repository variable is not set"; exit 1; }
+          worker=$([ "$TARGET" = production ] && echo "serene-pulse-survey" || echo "serene-pulse-survey-staging")
           for i in 1 2 3 4 5 6; do
-            code=$(curl -s -o /tmp/h.json -w '%{http_code}' "https://$host.${{ vars.SERENE_ROOT_DOMAIN }}/healthz" || true)
+            code=$(curl -s -o /tmp/h.json -w '%{http_code}' "https://$worker.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/healthz" || true)
             [ "$code" = 200 ] && { cat /tmp/h.json; exit 0; }
             sleep 10
           done

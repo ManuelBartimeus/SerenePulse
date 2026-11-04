@@ -1,0 +1,33 @@
+# Secrets: never commit. Only .env.example is tracked.
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+supabase/functions/.env
+supabase/.temp/
+*.age-key
+age-private*.txt
+
+# Dependencies / builds
+node_modules/
+dist/
+build/
+.wrangler/
+.turbo/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Backups must never land in the repo
+*.dump
+*.dump.age
+*.sql.gz
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/

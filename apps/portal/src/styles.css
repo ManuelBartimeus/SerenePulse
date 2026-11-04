@@ -1,0 +1,12 @@
+@import 'tailwindcss';
+@import '@serene/ui/tokens.css';
+@import '@serene/ui/tailwind.css';
+
+html,
+body {
+  margin: 0;
+  background: var(--color-surface-subtle);
+  color: var(--color-ink);
+  font: var(--weight-regular) var(--text-body) / var(--leading-body) var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}

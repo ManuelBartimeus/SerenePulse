@@ -1,0 +1,113 @@
+/*
+ * Serene design tokens (SPEC E1–E10). The single source for both apps.
+ * Brand: #1108BF blue, #FBDE04 yellow, white (D-25). Yellow is never text or a sole
+ * state indicator on white (1.35:1); use it decoratively, on blue, or behind #111 text.
+ */
+:root {
+  /* E1 colour */
+  --color-brand: #1108bf;
+  --color-brand-700: #0d0699;
+  --color-brand-50: #ecebfb;
+  --color-accent: #fbde04;
+  --color-accent-50: #fff8cc;
+  --color-ink: #111111;
+  --color-text-secondary: #545454;
+  --color-text-muted: #666666;
+  --color-text-on-brand: #ffffff;
+  --color-bg: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #f7f7f7;
+  --color-surface-muted: #f2f2f2;
+  --color-success: #1f7a3a;
+  --color-success-bg: #e7f4ea;
+  --color-warning: #8a5a00;
+  --color-warning-bg: #fff4db;
+  --color-danger: #b42332;
+  --color-danger-bg: #fdecee;
+  --color-info: #0b5cad;
+  --color-info-bg: #e6f0fa;
+  --color-border: #d3d3d3;
+  --color-border-strong: #8a8a8a;
+  --color-focus-ring: #1108bf;
+  --color-scrim: rgb(17 17 17 / 0.48);
+
+  /* E2 data-viz fixed meanings */
+  --color-nps-detractor: var(--color-danger);
+  --color-nps-passive: #8a8a8a;
+  --color-nps-promoter: var(--color-success);
+
+  /* E3 typography. The survey uses the system stack only (A-148). */
+  --font-system: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: 'Inter', var(--font-system);
+  --text-display: 36px;
+  --leading-display: 44px;
+  --text-display-sm: 28px;
+  --leading-display-sm: 36px;
+  --text-h2: 24px;
+  --leading-h2: 32px;
+  --text-h3: 18px;
+  --leading-h3: 24px;
+  --text-kpi: 32px;
+  --leading-kpi: 40px;
+  --text-body: 16px;
+  --leading-body: 24px;
+  --text-body-sm: 14px;
+  --leading-body-sm: 20px;
+  --text-caption: 12px;
+  --leading-caption: 16px;
+  --tracking-display: -1px;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  /* Spacing: 4 px base, 8 px rhythm (DS §4.1) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Radii (A-42) */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 48px;
+  --radius-pill: 9999px;
+
+  /* Elevation: only things that float (DS §7) */
+  --shadow-float: 0 10px 30px 0 rgb(0 0 0 / 0.12);
+  --shadow-float-strong: 0 10px 30px 0 rgb(0 0 0 / 0.16);
+
+  /* E9 motion */
+  --duration-select: 120ms;
+  --duration-fast: 200ms;
+  --duration-page: 240ms;
+  --ease-enter: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Controls (E4) */
+  --control-h: 48px;
+  --control-h-survey: 56px;
+  --target-min: 44px;
+  --target-min-survey: 48px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-select: 0ms;
+    --duration-fast: 0ms;
+    --duration-page: 80ms;
+  }
+}
+
+/* Focus visible everywhere: 2 px blue ring with 2 px white offset (works on blue buttons). */
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--color-bg);
+}

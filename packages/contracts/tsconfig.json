@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.base.json",
+  // Runs in the browser, Workers and Deno; all provide atob/btoa.
+  "compilerOptions": { "lib": ["ES2022", "DOM"] },
+  "include": ["src"]
+}

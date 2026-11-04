@@ -1,0 +1,34 @@
+{
+  "name": "serene-pulse",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.15.9",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:survey": "pnpm --filter @serene/survey-worker dev",
+    "dev:portal": "pnpm --filter @serene/portal dev",
+    "build": "pnpm -r --if-present build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "test": "pnpm -r --if-present test",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:test": "supabase test db",
+    "env:check": "node scripts/env-check.mjs",
+    "secrets:sync": "node scripts/sync-secrets.mjs",
+    "scan:bundles": "node scripts/scan-bundles.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.0",
+    "eslint": "^9.39.0",
+    "prettier": "^3.9.10",
+    "supabase": "^2.113.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^5.1.0"
+  }
+}

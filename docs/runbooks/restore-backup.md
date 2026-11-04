@@ -1,45 +1,39 @@
 # Runbook: restore a backup (monthly drill and real incidents)
 
 **When:** on the first working day of each month (drill), or during an incident.
-**Needs:** Docker Desktop running, `age` installed, the age private key file (from your password manager), and the GitHub CLI signed in (`gh auth login`) with access to the repository.
-**Time:** about 10 minutes.
+**Needs:** Docker Desktop running, `age` installed, the age private key file (`serene-pulse-backup.agekey`, from your password manager), and `GITHUB_PAT` in `.env` or `gh auth login`.
+**Time:** about 5 minutes.
 
-## Drill (local only, never touches staging or production)
+## How backups work (D-41, ADR-0007)
+
+* Every night `.github/workflows/backup.yml` takes a **data-only** dump of our schemas (`public app survey analytics pii audit ops`) plus `auth` (staff accounts), encrypts it to the age public key, and stores it as a GitHub Actions artifact: 35 days for daily copies, 90 days for the copy made on the 1st of the month.
+* The **schema is not in the backup**; it comes from `supabase/migrations` in git. A whole-database dump can't be restored, because Supabase-managed objects belong to an admin role.
+* **Vault secrets are not in the backup** (they're encrypted with a per-project key). They are reloaded from `.env` with `scripts/sync-secrets.mjs`.
+* Before storing, the job checks that the dump contains `public.settings`, `audit.log` and `auth.users` data.
+
+## Monthly drill (local only, never touches staging or production)
 
 ```powershell
-# 1. Start the local stack (empty database with current migrations)
-pnpm db:start
-
-# 2. Download the latest daily backup
-gh run list --workflow backup --limit 1 --json databaseId --jq ".[0].databaseId"   # newest backup run id
-gh run download <run id> --dir .   # downloads daily-serene-pulse-YYYY-MM-DD.dump.age/ ; move the file to backup.dump.age
-
-# 3. Decrypt (the key file path is wherever you keep it; never inside this repo)
-age -d -i C:\path\to\serene-pulse-backup.agekey -o backup.dump backup.dump.age
-
-# 4. Restore into the local database container
-docker cp backup.dump supabase_db_serene-pulse:/tmp/backup.dump
-docker exec supabase_db_serene-pulse pg_restore -U postgres -d postgres --clean --if-exists --no-owner /tmp/backup.dump
-
-# 5. Verify
-docker exec supabase_db_serene-pulse psql -U postgres -d postgres -c "select * from audit.verify_chain();"
-docker exec supabase_db_serene-pulse psql -U postgres -d postgres -c "select (select count(*) from audit.log) audit_rows;"
-
-# 6. Clean up: delete the decrypted dump
-Remove-Item backup.dump, backup.dump.age
-docker exec supabase_db_serene-pulse rm /tmp/backup.dump
+pnpm db:start                          # local stack with current migrations
+node scripts/restore-drill.mjs         # downloads the latest backup, decrypts, restores, verifies
+pnpm db:reset                          # wipe the production data from your machine afterwards
 ```
 
-**Pass:** `verify_chain` returns `ok = t`, and row counts are plausible against the production dashboard (once MS-06 lands, also compare `survey.responses` counts). Record the date, backup name and result in the next checkpoint under "Backups".
+**Pass:** the script prints `DRILL PASSED`, the audit chain verifies, and the row counts look plausible against production. Copy the output into the next checkpoint under "Backups". Options: `--run <id>` restores a specific backup run, `--file <path>` restores a file you downloaded, and `--key <path>` points at the key file if it isn't in your user folder.
 
-`pg_restore` warnings about extensions or roles that already exist are expected. Errors on application tables are a failed drill: open an incident.
+## Real restore after data loss
 
-## Real restore into production
+Use this only after confirming that data has been lost. Restore into a **new** project rather than overwriting the broken one.
 
-Use this only after confirming with Nii that data loss has happened.
-
-1. Create a **new** Supabase project (eu-west-2) rather than overwriting the broken one, and run `supabase db push` against it.
-2. Restore as in step 4, using the new project's session-pooler URL: `pg_restore --dbname "<pooler URL>" --clean --if-exists --no-owner backup.dump`.
-3. Load Vault keys: `node scripts/sync-secrets.mjs supabase production` (after updating `SUPABASE_*_PRODUCTION` in `.env` to the new project).
-4. Update the GitHub production environment (`node scripts/sync-secrets.mjs github`) and the Worker secrets (`node scripts/sync-secrets.mjs worker production`), then redeploy.
-5. Verify `/healthz`, sign in, and check that the dashboards' counts match the backup date.
+1. Create a new Supabase project (West EU, London). Put its values in `.env` (`SUPABASE_*_PRODUCTION`), or let me fill them from the access token.
+2. Apply the schema: `pnpm exec supabase db push --db-url "<new session pooler URL>"`.
+3. Download and decrypt the backup: `gh run download <run id>`, then `age -d -i <key> -o restore.dump <file>.dump.age`.
+4. Empty the seeded rows, then load the data with triggers off:
+   ```powershell
+   # in psql against the new project: truncate public.settings, public.settings_history restart identity cascade;
+   $env:PGOPTIONS = "-c session_replication_role=replica"
+   pg_restore --data-only --no-owner --exit-on-error --dbname "<new session pooler URL>" restore.dump
+   ```
+5. Reload secrets and redeploy: `node scripts/sync-secrets.mjs supabase production`, `node scripts/sync-secrets.mjs github`, `node scripts/sync-secrets.mjs worker production`, then re-run the `deploy` workflow.
+6. Verify: `select * from audit.verify_chain();`, `/healthz`, sign in, and dashboard counts as of the backup date.
+7. Delete the decrypted `restore.dump`.

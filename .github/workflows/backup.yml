@@ -37,10 +37,22 @@ jobs:
           set -euo pipefail
           test -n "$AGE_RECIPIENT" || { echo "BACKUP_AGE_PUBLIC_KEY variable is not set"; exit 1; }
           file="serene-pulse-$(date -u +%F).dump.age"
-          /usr/lib/postgresql/17/bin/pg_dump --format=custom --no-owner --no-privileges \
-            --exclude-schema=cron --dbname="$DB_URL" | age -r "$AGE_RECIPIENT" > "$file"
+          # Data only, for our schemas plus auth (staff accounts). The schema itself comes from
+          # supabase/migrations at restore time: Supabase-managed objects can't be recreated by a
+          # normal role, so a whole-database dump is not restorable. Vault secrets are reloaded
+          # with scripts/sync-secrets.mjs (they are encrypted with a per-project key).
+          /usr/lib/postgresql/17/bin/pg_dump --format=custom --data-only --load-via-partition-root \
+            --schema=public --schema=app --schema=survey --schema=analytics --schema=pii \
+            --schema=audit --schema=ops --schema=auth --exclude-table-data='auth.schema_migrations' \
+            --dbname="$DB_URL" --file=backup.dump
+          # Refuse to store a dump that doesn't contain the tables a restore depends on.
+          toc=$(/usr/lib/postgresql/17/bin/pg_restore --list backup.dump)
+          for t in 'TABLE DATA public settings' 'TABLE DATA audit log' 'TABLE DATA auth users'; do
+            grep -q "$t" <<<"$toc" || { echo "Backup is missing: $t"; exit 1; }
+          done
+          age -r "$AGE_RECIPIENT" -o "$file" backup.dump
+          rm -f backup.dump
           size=$(stat -c %s "$file")
-          [ "$size" -gt 10240 ] || { echo "Backup suspiciously small ($size bytes)"; exit 1; }
           echo "file=$file" >> "$GITHUB_OUTPUT"
           echo "monthly=$([ "$(date -u +%d)" = 01 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
           echo "Encrypted backup $file ($size bytes)"

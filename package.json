@@ -20,7 +20,8 @@
     "db:test": "supabase test db",
     "env:check": "node scripts/env-check.mjs",
     "secrets:sync": "node scripts/sync-secrets.mjs",
-    "scan:bundles": "node scripts/scan-bundles.mjs"
+    "scan:bundles": "node scripts/scan-bundles.mjs",
+    "restore:drill": "node scripts/restore-drill.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

@@ -1,9 +1,11 @@
 name: deploy
 
-# Staging deploys on every merge to main. Production deploys only by manual dispatch, and
-# the `production` GitHub environment requires Nii's approval (external-actions X-01).
+# Continuous deployment (D-39): when CI passes on main, deploy staging; when staging's smoke
+# test passes, deploy production. No manual approval. Manual dispatch redeploys either one.
 on:
-  push:
+  workflow_run:
+    workflows: [ci]
+    types: [completed]
     branches: [main]
   workflow_dispatch:
     inputs:
@@ -17,75 +19,29 @@ permissions:
   contents: read
 
 concurrency:
-  group: deploy-${{ github.event.inputs.environment || 'staging' }}
+  group: deploy
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
-    env:
-      TARGET: ${{ github.event.inputs.environment || 'staging' }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - uses: pnpm/action-setup@a7487c7e89a18df4991f7f222e4898a00d66ddda # v4.1.0
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - uses: supabase/setup-cli@d347ba47d3fb7eeeddbbc793bc8d4779caf773ea # v1.5.0
-        with:
-          version: 2.113.0
-      - run: pnpm install --frozen-lockfile
+  staging:
+    if: >-
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push') ||
+      (github.event_name == 'workflow_dispatch' && inputs.environment == 'staging')
+    uses: ./.github/workflows/deploy-env.yml
+    with:
+      environment: staging
+      ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+    secrets: inherit
 
-      - name: Database migrations (forward-only)
-        run: |
-          supabase link --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
-          supabase db push --include-all
-
-      - name: Edge Functions
-        run: |
-          if ls supabase/functions/*/index.ts >/dev/null 2>&1; then
-            supabase functions deploy --project-ref "${{ secrets.SUPABASE_PROJECT_REF }}"
-          else
-            echo "No Edge Functions yet."
-          fi
-
-      - name: Build portal
-        run: pnpm --filter @serene/portal build
-        env:
-          VITE_APP_ENV: ${{ env.TARGET }}
-          VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
-          VITE_SENTRY_DSN: ${{ vars.SENTRY_DSN_PORTAL }}
-
-      - name: No secret keys in any built bundle
-        run: pnpm scan:bundles
-
-      - name: Deploy survey Worker
-        working-directory: apps/survey-worker
-        run: >-
-          pnpm exec wrangler deploy --env "$TARGET"
-          --var "GIT_SHA:${GITHUB_SHA::12}"
-          --var "SUPABASE_URL:${{ vars.SUPABASE_URL }}"
-          --var "TURNSTILE_SITE_KEY:${{ vars.TURNSTILE_SITE_KEY }}"
-          --var "CF_WEB_ANALYTICS_TOKEN:${{ vars.CF_WEB_ANALYTICS_TOKEN }}"
-
-      - name: Deploy portal
-        working-directory: apps/portal
-        run: pnpm exec wrangler deploy --env "$TARGET"
-
-      - name: Smoke test
-        run: |
-          test -n "${{ vars.WORKERS_SUBDOMAIN }}" || { echo "WORKERS_SUBDOMAIN repository variable is not set"; exit 1; }
-          worker=$([ "$TARGET" = production ] && echo "serene-pulse-survey" || echo "serene-pulse-survey-staging")
-          for i in 1 2 3 4 5 6; do
-            code=$(curl -s -o /tmp/h.json -w '%{http_code}' "https://$worker.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/healthz" || true)
-            [ "$code" = 200 ] && { cat /tmp/h.json; exit 0; }
-            sleep 10
-          done
-          echo "healthz did not return 200 (last: $code)"; cat /tmp/h.json || true; exit 1
+  production:
+    needs: staging
+    if: >-
+      always() &&
+      ((needs.staging.result == 'success' && github.event_name == 'workflow_run') ||
+       (github.event_name == 'workflow_dispatch' && inputs.environment == 'production'))
+    uses: ./.github/workflows/deploy-env.yml
+    with:
+      environment: production
+      ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+    secrets: inherit

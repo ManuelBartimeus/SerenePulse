@@ -1,0 +1,10 @@
+# 0008 Operations simplifications chosen by Nii (D-39 to D-42)
+
+**Status:** Accepted, 2026-11-04. These are disclosed trade-offs against SPEC, chosen by the person.
+
+| Decision | SPEC said | Now | What protects us instead | Residual risk |
+|---|---|---|---|---|
+| **D-39** Continuous production deploys | Manual approval before production | When CI passes on `main`: deploy staging; if staging's smoke test passes, deploy production automatically. Both environments accept deploys from `main` only | CI gate (lint, types, unit tests, pgTAP database tests, secret scan, bundle scan) and staging smoke test before production. Migrations are forward-only (expand/contract) | A bug that passes all tests reaches production without a human look. Keep changes small; `workflow_dispatch` redeploys a previous commit |
+| **D-40** Google Workspace SMTP | Resend | `smtp.gmail.com:465` with a Workspace mailbox and app password, used by Supabase Auth and the `send-email` Edge Function | Daily budget guard (default 1,000; Workspace allows about 2,000/day per user); hourly digests for low-priority emails | Requires 2-Step Verification on the mailbox; an app-password revocation stops all staff email (runbook) |
+| **D-41** No R2 | Nightly backups to R2, 35 daily + 12 monthly | Nightly age-encrypted dump stored as a GitHub Actions artifact: 35 days daily, 90 days for the 1st-of-month copy | Encryption to an offline key; a failed run emails the owner | Monthly history is 3 months, not 12. Artifacts count against GitHub's free 500 MB storage; at today's size (well under 10 MB per dump) that holds for years, and the quota is checked each checkpoint |
+| **D-42** No Sentry or uptime monitor | Sentry, uptime monitor, alert in 5 minutes | Cloudflare Workers logs, Supabase logs, a GitHub `health` workflow checking `/healthz` every 3 hours (emails on failure), and the in-app ops alerts from MS-11 | Detection within 3 hours instead of 5 minutes | Slower detection of an outage. Adding Sentry later needs only DSNs in `.env` (the code already reads them) |

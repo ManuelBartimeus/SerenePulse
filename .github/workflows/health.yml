@@ -1,0 +1,32 @@
+name: health
+
+# Scheduled availability check (D-42: no external uptime monitor). A failure emails the
+# repository owner through GitHub Actions notifications. Every 3 hours keeps Actions usage
+# to ~240 minutes/month, well inside the free private-repo allowance.
+on:
+  schedule:
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        url:
+          - https://serene-pulse-survey.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/healthz
+          - https://serene-pulse-portal.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/
+          - https://serene-pulse-survey-staging.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/healthz
+    steps:
+      - name: Check ${{ matrix.url }}
+        run: |
+          for attempt in 1 2 3; do
+            code=$(curl -s -o /dev/null -m 15 -w '%{http_code}' "${{ matrix.url }}" || true)
+            [ "$code" = 200 ] && { echo "OK ($code)"; exit 0; }
+            echo "Attempt $attempt: HTTP $code"; sleep 20
+          done
+          echo "::error::${{ matrix.url }} is not healthy"; exit 1

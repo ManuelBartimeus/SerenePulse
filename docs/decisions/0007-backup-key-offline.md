@@ -6,8 +6,8 @@
 
 **Decision.**
 * Backups are encrypted to Nii's public key only, and the private key never enters CI.
-* CI checks every night that the backup exists, is at least 10 KB, and was uploaded. The heartbeat alerts if no backup arrives within 26 h.
-* Once a month Nii runs the restore drill locally (`docs/runbooks/restore-from-r2.md`): download → decrypt → `pg_restore` into the local Docker Supabase → row-count and `audit.verify_chain()` checks. The output is pasted into the next checkpoint.
+* CI checks every night that the backup exists, is at least 10 KB, and was stored; a failed run emails the repository owner (D-41, D-42).
+* Once a month Nii runs the restore drill locally (`docs/runbooks/restore-backup.md`): download → decrypt → `pg_restore` into the local Docker Supabase → row-count and `audit.verify_chain()` checks. The output is pasted into the next checkpoint.
 
 **Alternative rejected.** A second "restore-test" recipient key stored as a GitHub secret. It would allow a fully automatic drill, but anyone with Actions access could then decrypt production data, including encrypted contact details' ciphertext and all comments.
 

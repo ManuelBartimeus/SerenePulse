@@ -11,3 +11,4 @@ One file per decision: `NNNN-title.md` with Status, Context, Decision, Consequen
 | [0005](0005-open-link-sessions.md) | Open link, anonymous sessions, device cooldown | Accepted (D-33) |
 | [0006](0006-resolved-conflicts.md) | Resolved source conflicts | Accepted |
 | [0007](0007-backup-key-offline.md) | Backup key offline; local monthly restore drill | Accepted (UG-13) |
+| [0008](0008-ops-simplifications.md) | Continuous deploys, Workspace SMTP, artifact backups, no Sentry/uptime | Accepted (D-39…D-42) |

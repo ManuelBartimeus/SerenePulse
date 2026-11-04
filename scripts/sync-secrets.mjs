@@ -51,7 +51,7 @@ function github() {
   const repo = env.GITHUB_REPOSITORY;
   const gh = { extraEnv: { GH_TOKEN: env.GITHUB_PAT } };
 
-  const repoVars = { WORKERS_SUBDOMAIN: env.WORKERS_SUBDOMAIN, R2_BACKUP_BUCKET: env.R2_BACKUP_BUCKET };
+  const repoVars = { WORKERS_SUBDOMAIN: env.WORKERS_SUBDOMAIN };
   for (const [k, v] of Object.entries(repoVars)) {
     if (!v) {
       console.log(`  - skip variable ${k} (empty)`);
@@ -62,7 +62,37 @@ function github() {
   }
 
   for (const e of ENVS) {
-    run('gh', ['api', '--method', 'PUT', `repos/${repo}/environments/${e}`, '--silent'], gh);
+    // Only `main` may deploy to either environment. No required reviewers: production deploys
+    // automatically after staging passes its smoke test (D-39).
+    run('gh', ['api', '--method', 'PUT', `repos/${repo}/environments/${e}`, '--silent', '--input', '-'], {
+      ...gh,
+      input: JSON.stringify({
+        deployment_branch_policy: { protected_branches: false, custom_branch_policies: true },
+      }),
+    });
+    const policies = JSON.parse(
+      run('gh', ['api', `repos/${repo}/environments/${e}/deployment-branch-policies`], gh).stdout ||
+        '{"branch_policies":[]}',
+    );
+    if (!policies.branch_policies.some((p) => p.name === 'main')) {
+      run(
+        'gh',
+        [
+          'api',
+          '--method',
+          'POST',
+          `repos/${repo}/environments/${e}/deployment-branch-policies`,
+          '-f',
+          'name=main',
+          '-f',
+          'type=branch',
+          '--silent',
+        ],
+        gh,
+      );
+    }
+    console.log(`  ✓ environment ${e} (deploys from main only)`);
+
     const secrets = {
       CLOUDFLARE_API_TOKEN: env.CLOUDFLARE_API_TOKEN,
       CLOUDFLARE_ACCOUNT_ID: env.CLOUDFLARE_ACCOUNT_ID,
@@ -70,14 +100,6 @@ function github() {
       SUPABASE_PROJECT_REF: forEnv(env, 'SUPABASE_PROJECT_REF', e),
       SUPABASE_DB_PASSWORD: forEnv(env, 'SUPABASE_DB_PASSWORD', e),
       SUPABASE_DB_URL: forEnv(env, 'SUPABASE_DB_URL', e),
-      ...(e === 'production'
-        ? {
-            R2_ACCESS_KEY_ID: env.R2_ACCESS_KEY_ID,
-            R2_SECRET_ACCESS_KEY: env.R2_SECRET_ACCESS_KEY,
-            BACKUP_HEARTBEAT_URL: env.BACKUP_HEARTBEAT_URL,
-          }
-        : {}),
-      SENTRY_AUTH_TOKEN: env.SENTRY_AUTH_TOKEN,
     };
     const vars = {
       SUPABASE_URL: forEnv(env, 'SUPABASE_URL', e),
@@ -85,9 +107,7 @@ function github() {
       SENTRY_DSN_PORTAL: env.SENTRY_DSN_PORTAL,
       TURNSTILE_SITE_KEY: forEnv(env, 'TURNSTILE_SITE_KEY', e),
       CF_WEB_ANALYTICS_TOKEN: env.CF_WEB_ANALYTICS_TOKEN,
-      ...(e === 'production'
-        ? { BACKUP_AGE_PUBLIC_KEY: env.BACKUP_AGE_PUBLIC_KEY, R2_BACKUP_BUCKET: env.R2_BACKUP_BUCKET }
-        : {}),
+      ...(e === 'production' ? { BACKUP_AGE_PUBLIC_KEY: env.BACKUP_AGE_PUBLIC_KEY } : {}),
     };
     for (const [k, v] of Object.entries(secrets)) {
       if (!v) {
@@ -144,7 +164,10 @@ function supabase() {
 
   const fnSecrets = {
     APP_ENV: e,
-    RESEND_API_KEY: env.RESEND_API_KEY,
+    SMTP_HOST: env.SMTP_HOST,
+    SMTP_PORT: env.SMTP_PORT,
+    SMTP_USER: env.SMTP_USER,
+    SMTP_PASSWORD: env.SMTP_PASSWORD,
     EMAIL_FROM: env.EMAIL_FROM,
     EMAIL_REPLY_TO: env.EMAIL_REPLY_TO,
     EMAIL_DAILY_BUDGET: env.EMAIL_DAILY_BUDGET,

@@ -1,8 +1,11 @@
 name: backup
 
-# Nightly encrypted logical backup of PRODUCTION to Cloudflare R2 (SPEC DISASTER RECOVERY).
-# 02:00 UTC = 02:00 Africa/Accra. Keeps 35 daily + 12 monthly copies.
-# Backups are encrypted to Nii's age public key; the private key never enters CI (UG-13).
+# Nightly encrypted logical backup of PRODUCTION (SPEC DISASTER RECOVERY, D-41).
+# 02:00 UTC = 02:00 Africa/Accra. Stored as GitHub Actions artifacts (no R2):
+#   daily copies kept 35 days; the copy made on the 1st of each month kept 90 days
+#   (GitHub's maximum, so monthly history is 3 months rather than SPEC's 12; see ADR-0008).
+# Encrypted to Nii's age public key; the private key never enters CI (ADR-0007).
+# A failed run emails the repository owner (GitHub Actions notifications).
 on:
   schedule:
     - cron: '0 2 * * *'
@@ -19,49 +22,44 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     environment: production
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: auto
-      R2_ENDPOINT: https://${{ secrets.CLOUDFLARE_ACCOUNT_ID }}.r2.cloudflarestorage.com
-      BUCKET: ${{ vars.R2_BACKUP_BUCKET }}
     steps:
       - name: Install PostgreSQL 17 client and age
         run: |
           sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
           sudo apt-get install -y --no-install-recommends postgresql-client-17 age
 
-      - name: Dump, encrypt, upload
+      - name: Dump and encrypt
+        id: dump
         env:
           DB_URL: ${{ secrets.SUPABASE_DB_URL }}
           AGE_RECIPIENT: ${{ vars.BACKUP_AGE_PUBLIC_KEY }}
         run: |
           set -euo pipefail
-          day=$(date -u +%F)
-          file="serene-pulse-$day.dump.age"
+          test -n "$AGE_RECIPIENT" || { echo "BACKUP_AGE_PUBLIC_KEY variable is not set"; exit 1; }
+          file="serene-pulse-$(date -u +%F).dump.age"
           /usr/lib/postgresql/17/bin/pg_dump --format=custom --no-owner --no-privileges \
             --exclude-schema=cron --dbname="$DB_URL" | age -r "$AGE_RECIPIENT" > "$file"
           size=$(stat -c %s "$file")
           [ "$size" -gt 10240 ] || { echo "Backup suspiciously small ($size bytes)"; exit 1; }
-          aws s3 cp "$file" "s3://$BUCKET/daily/$file" --endpoint-url "$R2_ENDPOINT" --only-show-errors
-          if [ "$(date -u +%d)" = "01" ]; then
-            aws s3 cp "$file" "s3://$BUCKET/monthly/$file" --endpoint-url "$R2_ENDPOINT" --only-show-errors
-          fi
-          echo "Uploaded $file ($size bytes)"
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+          echo "monthly=$([ "$(date -u +%d)" = 01 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "Encrypted backup $file ($size bytes)"
 
-      - name: Prune (35 daily, 12 monthly)
-        run: |
-          set -euo pipefail
-          prune() {
-            prefix=$1; keep=$2
-            aws s3 ls "s3://$BUCKET/$prefix/" --endpoint-url "$R2_ENDPOINT" | awk '{print $4}' | sort -r \
-              | tail -n +$((keep + 1)) | while read -r f; do
-                aws s3 rm "s3://$BUCKET/$prefix/$f" --endpoint-url "$R2_ENDPOINT" --only-show-errors
-              done
-          }
-          prune daily 35
-          prune monthly 12
+      - name: Store daily copy (35 days)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: daily-${{ steps.dump.outputs.file }}
+          path: ${{ steps.dump.outputs.file }}
+          retention-days: 35
+          compression-level: 0
+          if-no-files-found: error
 
-      - name: Heartbeat (missing for 26 h raises the "no backup" alert)
-        if: success()
-        run: curl -fsS -m 10 --retry 3 "${{ secrets.BACKUP_HEARTBEAT_URL }}" > /dev/null
+      - name: Store monthly copy (90 days)
+        if: steps.dump.outputs.monthly == 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: monthly-${{ steps.dump.outputs.file }}
+          path: ${{ steps.dump.outputs.file }}
+          retention-days: 90
+          compression-level: 0
+          if-no-files-found: error

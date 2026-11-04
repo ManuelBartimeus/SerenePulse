@@ -1,7 +1,7 @@
-# Runbook: restore a backup from R2 (monthly drill and real incidents)
+# Runbook: restore a backup (monthly drill and real incidents)
 
 **When:** on the first working day of each month (drill), or during an incident.
-**Needs:** Docker Desktop running, `age` installed, the age private key file (from your password manager), and `.env` with the Cloudflare values.
+**Needs:** Docker Desktop running, `age` installed, the age private key file (from your password manager), and the GitHub CLI signed in (`gh auth login`) with access to the repository.
 **Time:** about 10 minutes.
 
 ## Drill (local only, never touches staging or production)
@@ -11,11 +11,11 @@
 pnpm db:start
 
 # 2. Download the latest daily backup
-pnpm exec wrangler r2 object list serene-pulse-backups --prefix daily/   # note the newest name
-pnpm exec wrangler r2 object get serene-pulse-backups/daily/serene-pulse-YYYY-MM-DD.dump.age --file backup.dump.age --remote
+gh run list --workflow backup --limit 1 --json databaseId --jq ".[0].databaseId"   # newest backup run id
+gh run download <run id> --dir .   # downloads daily-serene-pulse-YYYY-MM-DD.dump.age/ ; move the file to backup.dump.age
 
 # 3. Decrypt (the key file path is wherever you keep it; never inside this repo)
-age -d -i C:\path\to\serene-backup.agekey -o backup.dump backup.dump.age
+age -d -i C:\path\to\serene-pulse-backup.agekey -o backup.dump backup.dump.age
 
 # 4. Restore into the local database container
 docker cp backup.dump supabase_db_serene-pulse:/tmp/backup.dump

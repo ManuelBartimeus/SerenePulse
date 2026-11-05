@@ -83,7 +83,7 @@ const SPECS: CatalogueSpec[] = [
     title: 'Areas to improve',
     singular: 'area',
     description:
-      'The “main thing we could improve” options on Page 5. Whether choosing one flags the feedback for review or opens a case is set under Flagging rules.',
+      'The “main thing we should improve upon” options on Page 5. Whether choosing one flags the feedback for review or opens a case is set under Flagging rules.',
     select: 'id, code, label, is_other, is_none, is_active, sort_order, version',
     customerFacing: true,
   },

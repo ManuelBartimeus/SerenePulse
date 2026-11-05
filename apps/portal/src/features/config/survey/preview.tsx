@@ -304,7 +304,9 @@ export function SurveyPreview({ def, snapshot }: { def: Definition; snapshot: Sn
                     Question {page + 1} of {total}
                   </p>
                   {page === 0 && def.intro && <p className="mt-3 text-secondary">{def.intro}</p>}
-                  <h3 className="mt-3 text-[28px] font-medium leading-9 tracking-[-0.5px]">{title}</h3>
+                  {title && (
+                    <h3 className="mt-3 text-[28px] font-medium leading-9 tracking-[-0.5px]">{title}</h3>
+                  )}
                 </div>
                 {current.questions
                   .filter((q) => isVisible(def, snapshot, answers, q))

@@ -1,8 +1,8 @@
 // Shared fixtures for the Worker unit tests (not bundled: only *.test.ts import it).
 import type { Definition, Snapshot } from '@serene/survey-engine';
-import v1 from '@serene/survey-engine/v1.json';
+import v2 from '@serene/survey-engine/v2.json';
 
-export const definition = v1 as Definition;
+export const definition = v2 as Definition;
 
 export const snapshot: Snapshot = {
   service_channels: [

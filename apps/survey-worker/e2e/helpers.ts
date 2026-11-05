@@ -60,7 +60,13 @@ export async function toPage5(page: Page, csat = '4, Satisfied') {
   await rate(page, '9', 5);
 }
 
+/** "What main thing should we improve upon?" is required from survey v2. */
+export async function chooseImprovement(page: Page, label = 'Nothing, I am satisfied') {
+  await page.getByRole('radio', { name: label, exact: true }).check();
+}
+
 export async function submitAndConfirm(page: Page) {
+  if ((await page.locator('input[name="factor"]:checked').count()) === 0) await chooseImprovement(page);
   await page.getByRole('button', { name: 'Submit feedback' }).click();
   await expect(
     page.getByRole('heading', { name: 'Thank you! Your feedback has been received.' }),

@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./v1.json": "./src/v1.json"
+    "./v1.json": "./src/v1.json",
+    "./v2.json": "./src/v2.json"
   },
   "scripts": {
     "typecheck": "tsc -p .",

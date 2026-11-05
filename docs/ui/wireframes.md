@@ -26,7 +26,7 @@ Which branch issued your policy?
 [ Select a branch               ▾ ]   ← native <select>: 13 A–Z + "Other branch"
 The branch that issued your policy, which may differ from one you visited.
 
-What type of insurance policy did you get?
+What type of insurance policy did you buy?
 [Motor insurance ] [Fire & property ]   ← 2-column chips ≥ 360 px
 [Marine          ] [Travel          ]
 [General accident] [Engineering     ]
@@ -59,7 +59,7 @@ Choosing an answer moves you to the next question.
 ### S-C4 Page 4: 0–10 scale
 
 ```text
-How likely are you to recommend Serene Insurance to someone you know?
+Would you recommend Serene to others?
  < 520 px                               ≥ 520 px
 [0][1][2][3][4][5]                      [0][1][2][3][4][5][6][7][8][9][10]
 [6][7][8][9][10]                        Not at all likely      Extremely likely
@@ -69,8 +69,7 @@ Not at all likely   Extremely likely    (square buttons ≥ 48 px; no slider)
 ### S-C5 Page 5: additional feedback
 
 ```text
-What is the main thing we could improve? (optional)
-  ← if CSAT ≤ 2: "We're sorry we fell short. What should we improve?"
+What main thing should we improve upon?   ← required (survey v2); no page heading
 [Speed of service] [Staff professionalism] [Communication…] [Ease…]
 [Technical issues] [Pricing and charges] [Other] [Nothing, I am satisfied]
 Anything else you'd like to tell us? (optional)

@@ -138,12 +138,19 @@ test.describe('navigation (FR-05, FR-06, FR-07, FR-12)', () => {
 });
 
 test.describe('Page 5 and submission', () => {
-  test('T-M06-031 CSAT ≤ 2 changes the heading only; T-M06-108 Page 5 can be skipped', async ({ page }) => {
+  test('v2 Page 5: no heading text, even after a low score; the improvement question is required', async ({
+    page,
+  }) => {
     await page.goto(START);
     await toPage5(page, '1, Very dissatisfied');
+    await expect(page.getByText('fell short')).toHaveCount(0);
+    await expect(page.getByText('Additional feedback')).toHaveCount(0);
+    await expect(page.getByText('What main thing should we improve upon?')).toBeVisible();
+    await page.getByRole('button', { name: 'Submit feedback' }).click();
+    await expect(page.getByText('Please choose what we should improve.', { exact: false })).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: "We're sorry we fell short. What should we improve?" }),
-    ).toBeVisible();
+      page.getByRole('heading', { name: 'Thank you! Your feedback has been received.' }),
+    ).toHaveCount(0);
     await submitAndConfirm(page);
   });
 
@@ -239,8 +246,11 @@ test.describe('no-JS fallback (A-38, UG-06)', () => {
     await page.getByRole('button', { name: 'Submit feedback' }).click();
     // branch is required for walk-in: same server rule, field-level message, answers kept
     await expect(page.locator('#e-branch')).toHaveText('Please choose the branch that issued your policy.');
+    // the improvement question is required too (survey v2)
+    await expect(page.locator('#e-factor')).toContainText('Please choose what we should improve.');
     await expect(page.getByRole('radio', { name: '4, Satisfied', exact: true })).toBeChecked();
     await page.getByLabel('Which branch issued your policy?').selectOption({ label: 'Kasoa' });
+    await page.getByRole('radio', { name: 'Speed of service', exact: true }).check();
     await page.getByRole('button', { name: 'Submit feedback' }).click();
     await expect(
       page.getByRole('heading', { name: 'Thank you! Your feedback has been received.' }),

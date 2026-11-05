@@ -182,7 +182,7 @@ describe('survey entry (T-M05-001, T-M05-020, FR-01′)', () => {
     expect(body).not.toContain('<form');
   });
 
-  it('renders the CSAT ≤ 2 heading on Page 5 when resuming a low score (T-M06-031)', async () => {
+  it('renders Page 5 without a visible heading, even after a low score (v2)', async () => {
     stub({
       survey_start_session: () =>
         json(
@@ -196,7 +196,10 @@ describe('survey entry (T-M05-001, T-M05-020, FR-01′)', () => {
       await app.request('/customerfeedback', { headers: { cookie: COOKIE } }, bindings)
     ).text();
     expect(body).toMatch(/data-page="5"\s+data-current/);
-    expect(body).toContain('We&#39;re sorry we fell short. What should we improve?');
+    expect(body).not.toContain('fell short');
+    expect(body).not.toContain('Additional feedback');
+    expect(body).toMatch(/<h1\s+id="t-5"\s+tabindex="-1"\s+class="sr-only"\s*>\s*Section 5 of 5/);
+    expect(body).toContain('What main thing should we improve upon?');
   });
 
   it('serves the island and the logo with immutable caching', async () => {

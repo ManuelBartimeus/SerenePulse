@@ -168,6 +168,47 @@ roll-ups cover all 5,179 responses, device cooldown is 0 (repeat submissions all
 grants are left pending, ~70% satisfied customers over the last 30 days, and every public path
 responds (`/customerfeedback/new` → fresh form; old `/q/…` links → the form).
 
+---
+
+## 2026-11-05 (late evening) — Survey wording (survey v2) and accordion sidebar
+
+User feedback and what was done:
+
+1. **Survey form (published as survey version 2)** → migration `202611120001_survey_v2.sql`
+   retires v1 and publishes v2 (published versions are never edited, FR-27; earlier responses
+   stay linked to v1; the rating scales are unchanged, so trends continue). The definition is
+   `packages/survey-engine/src/v2.json`, and a test checks that it matches the migration.
+   * Page 5 no longer shows a heading: both "Additional feedback" and "We're sorry we fell
+     short. What should we improve?" (low-score version) are gone. The page keeps a hidden
+     heading ("Section 5 of 5") for screen readers and keyboard focus.
+   * "What is the main thing we could improve? (optional)" → **"What main thing should we
+     improve upon?"**, now **required**. Customers who have nothing to raise choose "Nothing,
+     I am satisfied". If it is skipped: "Please choose what we should improve. If nothing,
+     choose 'Nothing, I am satisfied'." The rule holds in the browser, in the no-JavaScript form
+     and in the database.
+   * "How likely are you to recommend Serene Insurance to someone you know?" → **"Would you
+     recommend Serene to others?"** (still 0–10).
+   * "What type of insurance policy did you get?" → **"What type of insurance policy did you
+     buy?"** (its error message now says "bought").
+   * The portal's survey preview and the "Lists & options" helper text follow the new wording,
+     as do the wireframes in `docs/ui/wireframes.md`.
+2. **Sidebar sections now work as an accordion** (`apps/portal/src/pages/shell.tsx`). Only one
+   section is open at a time. Opening a section, or going to a page in another section, closes
+   the one that was open. Going to Overview, Feedback form or Reports closes them all. The
+   remembered open/closed state was removed, since the current page now decides.
+
+**Verified:**
+* pgTAP 399/399 on a fresh database, including the updated survey-version test; SQL lint clean.
+* JS-vs-SQL survey parity test passes against the published v2.
+* Unit tests 216 (survey engine 21 with three new v2 checks, survey Worker 49, portal 71,
+  metrics 30, contracts 5) plus Edge Functions 40.
+* Survey browser tests 26/26 on phone and desktop, including accessibility. They cover: the new
+  Page 5 without a heading after a low score, the required improvement question (with and
+  without JavaScript), and "Share more feedback".
+* A signed-in local check of the sidebar: Insights › Branches, then Feedback › Cases, then
+  Administration › Settings, then Overview. Exactly one section was open each time (none on
+  Overview), with no console errors.
+
 **Still open:** run `node scripts/seed-demo.mjs production --clear` before go-live; Gmail app
 password for email; XLSX exports of ~100k rows exceed the free Edge Function CPU limit; load test
 at 600k responses; privacy-notice contact details in Settings; official logo vector;

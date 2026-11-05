@@ -2,7 +2,7 @@
 -- system catalogue rows stay active (T-M03-001…006), settings validation (M17).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(26);
+select plan(27);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -147,7 +147,8 @@ reset role;
 select set_config('request.jwt.claims', pg_temp.claims_for('00000000-0000-0000-0000-00000000aa05'), true);
 set local role authenticated;
 select is((public.survey_version_list() -> -1 ->> 'version_no')::int, 1, 'survey_version_list lists v1 (newest first)');
-select is(public.survey_version_list() -> -1 ->> 'status', 'published', 'with its status');
+select is(public.survey_version_list() -> -1 ->> 'status', 'retired', 'v1 is retired since survey v2');
+select is(public.survey_version_list() -> 0 ->> 'status', 'published', 'the newest version is the published one');
 
 -- ---------------------------------------------------------------------------
 -- System catalogue rows (cx_admin has config.catalogues)

@@ -188,31 +188,19 @@ function useVisibleNav(): NavEntry[] {
   });
 }
 
-const OPEN_KEY = 'serene.nav.open';
-function readOpen(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(OPEN_KEY) ?? '[]') as string[];
-  } catch {
-    return [];
-  }
-}
-
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const visible = useVisibleNav();
   const current = activeLink(visible, path);
-  const [open, setOpen] = useState<string[]>(readOpen);
-  // The section holding the current page is always expanded.
-  const isOpen = (title: string) => open.includes(title) || current?.section === title;
-  const toggle = (title: string) => {
-    const next = open.includes(title) ? open.filter((t) => t !== title) : [...open, title];
-    setOpen(next);
-    try {
-      localStorage.setItem(OPEN_KEY, JSON.stringify(next));
-    } catch {
-      // Private browsing: the open sections just aren't remembered.
-    }
-  };
+  // Accordion: one section open at a time. Opening a section closes the others, and moving to a
+  // page opens its section and closes the rest.
+  const currentSection = current?.section ?? null;
+  const [open, setOpen] = useState<string | null>(currentSection);
+  useEffect(() => {
+    setOpen(currentSection);
+  }, [currentSection]);
+  const isOpen = (title: string) => open === title;
+  const toggle = (title: string) => setOpen((o) => (o === title ? null : title));
 
   const link = (item: NavLinkItem, nested: boolean) => {
     const active = current?.item.to === item.to;

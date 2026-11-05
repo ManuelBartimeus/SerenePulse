@@ -278,6 +278,8 @@ function renderPage(page: Page, index: number, ctx: Ctx, view: SurveyView, total
   const headingId = `t-${n}`;
   const single = page.questions.length === 1 && !!page.questions[0]?.type.startsWith('rating');
   const last = n === total;
+  // A page may have no visible heading (v2 Page 5); it keeps a hidden one for screen readers and focus.
+  const heading = pageHeading(ctx.def, page, index, ctx.answers).trim();
   return html`<section
     class="page"
     data-page="${n}"
@@ -295,9 +297,10 @@ function renderPage(page: Page, index: number, ctx: Ctx, view: SurveyView, total
     <h1
       id="${headingId}"
       tabindex="-1"
+      ${heading ? '' : html`class="sr-only"`}
       ${page.title_when_low_csat ? html`data-title="${page.title}" data-title-low="${page.title_when_low_csat}"` : ''}
     >
-      ${pageHeading(ctx.def, page, index, ctx.answers)}
+      ${heading || COPY.section(n, total)}
     </h1>
     ${single ? html`<p class="help js-only">${COPY.autoAdvance}</p>` : ''}
     ${page.questions.map((q) => renderQuestion(q, ctx, headingId))}

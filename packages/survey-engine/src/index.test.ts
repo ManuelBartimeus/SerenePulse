@@ -12,6 +12,7 @@ import {
 } from './index';
 import type { Definition, Snapshot } from './index';
 import v1json from './v1.json';
+import v2json from './v2.json';
 
 const v1 = v1json as unknown as Definition;
 const snapshot: Snapshot = {
@@ -53,6 +54,32 @@ describe('v1 definition', () => {
   it('has five pages with three transaction questions and one rating on pages 2–4 (FR-02)', () => {
     expect(v1.pages).toHaveLength(5);
     expect(scaleSignature(v1)).toEqual({ csat: '1-5', ces: '1-5', nps: '0-10' });
+  });
+});
+
+describe('v2 definition (live from 2026-11-05)', () => {
+  const v2 = v2json as unknown as Definition;
+  it('passes every guardrail and keeps the v1 rating scales', () => {
+    expect(guardrails(v2)).toEqual([]);
+    expect(scaleSignature(v2)).toEqual(scaleSignature(v1));
+  });
+  it('is the definition the v2 migration publishes', () => {
+    const sql = readFileSync(
+      new URL('../../../supabase/migrations/202611120001_survey_v2.sql', import.meta.url),
+      'utf8',
+    );
+    const embedded = sql.split('-- V2-BEGIN\n$v2$')[1]?.split('$v2$\n-- V2-END')[0] ?? '';
+    expect(JSON.parse(embedded)).toEqual(v2);
+  });
+  it('has no Page 5 heading and requires the improvement question', () => {
+    const p5 = v2.pages[4]!;
+    expect(p5.title).toBe('');
+    expect(p5.title_when_low_csat).toBeUndefined();
+    const factor = questions(v2).find((x) => x.id === 'factor')!;
+    expect(factor.label).toBe('What main thing should we improve upon?');
+    expect(isRequired(v2, snapshot, base, factor)).toBe(true);
+    expect(validate(v2, snapshot, base).errors).toContainEqual({ field: 'factor', code: 'required' });
+    expect(validate(v2, snapshot, { ...base, factor: 'NONE' }).errors).toEqual([]);
   });
 });
 

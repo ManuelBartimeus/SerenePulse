@@ -36,10 +36,13 @@ export const COPY = {
   fieldErrors: {
     channel: { required: 'Please choose how you got your policy.' },
     branch: { required: 'Please choose the branch that issued your policy.' },
-    product: { required: 'Please choose the type of policy you got.' },
+    product: { required: 'Please choose the type of policy you bought.' },
     csat: { required: 'Please choose how satisfied you are.' },
     ces: { required: 'Please choose how easy it was.' },
     nps: { required: 'Please choose a number from 0 to 10.' },
+    factor: {
+      required: 'Please choose what we should improve. If nothing, choose “Nothing, I am satisfied”.',
+    },
     phone: {
       required: 'Please enter a Ghana mobile number, e.g. 024 123 4567, or switch off the contact option.',
       invalid_phone:

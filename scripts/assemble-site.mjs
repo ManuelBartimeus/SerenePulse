@@ -8,7 +8,7 @@
 // Portal build variables (VITE_*) come from the environment, as in the deploy workflow.
 //   node scripts/assemble-site.mjs [--skip-build]
 import { execSync } from 'node:child_process';
-import { cpSync, existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { root } from './lib/env.mjs';
 
@@ -26,6 +26,9 @@ for (const dir of [landing, portal]) {
 }
 
 rmSync(out, { recursive: true, force: true });
+mkdirSync(out, { recursive: true });
+// Keeps the (otherwise generated) directory in git so wrangler's dry-run build finds it.
+writeFileSync(path.join(out, '.gitkeep'), '');
 // The Worker sets every header itself; _headers/_redirects only work at the assets root anyway.
 cpSync(landing, out, { recursive: true });
 cpSync(portal, path.join(out, 'admin'), { recursive: true });

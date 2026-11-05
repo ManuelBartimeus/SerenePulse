@@ -15,7 +15,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/**/*.mjs'],
+    files: ['scripts/**/*.mjs', 'tests/**/*.mjs'],
     languageOptions: {
       globals: {
         process: 'readonly',
@@ -23,6 +23,7 @@ export default tseslint.config(
         Buffer: 'readonly',
         fetch: 'readonly',
         URL: 'readonly',
+        setTimeout: 'readonly',
       },
     },
   },

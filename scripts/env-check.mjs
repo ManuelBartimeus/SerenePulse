@@ -95,7 +95,7 @@ for (const k of leakedIntoTemplate)
   problems.push(`${k} has a value in .env.example (committed to git). Move it to .env and blank it there.`);
 
 if (env.SEED_ADMIN_PASSWORD)
-  check(env.SEED_ADMIN_PASSWORD.length >= 12, 'SEED_ADMIN_PASSWORD must be at least 12 characters');
+  check(env.SEED_ADMIN_PASSWORD.length >= 8, 'SEED_ADMIN_PASSWORD must be at least 8 characters (D-43)');
 if (env.BACKUP_AGE_PUBLIC_KEY)
   check(
     env.BACKUP_AGE_PUBLIC_KEY.startsWith('age1'),

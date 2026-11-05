@@ -2,6 +2,7 @@ import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-route
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import logoUrl from '@serene/ui/assets/serene-logo.svg';
 import { analyticsNav } from '../features/analytics/routes';
+import { NotificationBell } from '../features/cases/notification-bell';
 import { casesNav } from '../features/cases/routes';
 import { configNav } from '../features/config/routes';
 import { reportsNav } from '../features/reports/routes';
@@ -134,6 +135,7 @@ function UserMenu() {
   const navigate = useNavigate();
   return (
     <div className="flex items-center gap-2">
+      <NotificationBell />
       <Link
         to="/profile"
         className="hidden max-w-[220px] truncate text-[14px] text-secondary hover:text-ink md:block"

@@ -246,6 +246,7 @@ function local() {
     VITE_APP_ENV: 'local',
     VITE_SUPABASE_URL: s.API_URL,
     VITE_SUPABASE_ANON_KEY: s.PUBLISHABLE_KEY || s.ANON_KEY,
+    VITE_SURVEY_URL: 'http://127.0.0.1:8787',
   };
   const fmt = (o) =>
     Object.entries(o)

@@ -6,7 +6,6 @@ import {
   Outlet,
   useRouterState,
 } from '@tanstack/react-router';
-import type { ReactNode } from 'react';
 import { useSession } from './lib/session';
 import { ForgotPasswordPage, SetPasswordPage, SignInPage } from './pages/auth';
 import { AuditPage } from './pages/audit';
@@ -15,7 +14,8 @@ import { analyticsRoutes } from './features/analytics/routes';
 import { casesRoutes } from './features/cases/routes';
 import { configRoutes } from './features/config/routes';
 import { reportsRoutes } from './features/reports/routes';
-import { AccessDeniedPage, NotFoundPage, Shell } from './pages/shell';
+import { RequirePerm } from './lib/require-perm';
+import { NotFoundPage, Shell } from './pages/shell';
 import { ApprovalsPage, UsersPage } from './pages/users';
 import { Spinner } from './ui/controls';
 
@@ -35,19 +35,6 @@ function AuthGate() {
   if (!session) return <Navigate to="/sign-in" search={{ next: path }} replace />;
   if (claims?.app_must_change_password) return <Navigate to="/set-password" replace />;
   return <Shell />;
-}
-
-/** Direct URL access without the permission shows the access-denied page (STEP 7). */
-export function RequirePerm({
-  permission,
-  children,
-}: {
-  permission: string | string[];
-  children: ReactNode;
-}) {
-  const { can } = useSession();
-  const allowed = (Array.isArray(permission) ? permission : [permission]).some((p) => can(p));
-  return allowed ? <>{children}</> : <AccessDeniedPage />;
 }
 
 const rootRoute = createRootRoute({ component: Outlet, notFoundComponent: NotFoundPage });

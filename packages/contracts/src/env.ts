@@ -47,6 +47,8 @@ export const portalEnvSchema = z.object({
   VITE_SUPABASE_URL: url,
   VITE_SUPABASE_ANON_KEY: publicKey,
   VITE_SENTRY_DSN: z.union([url, z.literal('')]).default(''),
+  /** Public survey origin, printed on QR posters and in the SMS-link guide (M05). */
+  VITE_SURVEY_URL: url.default('http://127.0.0.1:8787'),
 });
 export type PortalEnv = z.infer<typeof portalEnvSchema>;
 

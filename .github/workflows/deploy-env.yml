@@ -59,6 +59,7 @@ jobs:
           VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
           VITE_SENTRY_DSN: ${{ vars.SENTRY_DSN_PORTAL }}
+          VITE_SURVEY_URL: https://${{ env.TARGET == 'production' && 'serene-pulse-survey' || 'serene-pulse-survey-staging' }}.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev
 
       - name: No secret keys in any built bundle
         run: pnpm scan:bundles

@@ -82,7 +82,14 @@ Deno.serve(async (req) => {
     return problem(req, 409, 'already-exists', 'Someone with that email already has an account.');
   }
   if (!invite.ok) {
-    console.error(JSON.stringify({ event: 'invite_failed', status: invite.status }));
+    // GoTrue's message (e.g. "Error sending invite email" on SMTP failure) holds no address or secret.
+    console.error(
+      JSON.stringify({
+        event: 'invite_failed',
+        status: invite.status,
+        reason: String(invited.msg ?? invited.message ?? invited.error_code ?? '').slice(0, 200),
+      }),
+    );
     return problem(req, 502, 'invite-failed', "We couldn't send the invitation just now. Please try again.");
   }
 

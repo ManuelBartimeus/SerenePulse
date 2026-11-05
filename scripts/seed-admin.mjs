@@ -14,7 +14,8 @@ if (!['local', 'staging', 'production'].includes(target)) {
 }
 const env = readEnv();
 const email = env.SEED_ADMIN_EMAIL;
-const password = env.SEED_ADMIN_PASSWORD;
+// A process variable wins, so local test runs can use a throwaway password once .env no longer has one.
+const password = process.env.SEED_ADMIN_PASSWORD ?? env.SEED_ADMIN_PASSWORD;
 if (!email || !password || password.length < 8) {
   console.error('SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD (8+ characters, D-43) must be set in .env');
   process.exit(1);

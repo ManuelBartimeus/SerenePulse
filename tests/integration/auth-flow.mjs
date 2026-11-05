@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 // End-to-end check of staff authentication against the LOCAL stack (MS-02, F16):
 // sign-in via auth-sign-in, forced password change, claims, invites, lockout, enumeration safety.
-// Needs: `pnpm db:start`, `supabase functions serve`, and `node scripts/seed-admin.mjs local`.
+// Needs: `pnpm db:start`, `supabase functions serve`, and `node scripts/seed-admin.mjs local`, with
+// the same SEED_ADMIN_PASSWORD (from .env or the process environment) for both.
 //   node tests/integration/auth-flow.mjs
 import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
+import { URLSearchParams } from 'node:url';
 import { readEnv } from '../../scripts/lib/env.mjs';
 
 const env = readEnv();
@@ -19,7 +21,7 @@ const API = status.API_URL;
 const ANON = status.PUBLISHABLE_KEY || status.ANON_KEY;
 const MAILPIT = (status.INBUCKET_URL || status.MAILPIT_URL || 'http://127.0.0.1:54324').replace(/\/$/, '');
 const ADMIN = env.SEED_ADMIN_EMAIL;
-const PASSWORD = env.SEED_ADMIN_PASSWORD;
+const PASSWORD = process.env.SEED_ADMIN_PASSWORD ?? env.SEED_ADMIN_PASSWORD;
 const ORIGIN = 'http://127.0.0.1:5173';
 
 const claims = (token) => JSON.parse(Buffer.from(token.split('.')[1], 'base64url'));
@@ -102,26 +104,63 @@ await step('after completing the password change the next token has permissions'
 });
 
 const stamp = Date.now();
-await step(
-  'inviting a user with a non-sensitive role grants it immediately and sends the email',
-  async () => {
-    const before = await fetch(`${MAILPIT}/api/v1/messages`)
-      .then((r) => r.json())
-      .catch(() => ({ total: 0 }));
-    const r = await fn(
-      'invite-user',
-      { email: `auditor-${stamp}@example.test`, displayName: 'Test Auditor', grants: [{ role: 'auditor' }] },
-      token,
-    );
-    assert.equal(r.status, 201, await r.clone().text());
-    assert.equal((await r.json()).pendingApproval, 0);
-    await new Promise((res) => setTimeout(res, 1500));
-    const after = await fetch(`${MAILPIT}/api/v1/messages`)
-      .then((r) => r.json())
-      .catch(() => ({ total: -1 }));
-    assert.ok(after.total > (before.total ?? 0), 'an invitation email reached the local mail catcher');
-  },
-);
+// Following an access link signs the person in: GoTrue redirects to /set-password with a session.
+const follow = async (link) => {
+  const r = await fetch(link, { redirect: 'manual' });
+  const to = r.headers.get('location') ?? '';
+  assert.ok(to.startsWith(`${ORIGIN}/set-password`), `redirects to the portal (${to.split('#')[0]})`);
+  return new URLSearchParams(to.split('#')[1] ?? '').get('access_token');
+};
+const mailCount = () =>
+  fetch(`${MAILPIT}/api/v1/messages`)
+    .then((r) => r.json())
+    .then((j) => j.total ?? 0)
+    .catch(() => 0);
+
+let auditorId;
+let auditorLink;
+await step('inviting a user with a non-sensitive role grants it immediately and returns a link', async () => {
+  const before = await mailCount();
+  const r = await fn(
+    'invite-user',
+    { email: `auditor-${stamp}@example.test`, displayName: 'Test Auditor', grants: [{ role: 'auditor' }] },
+    token,
+  );
+  assert.equal(r.status, 201, await r.clone().text());
+  const body = await r.json();
+  assert.equal(body.pendingApproval, 0);
+  assert.match(body.link, /\/auth\/v1\/verify\?.*type=invite/);
+  auditorId = body.userId;
+  auditorLink = body.link;
+  await new Promise((res) => setTimeout(res, 1000));
+  assert.equal(await mailCount(), before, 'no email is sent (D-45)');
+});
+
+await step('a new invitation link replaces the first, and the new one signs the person in', async () => {
+  const r = await fn('invite-user', { action: 'link', userId: auditorId }, token);
+  assert.equal(r.status, 200, await r.clone().text());
+  const body = await r.json();
+  assert.equal(body.kind, 'invite');
+  const old = await fetch(auditorLink, { redirect: 'manual' });
+  assert.ok(
+    !(old.headers.get('location') ?? '').includes('access_token'),
+    'the earlier link no longer works',
+  );
+  const session = await follow(body.link);
+  assert.ok(session, 'the link produced a session');
+  assert.equal(claims(session).app_must_change_password, true);
+});
+
+await step('an active user gets a password-reset link; no link for your own account', async () => {
+  psql(`update public.profiles set status = 'active' where user_id = '${auditorId}'`);
+  const r = await fn('invite-user', { action: 'link', userId: auditorId }, token);
+  assert.equal(r.status, 200, await r.clone().text());
+  const body = await r.json();
+  assert.equal(body.kind, 'recovery');
+  assert.ok(await follow(body.link), 'the reset link produced a session');
+  const self = await fn('invite-user', { action: 'link', userId: claims(token).sub }, token);
+  assert.equal(self.status, 422);
+});
 
 await step('inviting a user with a contact-data role waits for a second approver', async () => {
   const r = await fn(

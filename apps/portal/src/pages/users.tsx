@@ -102,38 +102,78 @@ function RolePicker({
   );
 }
 
-function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+/** Calls the invite-user Edge Function with the signed-in administrator's token. */
+function useInviteFunction() {
   const { session, env } = useSession();
+  return async <T,>(payload: Record<string, unknown>, fallback: string): Promise<T> => {
+    const res = await fetch(`${env.VITE_SUPABASE_URL}/functions/v1/invite-user`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        apikey: env.VITE_SUPABASE_ANON_KEY,
+        authorization: `Bearer ${session?.access_token ?? ''}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw { message: body.detail ?? fallback, detail: body.request_id };
+    return body as T;
+  };
+}
+
+/** A one-time access link (D-45): shown once, copied by the administrator and sent to the person. */
+function AccessLink({ link, kind }: { link: string; kind: 'invite' | 'recovery' }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+  return (
+    <div className="flex flex-col gap-3">
+      <label className="flex flex-col gap-2">
+        <span className="text-[14px] font-medium">
+          {kind === 'invite' ? 'Invitation link' : 'Password-reset link'}
+        </span>
+        <input
+          readOnly
+          value={link}
+          onFocus={(e) => e.target.select()}
+          className="h-12 rounded-md border border-border bg-surface-muted px-3 text-[14px]"
+        />
+      </label>
+      <Button type="button" variant="secondary" onClick={copy}>
+        {copied ? 'Copied' : 'Copy link'}
+      </Button>
+      <p className="text-[14px] leading-5 text-secondary">
+        Send it to them privately, for example by direct message. Anyone with the link can set this account’s
+        password. It works once, expires in 24 hours and won’t be shown again.
+      </p>
+    </div>
+  );
+}
+
+function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const callInvite = useInviteFunction();
   const qc = useQueryClient();
   const roles = useRoles();
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState<UserFacingError | null>(null);
-  const [done, setDone] = useState<{ pending: number } | null>(null);
+  const [done, setDone] = useState<{ pending: number; link: string } | null>(null);
 
   const invite = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`${env.VITE_SUPABASE_URL}/functions/v1/invite-user`, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          apikey: env.VITE_SUPABASE_ANON_KEY,
-          authorization: `Bearer ${session?.access_token ?? ''}`,
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          displayName: name.trim(),
-          grants: selected.map((role) => ({ role })),
-        }),
-      });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok)
-        throw { message: body.detail ?? "We couldn't send the invitation.", detail: body.request_id };
-      return body as { pendingApproval: number };
-    },
+    mutationFn: () =>
+      callInvite<{ pendingApproval: number; link: string }>(
+        { email: email.trim(), displayName: name.trim(), grants: selected.map((role) => ({ role })) },
+        "We couldn't create the invitation.",
+      ),
     onSuccess: (body) => {
-      setDone({ pending: body.pendingApproval });
+      setDone({ pending: body.pendingApproval, link: body.link });
       qc.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (e) => setError(e as UserFacingError),
@@ -162,16 +202,17 @@ function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
     <Dialog
       open={open}
       onOpenChange={close}
-      title={done ? 'Invitation sent' : 'Invite a staff member'}
+      title={done ? 'Invitation created' : 'Invite a staff member'}
       description={
         done
           ? undefined
-          : 'They’ll get an email with a link to set their password. The link works once and expires in 24 hours.'
+          : 'You’ll get a link to send them. They use it to set their password; it works once and expires in 24 hours.'
       }
     >
       {done ? (
         <div className="flex flex-col gap-4">
-          <Alert tone="success">{email} has been invited.</Alert>
+          <Alert tone="success">{email} has been invited. Send them this link.</Alert>
+          <AccessLink link={done.link} kind="invite" />
           {done.pending > 0 && (
             <Alert tone="warning" title="Waiting for a second approver">
               One of the roles can reveal customers’ contact details, so another Executive must approve it
@@ -210,7 +251,7 @@ function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
               Cancel
             </Button>
             <Button type="submit" busy={invite.isPending}>
-              Send invitation
+              Create invitation
             </Button>
           </div>
         </form>
@@ -227,6 +268,8 @@ function EditUserDialog({ user, onClose }: { user: UserRow; onClose: () => void 
   const [error, setError] = useState<UserFacingError | null>(null);
   const [confirm, setConfirm] = useState<'suspended' | 'deactivated' | null>(null);
   const isSelf = user.user_id === claims?.sub;
+  const callInvite = useInviteFunction();
+  const [issued, setIssued] = useState<{ link: string; kind: 'invite' | 'recovery' } | null>(null);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['users'] });
   const saveRoles = useMutation({
@@ -268,6 +311,15 @@ function EditUserDialog({ user, onClose }: { user: UserRow; onClose: () => void 
     onSuccess: refresh,
     onError: (e) => setError(toUserError(e)),
   });
+  const issueLink = useMutation({
+    mutationFn: () =>
+      callInvite<{ link: string; kind: 'invite' | 'recovery' }>(
+        { action: 'link', userId: user.user_id },
+        "We couldn't create a link for this user.",
+      ),
+    onSuccess: setIssued,
+    onError: (e) => setError(e as UserFacingError),
+  });
 
   return (
     <Dialog
@@ -298,6 +350,25 @@ function EditUserDialog({ user, onClose }: { user: UserRow; onClose: () => void 
         >
           Save roles
         </Button>
+        {!isSelf && (user.status === 'invited' || user.status === 'active') && (
+          <div className="border-t border-border pt-5">
+            <p className="mb-1 text-[14px] font-medium">
+              {user.status === 'invited' ? 'Invitation link' : 'Password reset'}
+            </p>
+            <p className="mb-3 text-[14px] leading-5 text-secondary">
+              {user.status === 'invited'
+                ? 'They haven’t accepted yet. A new link replaces any earlier one.'
+                : 'If they’ve forgotten their password, create a link for them to set a new one.'}
+            </p>
+            {issued ? (
+              <AccessLink link={issued.link} kind={issued.kind} />
+            ) : (
+              <Button variant="secondary" busy={issueLink.isPending} onClick={() => issueLink.mutate()}>
+                {user.status === 'invited' ? 'Create new invitation link' : 'Create password-reset link'}
+              </Button>
+            )}
+          </div>
+        )}
         {!isSelf && user.status !== 'invited' && (
           <div className="border-t border-border pt-5">
             <p className="mb-3 text-[14px] font-medium">Account</p>

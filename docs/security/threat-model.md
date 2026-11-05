@@ -37,6 +37,7 @@ Scope: the open survey, the staff portal, and the handling of keys and secrets. 
 |---|---|---|---|---|
 | Spoofing | Password guessing / credential stuffing | 8+ chars (D-43), common-password list, lockout 5 → 15 min (A-139) also enforced by the token hook (A-152), IP rate limit 20/5 min (no CAPTCHA, D-44), new-device emails, sign-in spike alert | T-M01-lockout | 02 |
 | Spoofing | No MFA | Accepted by decision; compensating controls above; TOTP recommendation raised at MS-09 | n/a | 09 |
+| Elevation | A System Administrator issues a reset link for another account (e.g. an Executive) and takes it over, sidestepping the two-person rule (D-45) | users.manage re-checked live; no link for your own account or a suspended one; every link audited (`auth.access_link_issued`); single use, 24 h. Residual: no email tells the account owner. Restore email in MS-11 and send "a reset link was issued" notices; keep a second Executive reviewing the audit log | T-D45-links | 11 |
 | Tampering | JWT claim tampering | Signature verified by PostgREST; sensitive RPCs re-read grants | Forged-claim test | 02 |
 | Tampering | Silent attribution change | Only via `attribution_corrections`, proposer ≠ approver, original kept visible | T-M10-correction | 13 |
 | Repudiation | Staff denies a contact reveal or export | Hash-chained audit with reason; nightly copy to R2 | `audit_verify_chain` test; chain-break alert | 02 |

@@ -39,17 +39,18 @@ const REQUIRED_BY = {
     'GITHUB_REPOSITORY',
     'GITHUB_PAT',
   ],
-  'MS-02 Identity & access': [
+  // SEED_ADMIN_PASSWORD is needed only while seeding, and is then removed from .env.
+  'MS-02 Identity & access': ['SEED_ADMIN_EMAIL'],
+  'MS-05 Survey access (Turnstile)': perEnv(['TURNSTILE_SITE_KEY', 'TURNSTILE_SECRET_KEY']),
+  // Invite and reset links are copied by an administrator until email is set up (D-45).
+  'MS-11 Notifications (email)': [
     'SMTP_HOST',
     'SMTP_PORT',
     'SMTP_USER',
     'SMTP_PASSWORD',
     'EMAIL_FROM',
     'EMAIL_REPLY_TO',
-    'SEED_ADMIN_EMAIL',
-    'SEED_ADMIN_PASSWORD',
   ],
-  'MS-05 Survey access (Turnstile)': perEnv(['TURNSTILE_SITE_KEY', 'TURNSTILE_SECRET_KEY']),
   'MS-09 Go-live (privacy notice)': [
     'SUPPORT_PHONE',
     'SUPPORT_EMAIL',

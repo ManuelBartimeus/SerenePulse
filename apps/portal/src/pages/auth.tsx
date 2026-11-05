@@ -121,11 +121,11 @@ export function SetPasswordPage() {
     return (
       <AuthCard title="This link has expired">
         <p className="text-secondary">
-          Invitation links work once and expire after 24 hours; reset links after 1 hour. Ask your system
-          administrator for a new invitation, or request a new reset link.
+          Invitation and password-reset links work once and expire after 24 hours. Ask your system
+          administrator for a new link.
         </p>
-        <a href="/forgot-password" className="mt-6 inline-block font-medium text-brand hover:underline">
-          Request a new reset link
+        <a href="/sign-in" className="mt-6 inline-block font-medium text-brand hover:underline">
+          Back to sign in
         </a>
       </AuthCard>
     );
@@ -195,54 +195,17 @@ export function SetPasswordPage() {
   );
 }
 
+/** Reset links are issued by an administrator while the portal sends no email (D-45). */
 export function ForgotPasswordPage() {
-  const { supabase } = useSession();
-  const [email, setEmail] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState(false);
-
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setBusy(true);
-    // The result is deliberately ignored: the same message shows whether or not the account
-    // exists (enumeration-safe, E8).
-    await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${location.origin}/set-password`,
-    });
-    setBusy(false);
-    setSent(true);
-  }
-
   return (
-    <AuthCard title="Reset your password" subtitle="We’ll email you a link to set a new password.">
-      {sent ? (
-        <div className="flex flex-col gap-5">
-          <Alert tone="success">
-            If an account exists for {email.trim()}, a reset link is on its way. It works once and expires in
-            1 hour.
-          </Alert>
-          <a href="/sign-in" className="font-medium text-brand hover:underline">
-            Back to sign in
-          </a>
-        </div>
-      ) : (
-        <form onSubmit={submit} noValidate className="flex flex-col gap-5">
-          <TextField
-            label="Email"
-            type="email"
-            autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <Button type="submit" busy={busy} className="w-full">
-            Send reset link
-          </Button>
-          <a href="/sign-in" className="text-center text-[14px] font-medium text-brand hover:underline">
-            Back to sign in
-          </a>
-        </form>
-      )}
+    <AuthCard title="Forgot your password?">
+      <p className="text-secondary">
+        Ask your system administrator for a password-reset link. They can create one from the Users page; it
+        works once and expires in 24 hours.
+      </p>
+      <a href="/sign-in" className="mt-6 inline-block font-medium text-brand hover:underline">
+        Back to sign in
+      </a>
     </AuthCard>
   );
 }

@@ -20,7 +20,10 @@ const senderEmail = from ? from[2].trim() : env.EMAIL_FROM.trim();
 const button = (href, label) =>
   `<a href="${href}" style="display:inline-block;background:#1108BF;color:#ffffff;text-decoration:none;` +
   `font-weight:500;padding:14px 24px;border-radius:9999px">${label}</a>`;
-const layout = (title, body) => `<!doctype html><html><body style="margin:0;background:#F7F7F7;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#111111">
+const layout = (
+  title,
+  body,
+) => `<!doctype html><html><body style="margin:0;background:#F7F7F7;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;color:#111111">
 <div style="max-width:520px;margin:0 auto;padding:32px 16px">
 <div style="background:#ffffff;border-radius:24px;padding:32px;border-top:4px solid #FBDE04">
 <p style="margin:0 0 24px;font-size:20px;font-weight:600;color:#1108BF">Serene Insurance</p>
@@ -74,11 +77,15 @@ const settings = {
 
 const missing = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD', 'EMAIL_FROM'].filter((k) => !env[k]);
 if (!ref || missing.length) {
-  console.error(`Missing: ${[!ref && `SUPABASE_PROJECT_REF_${target.toUpperCase()}`, ...missing].filter(Boolean).join(', ')}`);
+  console.error(
+    `Missing: ${[!ref && `SUPABASE_PROJECT_REF_${target.toUpperCase()}`, ...missing].filter(Boolean).join(', ')}`,
+  );
   process.exit(1);
 }
 if (dryRun) {
-  console.log(`[dry run] would set ${Object.keys(settings).length} Auth settings on ${target}: ${Object.keys(settings).join(', ')}`);
+  console.log(
+    `[dry run] would set ${Object.keys(settings).length} Auth settings on ${target}: ${Object.keys(settings).join(', ')}`,
+  );
   process.exit(0);
 }
 const res = await fetch(`https://api.supabase.com/v1/projects/${ref}/config/auth`, {
@@ -91,6 +98,16 @@ if (!res.ok) {
   process.exit(1);
 }
 const applied = await res.json();
-const check = ['site_url', 'disable_signup', 'password_min_length', 'jwt_exp', 'hook_custom_access_token_enabled', 'mfa_totp_enroll_enabled', 'smtp_host'];
+const check = [
+  'site_url',
+  'disable_signup',
+  'password_min_length',
+  'jwt_exp',
+  'hook_custom_access_token_enabled',
+  'mfa_totp_enroll_enabled',
+  'smtp_host',
+];
 const mismatched = check.filter((k) => String(applied[k]) !== String(settings[k]));
-console.log(`✓ ${target}: ${Object.keys(settings).length} Auth settings applied${mismatched.length ? `; NOT reflected: ${mismatched.join(', ')}` : ''}.`);
+console.log(
+  `✓ ${target}: ${Object.keys(settings).length} Auth settings applied${mismatched.length ? `; NOT reflected: ${mismatched.join(', ')}` : ''}.`,
+);

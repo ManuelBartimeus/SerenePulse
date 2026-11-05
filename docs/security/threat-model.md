@@ -35,7 +35,7 @@ Scope: the open survey, the staff portal, and the handling of keys and secrets. 
 
 | STRIDE | Threat | Control | Test | MS |
 |---|---|---|---|---|
-| Spoofing | Password guessing / credential stuffing | 12+ chars, common-password list, lockout 5 → 15 min (A-139), Turnstile on sign-in, new-device emails, sign-in spike alert | T-M01-lockout | 02 |
+| Spoofing | Password guessing / credential stuffing | 8+ chars (D-43), common-password list, lockout 5 → 15 min (A-139) also enforced by the token hook (A-152), IP rate limit 20/5 min (no CAPTCHA, D-44), new-device emails, sign-in spike alert | T-M01-lockout | 02 |
 | Spoofing | No MFA | Accepted by decision; compensating controls above; TOTP recommendation raised at MS-09 | n/a | 09 |
 | Tampering | JWT claim tampering | Signature verified by PostgREST; sensitive RPCs re-read grants | Forged-claim test | 02 |
 | Tampering | Silent attribution change | Only via `attribution_corrections`, proposer ≠ approver, original kept visible | T-M10-correction | 13 |

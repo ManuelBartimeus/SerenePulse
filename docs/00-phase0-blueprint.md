@@ -117,6 +117,8 @@ The SRS is SPEC §PHASE 1: the amended FR table (FR-01′, FR-14′, FR-31…FR-
 | A-149 | 12 h absolute session limit enforced in the access-token hook; idle timeout client-side | UG-02 | M01 |
 | A-150 | `qr_points.mode` column (`poster` default; `kiosk` reserved, unused until Q-36 is answered) | UG-09 | M05 schema |
 | A-151 | Ghana public-holiday seed covers 2026–2027 from the official gazette; System Admin adds new years | D-18 needs holiday data; dates are announced yearly | M02 |
+| A-152 | The access-token hook refuses password sign-ins while an account is locked, so direct Auth API calls are blocked too | Supabase's password-verification hook is paid, so guesses made directly against the Auth API are not counted toward the lockout; the IP rate limit bounds them | M01 |
+| A-153 | One 24-hour expiry applies to every email link (invite and reset) | Supabase has a single email-link expiry setting, and invites need 24 h | M01 |
 
 ## Answers received 2026-11-04
 
@@ -130,6 +132,8 @@ The SRS is SPEC §PHASE 1: the amended FR table (FR-01′, FR-14′, FR-31…FR-
 | **D-37** (supersedes D-29, X-03) | Host on Cloudflare's **workers.dev** subdomain, not a Serene domain | `serene-pulse-survey[-staging].eliteservicesagency3.workers.dev` and `serene-pulse-portal[-staging]…`. Consequences: (1) no zone, so the WAF rate-limiting rule (A-143) is replaced by the Workers Rate Limiting binding plus the SQL limits; (2) SMS links and QR posters carry the workers.dev URL, so moving to a custom domain later means reprinting posters (a redirect from the old host can be kept); (3) staff email still needs a domain we can verify for SPF/DKIM, see Q-39 |
 | D-38 | Recreate Supabase in London (Nii, 2026-11-04) | The empty eu-west-1 project "Serene Pulse" was deleted after verifying 0 tables, users and files. Creating replacements through the API was refused (403: the access token lacks create permission), so Nii creates `serene-pulse-production` and `serene-pulse-staging` (West EU, London) in the dashboard |
 | D-39…D-42 | Continuous production deploys; Workspace SMTP (answers Q-39); no R2; no Sentry/uptime accounts | See [ADR-0008](decisions/0008-ops-simplifications.md) |
+| D-43 (supersedes the 12-character minimum) | Passwords need 8+ characters (Nii, 2026-11-05) | The common-password list and lockout stay. Applied to local config, hosted Auth (`scripts/configure-auth.mjs`), the portal check and the seed script |
+| D-44 | Sign-in is email and password only: no 2FA and no CAPTCHA (Nii, 2026-11-05) | Turnstile is removed from sign-in (it stays on the public survey). Compensating controls: lockout, the IP rate limit (20 per 5 minutes), new-device emails, and the TOTP recommendation at MS-09 |
 | ~~**Q-39**~~ answered by D-40 | Staff emails (invites, password resets, alerts) need a sending domain verified with SPF/DKIM. workers.dev can't be verified. | Options: (a) add DNS records for email only on Serene's real domain (no hosting change); (b) Gmail/Google Workspace SMTP for Supabase Auth and alerts (≈500/day, an app password); (c) Resend's test sender, which only delivers to the Resend account owner, so it's unusable for staff |
 
 ## New questions (non-blocking unless noted)
@@ -230,7 +234,7 @@ GAPS FOUND & PATCHED: UG-01…UG-12 (above), in the plan.
 EXTERNAL ACTIONS STILL NEEDED FROM YOU: X-01, X-02, X-03, X-05, X-07 before MS-01;
   X-06, X-08 before MS-02 (docs/external-actions.md). Q-35 (source documents).
 KNOWN ISSUES: traceability FR-02…FR-30 placeholders (Q-35); SVG logo is an interim trace.
-ASSUMPTIONS: A-136…A-151.
+ASSUMPTIONS: A-136…A-153.
 FREE-TIER USAGE: none yet (no projects exist).
 NEXT MILESTONE: MS-01 Platform foundation, starting with spikes S-01…S-07.
 ```

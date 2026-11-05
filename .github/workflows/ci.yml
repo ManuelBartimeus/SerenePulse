@@ -26,6 +26,8 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Edge Function unit tests
+        run: pnpm exec vitest run supabase/functions
       - name: Build (portal with a local, non-secret configuration)
         run: pnpm build
         env:
@@ -58,6 +60,10 @@ jobs:
         run: pnpm --filter @serene/survey-engine exec vitest run src/parity.test.ts
         env:
           SURVEY_PARITY_DB: '1'
+      - name: Metrics parity (TS metrics = SQL roll-ups = raw rows)
+        run: pnpm --filter @serene/metrics exec vitest run src/parity.test.ts
+        env:
+          METRICS_PARITY_DB: '1'
 
   secrets:
     runs-on: ubuntu-latest

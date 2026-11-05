@@ -9,7 +9,8 @@ import { corsHeaders, json, problem, rpc, serviceHeaders } from '../_shared/http
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
-const REDIRECT_TO = `${Deno.env.get('PORTAL_URL') ?? 'http://127.0.0.1:5173'}/set-password`;
+// PORTAL_URL is the site origin; the portal lives under /admin.
+const REDIRECT_TO = `${Deno.env.get('PORTAL_URL') ?? 'http://127.0.0.1:5173'}/admin/set-password`;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 async function asCaller(token: string, fn: string, args: Record<string, unknown>) {

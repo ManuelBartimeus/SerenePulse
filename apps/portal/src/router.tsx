@@ -54,7 +54,7 @@ const forgot = createRoute({
 const app = createRoute({ getParentRoute: () => rootRoute, id: 'app', component: AuthGate });
 const users = createRoute({
   getParentRoute: () => app,
-  path: '/admin/users',
+  path: '/users',
   component: () => (
     <RequirePerm permission="users.manage">
       <UsersPage />
@@ -63,7 +63,7 @@ const users = createRoute({
 });
 const approvals = createRoute({
   getParentRoute: () => app,
-  path: '/admin/approvals',
+  path: '/approvals',
   component: () => (
     <RequirePerm permission="survey.publish.approve">
       <ApprovalsPage />
@@ -72,7 +72,7 @@ const approvals = createRoute({
 });
 const audit = createRoute({
   getParentRoute: () => app,
-  path: '/admin/audit',
+  path: '/audit',
   component: () => (
     <RequirePerm permission="audit.view">
       <AuditPage />
@@ -97,7 +97,7 @@ const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-export const router = createRouter({ routeTree, defaultPreload: 'intent' });
+export const router = createRouter({ routeTree, basepath: '/admin', defaultPreload: 'intent' });
 
 declare module '@tanstack/react-router' {
   interface Register {

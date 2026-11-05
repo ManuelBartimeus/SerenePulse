@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import '@serene/ui/fonts.css';
 @import '@serene/ui/tokens.css';
 @import '@serene/ui/tailwind.css';
 
@@ -9,4 +10,50 @@ body {
   color: var(--color-ink);
   font: var(--weight-regular) var(--text-body) / var(--leading-body) var(--font-sans);
   font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-brand-100);
+  color: var(--color-ink);
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+/* E9 motion: dialog/sheet entrance. Uses opacity and the independent `scale` property so it never
+   fights Tailwind's `translate` centring. Disabled under reduced motion via the duration tokens. */
+@keyframes serene-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes serene-rise {
+  from {
+    opacity: 0;
+    scale: 0.98;
+  }
+}
+.serene-fade {
+  animation: serene-fade var(--duration-fast) var(--ease-enter);
+}
+.serene-rise {
+  animation: serene-rise var(--duration-fast) var(--ease-enter);
+}
+@media (prefers-reduced-motion: reduce) {
+  .serene-fade,
+  .serene-rise {
+    animation: none;
+  }
+}
+
+/* Thin, quiet scrollbars inside the app chrome. */
+.serene-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
 }

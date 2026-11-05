@@ -1,4 +1,5 @@
 import { useInfiniteQuery, useMutation } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
 import { useState } from 'react';
 import { toUserError } from '../lib/errors';
 import { useSession } from '../lib/session';
@@ -43,7 +44,7 @@ function changes(row: AuditRow): string {
 
 /** S-B20 Audit log (M15): append-only, hash-chained; filter, page and verify. */
 export function AuditPage() {
-  const { supabase } = useSession();
+  const { supabase, can } = useSession();
   const [prefix, setPrefix] = useState('');
   const log = useInfiniteQuery({
     queryKey: ['audit', prefix],
@@ -74,9 +75,19 @@ export function AuditPage() {
         title="Audit log"
         subtitle="Every administrative action, in order. Entries can't be edited or deleted."
         actions={
-          <Button variant="secondary" busy={verify.isPending} onClick={() => verify.mutate()}>
-            Verify integrity
-          </Button>
+          <>
+            {can('audit.view_all') && (
+              <Link
+                to="/reports/audit-export"
+                className="inline-flex h-12 items-center rounded-full border border-border-strong bg-white px-5 font-medium hover:bg-surface-muted"
+              >
+                Export CSV
+              </Link>
+            )}
+            <Button variant="secondary" busy={verify.isPending} onClick={() => verify.mutate()}>
+              Verify integrity
+            </Button>
+          </>
         }
       />
       {verify.data && (

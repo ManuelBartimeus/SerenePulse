@@ -31,3 +31,7 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# Assembled by scripts/assemble-site.mjs (landing + portal builds)
+apps/survey-worker/public/*
+!apps/survey-worker/public/.gitkeep

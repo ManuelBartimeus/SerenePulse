@@ -1,8 +1,13 @@
+// The site Worker: one origin for the landing site (/), the staff portal (/admin) and the public
+// survey (/customerfeedback). /healthz stays at the root for the keep-alive and deploy checks.
 import { Hono } from 'hono';
+import { BASE } from '../shared/copy';
 import { loadConfig, type Bindings } from './config';
-import { securityHeaders, type HeaderVariables } from './headers';
+import { areaOf, securityHeaders, type HeaderVariables } from './headers';
 import { unavailablePage } from './pages';
+import { serveLanding, servePortal } from './site';
 import { callRpc } from './supabase';
+import { survey } from './survey';
 
 export const app = new Hono<{ Bindings: Bindings; Variables: HeaderVariables }>();
 
@@ -20,15 +25,19 @@ app.get('/healthz', async (c) => {
   return c.json(body, 200, { 'cache-control': 'no-store' });
 });
 
-// The survey pages arrive in MS-06. Until then every page states the truth rather than
-// showing a form that could lose answers (SPEC failure scenario "service unavailable").
-app.get('*', (c) =>
-  c.html(unavailablePage(c.get('cspNonce')), 503, { 'cache-control': 'no-store', 'retry-after': '3600' }),
-);
+app.route(BASE, survey);
+
+app.get('/admin', (c) => c.redirect('/admin/', 308));
+app.on(['GET', 'HEAD'], '/admin/*', servePortal);
+app.on(['GET', 'HEAD'], '*', serveLanding);
+app.all('*', (c) => c.text('Method not allowed', 405));
 
 app.onError((err, c) => {
   const requestId = crypto.randomUUID();
   console.error(JSON.stringify({ event: 'unhandled_error', requestId, message: err.message }));
+  const path = new URL(c.req.url).pathname;
+  if (c.req.method === 'GET' && areaOf(path) === 'survey' && path !== '/healthz')
+    return c.html(unavailablePage(c.get('cspNonce') ?? ''), 503, { 'cache-control': 'no-store' });
   return c.json(
     { type: 'about:blank', title: 'Service unavailable', status: 503, request_id: requestId },
     503,

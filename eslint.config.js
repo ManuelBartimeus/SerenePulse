@@ -3,7 +3,14 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', '**/.wrangler/**', '**/node_modules/**', 'supabase/functions/**', 'coverage/**'],
+    ignores: [
+      '**/dist/**',
+      'apps/survey-worker/public/**',
+      '**/.wrangler/**',
+      '**/node_modules/**',
+      'supabase/functions/**',
+      'coverage/**',
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.strict,

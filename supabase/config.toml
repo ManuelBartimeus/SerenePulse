@@ -421,3 +421,11 @@ enabled = true
 # before the user has a session, so it can't require a JWT; it authenticates the password itself.
 [functions.auth-sign-in]
 verify_jwt = false
+
+# Called by pg_cron + pg_net with the Vault jobs secret (no user JWT); each function checks the
+# x-jobs-secret header in constant time (generate-report also accepts a user JWT, checked itself).
+[functions.send-email]
+verify_jwt = false
+
+[functions.generate-report]
+verify_jwt = false

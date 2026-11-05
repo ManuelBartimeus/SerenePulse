@@ -1,6 +1,20 @@
 import { describeEnvError, surveyWorkerEnvSchema, type SurveyWorkerEnv } from '@serene/contracts';
 
-export type Bindings = Record<string, string | undefined>;
+/** Workers Rate Limiting binding (D-37 replaced the WAF rule). */
+export interface RateLimiter {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
+/** Workers static-assets binding: landing site at `/`, portal SPA at `/admin`. */
+export interface AssetsFetcher {
+  fetch(input: Request | string, init?: RequestInit): Promise<Response>;
+}
+
+export type Bindings = Record<string, unknown> & {
+  RL_SUBMIT?: RateLimiter;
+  RL_API?: RateLimiter;
+  ASSETS?: AssetsFetcher;
+};
 
 let cached: { source: Bindings; env: SurveyWorkerEnv } | undefined;
 

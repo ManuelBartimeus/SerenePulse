@@ -4,10 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:island": "node scripts/build-island.mjs",
     "dev": "wrangler dev",
     "build": "wrangler deploy --dry-run --outdir dist --env=\"\"",
-    "typecheck": "tsc -p .",
-    "test": "vitest run"
+    "typecheck": "node scripts/build-island.mjs && tsc -p . && tsc -p island",
+    "test": "node scripts/build-island.mjs && vitest run",
+    "e2e": "playwright test -c e2e/playwright.config.ts"
   },
   "dependencies": {
     "@serene/contracts": "workspace:*",

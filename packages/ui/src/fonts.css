@@ -1,0 +1,11 @@
+/* Plus Jakarta Sans (variable, weights 200–800, Latin subset), SIL Open Font License — see
+   assets/fonts/OFL-plus-jakarta-sans.txt. Self-hosted: no third-party font requests. */
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src:
+    url('../assets/fonts/plus-jakarta-sans-latin-wght-v5.woff2') format('woff2-variations'),
+    url('../assets/fonts/plus-jakarta-sans-latin-wght-v5.woff2') format('woff2');
+}

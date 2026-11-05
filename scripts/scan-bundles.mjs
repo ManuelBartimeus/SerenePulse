@@ -4,7 +4,12 @@ import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { root } from './lib/env.mjs';
 
-const dirs = ['apps/portal/dist', 'apps/survey-worker/dist'].map((d) => path.join(root, d));
+const dirs = [
+  'apps/portal/dist',
+  'apps/survey-worker/dist',
+  'apps/landing/dist',
+  'apps/survey-worker/public',
+].map((d) => path.join(root, d));
 const SECRET_PREFIX = /sb_secret_[A-Za-z0-9_-]{10,}/;
 const JWT = /eyJ[A-Za-z0-9_-]{10,}\.(eyJ[A-Za-z0-9_-]{10,})\.[A-Za-z0-9_-]{10,}/g;
 

@@ -1,6 +1,11 @@
 // Shared helpers for Edge Functions: CORS for the portal origins and JSON responses.
 
-const LOCAL_ORIGINS = ['http://127.0.0.1:5173', 'http://localhost:5173'];
+const LOCAL_ORIGINS = [
+  'http://127.0.0.1:5173',
+  'http://localhost:5173',
+  'http://127.0.0.1:8787',
+  'http://localhost:8787',
+];
 
 function allowedOrigins(): string[] {
   const portal = Deno.env.get('PORTAL_URL');

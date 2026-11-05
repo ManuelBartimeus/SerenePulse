@@ -1,4 +1,4 @@
-import { useNavigate, useSearch } from '@tanstack/react-router';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { useState, type FormEvent } from 'react';
 import { toUserError, type UserFacingError } from '../lib/errors';
 import { useSession } from '../lib/session';
@@ -96,12 +96,12 @@ export function SignInPage() {
         <Button type="submit" busy={busy} className="w-full">
           {busy ? 'Signing in…' : 'Sign in'}
         </Button>
-        <a
-          href="/forgot-password"
-          className="text-center text-[14px] font-medium text-brand underline-offset-2 hover:underline"
+        <Link
+          to="/forgot-password"
+          className="-my-1 self-center rounded-xs px-2 py-1 text-center text-[14px] font-medium text-brand underline-offset-4 hover:underline"
         >
           Forgot your password?
-        </a>
+        </Link>
       </form>
     </AuthCard>
   );
@@ -124,9 +124,12 @@ export function SetPasswordPage() {
           Invitation and password-reset links work once and expire after 24 hours. Ask your system
           administrator for a new link.
         </p>
-        <a href="/sign-in" className="mt-6 inline-block font-medium text-brand hover:underline">
+        <Link
+          to="/sign-in"
+          className="mt-6 inline-flex items-center gap-1 font-medium text-brand underline-offset-4 hover:underline"
+        >
           Back to sign in
-        </a>
+        </Link>
       </AuthCard>
     );
   }
@@ -203,9 +206,12 @@ export function ForgotPasswordPage() {
         Ask your system administrator for a password-reset link. They can create one from the Users page; it
         works once and expires in 24 hours.
       </p>
-      <a href="/sign-in" className="mt-6 inline-block font-medium text-brand hover:underline">
+      <Link
+        to="/sign-in"
+        className="mt-6 inline-flex items-center gap-1 font-medium text-brand underline-offset-4 hover:underline"
+      >
         Back to sign in
-      </a>
+      </Link>
     </AuthCard>
   );
 }

@@ -1,0 +1,988 @@
+<!doctype html>
+<html lang="en-GH">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Serene Insurance | Motor, property, marine, travel and business insurance in Ghana</title>
+    <meta
+      name="description"
+      content="Serene Insurance LTD is a licensed general insurer in Ghana. Motor, fire and property, marine, travel, general accident, engineering, workmen's compensation and bonds, served from 13 branches in 7 regions."
+    />
+    <meta name="theme-color" content="#1108bf" />
+    <link
+      rel="preload"
+      href="/fonts/plus-jakarta-sans-latin-wght-v5.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="icon" type="image/png" sizes="64x64" href="{{asset:favicon}}" />
+    <link rel="apple-touch-icon" href="{{asset:touch}}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Serene Insurance" />
+    <meta property="og:title" content="Serene Insurance | Insurance made simple, reliable and affordable" />
+    <meta
+      property="og:description"
+      content="A licensed general insurer in Ghana. Motor, property, marine, travel, engineering, bonds and more, from 13 branches in 7 regions."
+    />
+    <meta property="og:image" content="{{asset:tower800}}" />
+    <meta
+      property="og:image:alt"
+      content="SU Tower in Ridge, Accra, home of the Serene Insurance head office"
+    />
+    <meta property="og:locale" content="en_GH" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link
+      rel="preload"
+      as="image"
+      href="{{asset:tower800}}"
+      imagesrcset="{{asset:tower480}} 480w, {{asset:tower800}} 800w"
+      imagesizes="(min-width: 1000px) 520px, 100vw"
+      fetchpriority="high"
+    />
+    <script>
+      document.documentElement.classList.add('js');
+    </script>
+    <style>
+      {{css}}
+    </style>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="band" aria-hidden="true"></div>
+
+    <svg width="0" height="0" class="sprite" aria-hidden="true" focusable="false">
+      <defs>
+        <symbol id="i-car" viewBox="0 0 24 24">
+          <path
+            d="M5 17h14M3.5 13.5 5.2 8.4A2 2 0 0 1 7.1 7h9.8a2 2 0 0 1 1.9 1.4l1.7 5.1M3.5 13.5V18a1 1 0 0 0 1 1h1.5a1 1 0 0 0 1-1v-1M3.5 13.5h17m0 0V18a1 1 0 0 1-1 1H18a1 1 0 0 1-1-1v-1M7 15.25h.01M17 15.25h.01"
+          />
+        </symbol>
+        <symbol id="i-flame" viewBox="0 0 24 24">
+          <path
+            d="M12 21a6.5 6.5 0 0 0 6.5-6.5c0-3.9-3-6.2-4.4-9.5-.3-.7-1.2-.8-1.6-.2C10.9 7 11.6 9.5 9.6 10.6 8.8 9.8 8.4 8.8 8.3 8c-.1-.6-.9-.8-1.2-.2A9 9 0 0 0 5.5 14.5 6.5 6.5 0 0 0 12 21Z"
+          />
+          <path
+            d="M12 21a2.75 2.75 0 0 1-2.75-2.75c0-1.9 1.6-2.8 2.2-4.4.2-.4.7-.4.9 0 .6 1.6 2.4 2.5 2.4 4.4A2.75 2.75 0 0 1 12 21Z"
+          />
+        </symbol>
+        <symbol id="i-ship" viewBox="0 0 24 24">
+          <path
+            d="M3 19.5c1.5 0 1.5-1 3-1s1.5 1 3 1 1.5-1 3-1 1.5 1 3 1 1.5-1 3-1 1.5 1 3 1M4.5 16 3.5 12h17l-1.5 4M6 12V8.5h8.5V12M9 8.5V5h3"
+          />
+        </symbol>
+        <symbol id="i-plane" viewBox="0 0 24 24">
+          <path
+            d="M10.2 13.8 6 18l-2.5-.5L3 16l4.2-2.2M10.2 13.8l3.6-3.6m-3.6 3.6-3-3M13.8 10.2 18.5 5.5a2.1 2.1 0 0 1 3 3l-4.7 4.7m-3-3 3 3m-3-3L5 7.5 6.8 5.7l9.5 2.8m.5 4.7 2.8 9.5-1.8 1.8-2.7-8.8"
+          />
+        </symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24">
+          <path d="M12 3 4.5 6v5.6c0 4.6 3.1 8.1 7.5 9.4 4.4-1.3 7.5-4.8 7.5-9.4V6L12 3Z" />
+          <path d="m8.75 12 2.25 2.25 4.25-4.5" />
+        </symbol>
+        <symbol id="i-crane" viewBox="0 0 24 24">
+          <path d="M6 21V4.5M6 4.5h13M6 4.5 3 8h3M10 4.5 6 9M17 4.5v4M15 8.5h4v2.5h-4zM3.5 21h7" />
+        </symbol>
+        <symbol id="i-helmet" viewBox="0 0 24 24">
+          <path
+            d="M3 17.5h18M4.5 17.5V15a7.5 7.5 0 0 1 15 0v2.5M10 7.8V5.5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2.3M8 9.5v3M16 9.5v3"
+          />
+        </symbol>
+        <symbol id="i-seal" viewBox="0 0 24 24">
+          <path
+            d="M14 3H6.5A1.5 1.5 0 0 0 5 4.5v15A1.5 1.5 0 0 0 6.5 21H11M14 3l5 5M14 3v5h5m0 0v3M8.5 12.5h5M8.5 16h2.5"
+          />
+          <circle cx="16.5" cy="16.5" r="2.5" />
+          <path d="m15.25 18.75-.75 3 2-1 2 1-.75-3" />
+        </symbol>
+        <symbol id="i-branch" viewBox="0 0 24 24">
+          <path d="M4 21V9.5L12 4l8 5.5V21M4 21h16M9 21v-5.5h6V21M8.5 11h.01M12 11h.01M15.5 11h.01" />
+        </symbol>
+        <symbol id="i-globe" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="8.5" />
+          <path
+            d="M3.5 12h17M12 3.5c2.3 2.4 3.5 5.2 3.5 8.5s-1.2 6.1-3.5 8.5c-2.3-2.4-3.5-5.2-3.5-8.5s1.2-6.1 3.5-8.5Z"
+          />
+        </symbol>
+        <symbol id="i-phone" viewBox="0 0 24 24">
+          <path
+            d="M5.5 3.5h3l1.5 4-2 1.25a11 11 0 0 0 7.25 7.25L16.5 14l4 1.5v3a2 2 0 0 1-2 2A15.5 15.5 0 0 1 3.5 5.5a2 2 0 0 1 2-2Z"
+          />
+        </symbol>
+        <symbol id="i-chat" viewBox="0 0 24 24">
+          <path d="M4 20l1.3-3.9A8.5 8.5 0 1 1 8.4 19L4 20Z" />
+          <path d="M9 10.5h6M9 13.5h3.5" />
+        </symbol>
+        <symbol id="i-mobile" viewBox="0 0 24 24">
+          <rect x="6.5" y="2.75" width="11" height="18.5" rx="2.25" />
+          <path d="M10.75 18h2.5" />
+        </symbol>
+        <symbol id="i-people" viewBox="0 0 24 24">
+          <circle cx="9" cy="8" r="3.25" />
+          <path d="M3 19.5a6 6 0 0 1 12 0M15.5 5a3.25 3.25 0 0 1 0 6.25M17.5 14a6 6 0 0 1 3.5 5.5" />
+        </symbol>
+        <symbol id="i-mail" viewBox="0 0 24 24">
+          <rect x="3.25" y="5.25" width="17.5" height="13.5" rx="2" />
+          <path d="m4 6.5 8 6 8-6" />
+        </symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24">
+          <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z" />
+          <circle cx="12" cy="10" r="2.25" />
+        </symbol>
+        <symbol id="i-clock" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="8.5" />
+          <path d="M12 7.5V12l3 2" />
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" /></symbol>
+        <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-5-5 5 5-5 5" /></symbol>
+        <symbol id="i-external" viewBox="0 0 24 24">
+          <path
+            d="M14 4.5h5.5V10M19.5 4.5 11 13M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10"
+          />
+        </symbol>
+        <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" /></symbol>
+        <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" /></symbol>
+        <symbol id="i-leaf" viewBox="0 0 64 40">
+          <path
+            transform="rotate(-16 29 38)"
+            d="M29 38C22 30 14 22 15 9c.3-4 3-6.5 6-4.5C28 9 31 22 29 38Z"
+            fill="currentColor"
+            stroke="none"
+          />
+          <path
+            transform="rotate(16 35 38)"
+            d="M35 38c7-8 15-16 14-29-.3-4-3-6.5-6-4.5C36 9 33 22 35 38Z"
+            fill="currentColor"
+            stroke="none"
+          />
+        </symbol>
+      </defs>
+    </svg>
+
+    <header class="site-header">
+      <div class="wrap header-row">
+        <a class="brand" href="/" aria-label="Serene Insurance, home">
+          <img src="{{asset:logo}}" alt="Serene Insurance" width="148" height="72" />
+        </a>
+        <nav class="nav" id="site-nav" aria-label="Main">
+          <ul>
+            <li><a href="#products">Products</a></li>
+            <li><a href="#claims">Claims</a></li>
+            <li><a href="#branches">Branches</a></li>
+            <li><a href="#about">About us</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+          <div class="nav-actions">
+            <!-- Source: "BUY A POLICY" link in the sereneinsurance.com header -->
+            <a class="link-quiet" href="https://serene.sibapps.com" rel="noopener">Buy or renew a policy</a>
+            <a class="btn btn-primary btn-sm" href="/customerfeedback">Share your feedback</a>
+          </div>
+        </nav>
+        <button class="menu-btn" type="button" aria-expanded="false" aria-controls="site-nav" hidden>
+          <svg class="ico" aria-hidden="true"><use href="#i-menu" /></svg>
+          <span class="menu-label">Menu</span>
+        </button>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- HERO. Tagline and description: sereneinsurance.com home page and /sections/pages/company-profile -->
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="wrap hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">Licensed general insurer in Ghana</p>
+            <h1 id="hero-title">Insurance made simple, reliable and affordable.</h1>
+            <p class="lede">
+              Serene Insurance brings innovation, speed and agility to insurance across Ghana. We cover
+              vehicles, homes, businesses, cargo, travel and construction projects for individuals and
+              companies.
+            </p>
+            <div class="cta-row">
+              <a class="btn btn-primary" href="/customerfeedback">
+                Share your feedback
+                <svg class="ico" aria-hidden="true"><use href="#i-arrow" /></svg>
+              </a>
+              <a class="btn btn-secondary" href="#products">Our products</a>
+            </div>
+            <!-- Source: phone and WhatsApp from the sereneinsurance.com home page -->
+            <p class="hero-meta">
+              Talk to an adviser: <a href="tel:+233302917444">+233 30 2917 444/6</a>
+              <span aria-hidden="true">·</span>
+              <a href="https://wa.me/233500517114" rel="noopener">WhatsApp</a>
+            </p>
+          </div>
+          <div class="hero-visual">
+            <div class="hero-panel" aria-hidden="true">
+              <svg class="hero-leaf" viewBox="0 0 64 40"><use href="#i-leaf" /></svg>
+            </div>
+            <picture>
+              <img
+                class="hero-photo"
+                src="{{asset:tower800}}"
+                srcset="{{asset:tower480}} 480w, {{asset:tower800}} 800w"
+                sizes="(min-width: 1000px) 520px, 100vw"
+                width="800"
+                height="584"
+                alt="SU Tower on Castle Road, Ridge, Accra, at dusk. Serene Insurance's head office is on the fourth floor."
+                fetchpriority="high"
+                decoding="async"
+              />
+            </picture>
+            <!-- Source: sereneinsurance.com /contacts/branches (Accra Main) -->
+            <div class="float-card float-office">
+              <span class="float-icon"
+                ><svg class="ico" aria-hidden="true"><use href="#i-pin" /></svg
+              ></span>
+              <span>
+                <strong>Head office</strong>
+                4th Floor, SU Tower, Ridge, Accra
+              </span>
+            </div>
+            <div class="float-card float-branches">
+              <strong class="num">13</strong>
+              <span>branches in 7 regions</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Source: sereneinsurance.com /sections/pages/who-we-are ("Strong Reinsurance Companies Backing our Business Activities") -->
+      <section class="partners" aria-labelledby="partners-title">
+        <div class="wrap">
+          <h2 id="partners-title" class="partners-title">Backed by strong reinsurance partners</h2>
+          <ul class="partner-list">
+            <li>Ghana Re</li>
+            <li>African Re</li>
+            <li>WAICA Re</li>
+            <li>Mainstream Re</li>
+            <li>GN Re</li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- PRODUCTS. Descriptions condensed from sereneinsurance.com /sections/all_products and /sections/product_details/{1,2,4,5,7,8,10,12} -->
+      <section id="products" class="section" aria-labelledby="products-title">
+        <div class="wrap">
+          <div class="panel panel-subtle">
+            <div class="section-head">
+              <div>
+                <p class="eyebrow">Products</p>
+                <h2 id="products-title">Cover for the things you can’t afford to lose.</h2>
+              </div>
+              <p class="section-intro">
+                Eight lines of general insurance for individuals and businesses. Ask any branch which cover
+                fits you.
+              </p>
+            </div>
+            <ul class="product-grid">
+              <li class="product">
+                <span class="tile"
+                  ><svg class="ico" aria-hidden="true"><use href="#i-car" /></svg
+                ></span>
+                <h3>Motor insurance</h3>
+                <p>
+                  Third Party Only, Third Party Fire &amp; Theft, or Comprehensive cover, with an ECOWAS Brown
+                  Card for driving in the West African sub-region.
+                </p>
+                <a
+                  class="more"
+                  href="https://www.sereneinsurance.com/sections/product_details/1"
+                  rel="noopener"
+                  >Cover details<span class="sr-only"> for motor insurance</span>
+                  <svg class="ico" aria-hidden="true"><use href="#i-arrow" /></svg
+                ></a>
+              </li>
+              <li class="product">
+                <span class="tile"
+                  ><svg class="ico" aria-hidden="true"><use href="#i-flame" /></svg
+                ></span>
+                <h3>Fire &amp; property insurance</h3>
+                <p>
+                  Protects buildings, contents, machinery and stock against fire, lightning and explosion, and
+                  can be extended to flood, storm, riot, burst pipes and more.
+                </p>
+                <a
+                  class="more"
+                  href="https://www.sereneinsurance.com/sections/product_details/2"
+                  rel="noopener"
+                  >Cover details<span class="sr-only"> for fire and property insurance</span>
+                  <svg class="ico" aria-hidden="true"><use href="#i-arrow" /></svg
+                ></a>
+              </li>
+              <li class="product">
+                <span class="tile"
+                  ><svg class="ico" aria-hidden="true"><use href="#i-ship" /></svg
+                ></span>
+                <h3>Marine insurance</h3>
+                <p>
+                  Keeps your imports and exports safe, including air cargo and other freight, under single or
+                  open covers. Marine hull cover is available for vessels.
+                </p>
+                <a
+                  class="more"
+                  href="https://www.sereneinsurance.com/sections/product_details/10"
+                  rel="noopener"
+                  >Cover details<span class="sr-only"> for marine insurance</span>
+                  <svg class="ico" aria-hidden="true"><use href="#i-arrow" /></svg
+                ></a>
+              </li>
+              <li class="product">
+                <span class="tile"
+                  ><svg class="ico" aria-hidden="true"><use href="#i-plane" /></svg
+                ></span>
+                <h3>Travel insurance</h3>
+                <p>
+                  Covers medical expenses, hospitalisation, repatriation to Ghana and lost or delayed baggage
+                  when you travel.
+                </p>
+                <a
+                  class="more"
+                  href="https://www.sereneinsurance.com/sections/product_details/12"
+                  rel="noopener"
+                  >Cover details<span class="sr-only"> for travel insurance</span>
+                  <svg class="ico" aria-hidden="true"><use href="#i-arrow" /></svg
+                ></a>
+              </li>
+              <li class="product">
+                <span class="tile"
+                  ><svg class="ico" aria-hidden="true"><use href="#i-shield" /></svg
+                ></span>
+                <h3>General accident insurance</h3>
+                <p>
+                  Money, goods-in-transit, burglary, fidelity guarantee, hoteliers, bankers’ indemnity and
+                  cyber crime policies for your business.
+                </p>
+                <a
+                  class="more"
+                  href="https://www.sereneinsurance.com/sections/product_details/4"
+                  rel="noopener"
+                  >Cover details<span class="sr-only"> for general accident insurance</span>
+                  <svg class="ico" aria-hidden="true"><use href="#i-arrow" /></svg
+                ></a>
+              </li>
+              <li class="product">
+                <span class="tile"
+                  ><svg class="ico" aria-hidden="true"><use href="#i-crane" /></svg
+                ></span>
+                <h3>Engineering insurance</h3>
+                <p>
+                  Contractors’ all risks, erection all risks and electronic equipment cover for construction
+                  projects, installations and machinery.
+                </p>
+                <a
+                  class="more"
+                  href="https://www.sereneinsurance.com/sections/product_details/5"
+                  rel="noopener"
+                  >Cover details<span class="sr-only"> for engineering insurance</span>
+                  <svg class="ico" aria-hidden="true"><use href="#i-arrow" /></svg
+                ></a>
+              </li>
+              <li class="product">
+                <span class="tile"
+                  ><svg class="ico" aria-hidden="true"><use href="#i-helmet" /></svg
+                ></span>
+                <h3>Workmen’s compensation</h3>
+                <p>
+                  Covers an employer’s legal liability to employees for injury or disease at work, under the
+                  Workmen’s Compensation Law of 1987.
+                </p>
+                <a
+                  class="more"
+                  href="https://www.sereneinsurance.com/sections/product_details/7"
+                  rel="noopener"
+                  >Cover details<span class="sr-only"> for workmen’s compensation</span>
+                  <svg class="ico" aria-hidden="true"><use href="#i-arrow" /></svg
+                ></a>
+              </li>
+              <li class="product">
+                <span class="tile"
+                  ><svg class="ico" aria-hidden="true"><use href="#i-seal" /></svg
+                ></span>
+                <h3>Bonds</h3>
+                <p>
+                  Bid, performance and advance mobilisation bonds for contractors, and transit, warehouse,
+                  export and re-export bonds for importers.
+                </p>
+                <a
+                  class="more"
+                  href="https://www.sereneinsurance.com/sections/product_details/8"
+                  rel="noopener"
+                  >Cover details<span class="sr-only"> for bonds</span>
+                  <svg class="ico" aria-hidden="true"><use href="#i-arrow" /></svg
+                ></a>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- Facts band. Branch and region counts: sereneinsurance.com /contacts/branches; dates: /sections/pages/company-profile -->
+      <section class="facts" aria-label="Serene Insurance at a glance">
+        <div class="wrap">
+          <dl class="fact-grid">
+            <div>
+              <dt>Branches</dt>
+              <dd>13</dd>
+            </div>
+            <div>
+              <dt>Regions served</dt>
+              <dd>7</dd>
+            </div>
+            <div>
+              <dt>Lines of insurance</dt>
+              <dd>8</dd>
+            </div>
+            <div>
+              <dt>In full operation since</dt>
+              <dd>2018</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- CLAIMS. Source: sereneinsurance.com /sections/pages/who-we-are ("Claim Principle") and /sections/pages/claims -->
+      <section id="claims" class="section" aria-labelledby="claims-title">
+        <div class="wrap feature">
+          <div class="feature-copy">
+            <p class="eyebrow">Claims</p>
+            <h2 id="claims-title">A claim shouldn’t keep you waiting.</h2>
+            <p>
+              Our claim principle is simple: no outstanding claim should stay in our books more than one week
+              after we receive your last document.
+            </p>
+            <p>
+              Small motor claims, such as dents, scratches or a broken windscreen, should be settled within a
+              day of you providing the estimate.
+            </p>
+            <a
+              class="more more-lg"
+              href="https://www.sereneinsurance.com/sections/pages/claims"
+              rel="noopener"
+            >
+              Documents you need for each type of claim
+              <svg class="ico" aria-hidden="true"><use href="#i-arrow" /></svg>
+            </a>
+          </div>
+          <div class="feature-visual">
+            <div class="mock">
+              <div class="mock-head">
+                <span class="mock-kicker">Motor claim · partial loss</span>
+                <span class="mock-title">What to bring</span>
+              </div>
+              <ul class="checklist">
+                <li>
+                  <svg class="ico" aria-hidden="true"><use href="#i-check" /></svg>Completed and signed claim
+                  form
+                </li>
+                <li>
+                  <svg class="ico" aria-hidden="true"><use href="#i-check" /></svg>Repair estimate from a
+                  garage
+                </li>
+                <li>
+                  <svg class="ico" aria-hidden="true"><use href="#i-check" /></svg>Photographs of the damaged
+                  vehicle
+                </li>
+                <li>
+                  <svg class="ico" aria-hidden="true"><use href="#i-check" /></svg>Towage receipt, if you
+                  needed one
+                </li>
+                <li>
+                  <svg class="ico" aria-hidden="true"><use href="#i-check" /></svg>Driver’s licence
+                </li>
+              </ul>
+              <p class="mock-foot">Fire, accident and marine claims have their own lists.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHANNELS. Source: SPEC PROJECT CONFIGURATION (channels); website link and WhatsApp from the sereneinsurance.com home page -->
+      <section id="channels" class="section section-tight" aria-labelledby="channels-title">
+        <div class="wrap feature feature-reverse">
+          <div class="feature-copy">
+            <p class="eyebrow">How we serve you</p>
+            <h2 id="channels-title">Buy, renew and get help the way that suits you.</h2>
+            <p>
+              Walk into any of our branches, buy or renew online, call us, message us on WhatsApp, use the
+              Serene mobile app, or work through your agent or broker.
+            </p>
+          </div>
+          <div class="feature-visual">
+            <ul class="channel-list">
+              <li>
+                <span class="tile"
+                  ><svg class="ico" aria-hidden="true"><use href="#i-branch" /></svg
+                ></span>
+                <span><strong>Branches</strong>13 offices across Ghana</span>
+              </li>
+              <li>
+                <span class="tile"
+                  ><svg class="ico" aria-hidden="true"><use href="#i-globe" /></svg
+                ></span>
+                <span
+                  ><strong>Website</strong
+                  ><a href="https://serene.sibapps.com" rel="noopener">Buy or renew a policy online</a></span
+                >
+              </li>
+              <li>
+                <span class="tile"
+                  ><svg class="ico" aria-hidden="true"><use href="#i-phone" /></svg
+                ></span>
+                <span><strong>Phone</strong><a href="tel:+233302917444">+233 30 2917 444/6</a></span>
+              </li>
+              <li>
+                <span class="tile"
+                  ><svg class="ico" aria-hidden="true"><use href="#i-chat" /></svg
+                ></span>
+                <span
+                  ><strong>WhatsApp</strong
+                  ><a href="https://wa.me/233500517114" rel="noopener">Message an adviser</a></span
+                >
+              </li>
+              <li>
+                <span class="tile"
+                  ><svg class="ico" aria-hidden="true"><use href="#i-mobile" /></svg
+                ></span>
+                <span><strong>Mobile app</strong>Get a policy from your phone</span>
+              </li>
+              <li>
+                <span class="tile"
+                  ><svg class="ico" aria-hidden="true"><use href="#i-people" /></svg
+                ></span>
+                <span><strong>Agents &amp; brokers</strong>Advice from someone you already trust</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- BRANCHES. Source: sereneinsurance.com /contacts/branches (names, addresses, phones and emails exactly as published).
+           Note for Serene: Kumasi North (Suame) and Techiman are both listed with 0509415414 on the published page; please confirm. -->
+      <section id="branches" class="section" aria-labelledby="branches-title">
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Branch network</p>
+              <h2 id="branches-title">13 branches across 7 regions.</h2>
+            </div>
+            <p class="section-intro">
+              Visit or call your nearest branch. Every branch can help with new cover, renewals and claims.
+            </p>
+          </div>
+          <div class="region-filter" role="group" aria-label="Show branches by region" hidden>
+            <button type="button" aria-pressed="true" data-region="all">All regions</button>
+            <button type="button" aria-pressed="false" data-region="greater-accra">Greater Accra</button>
+            <button type="button" aria-pressed="false" data-region="ashanti">Ashanti</button>
+            <button type="button" aria-pressed="false" data-region="central">Central</button>
+            <button type="button" aria-pressed="false" data-region="western">Western</button>
+            <button type="button" aria-pressed="false" data-region="volta">Volta</button>
+            <button type="button" aria-pressed="false" data-region="northern">Northern</button>
+            <button type="button" aria-pressed="false" data-region="bono-east">Bono East</button>
+          </div>
+          <p class="sr-only" id="branch-count" aria-live="polite"></p>
+          <div class="regions">
+            <section class="region" data-region="greater-accra" aria-labelledby="r-ga">
+              <h3 id="r-ga" class="region-title">Greater Accra <span>6 branches</span></h3>
+              <ul class="branch-grid">
+                <li class="branch branch-hq">
+                  <div class="branch-top">
+                    <h4>Accra Main</h4>
+                    <span class="badge-hq">Head office</span>
+                  </div>
+                  <p class="addr">4th Floor, SU Tower, No. 18 Castle Road, Ridge, Accra</p>
+                  <p class="contact-line"><a href="tel:+233302917444">0302 917444/6</a></p>
+                  <p class="contact-line">
+                    <a href="mailto:info@sereneinsurance.com">info@sereneinsurance.com</a>
+                  </p>
+                </li>
+                <li class="branch">
+                  <div class="branch-top"><h4>Accra East</h4></div>
+                  <p class="addr">Ground Floor, Amazing Grace Plaza, Adenta Barrier, Adenta</p>
+                  <p class="contact-line"><a href="tel:+233501337116">050 133 7116</a></p>
+                  <p class="contact-line">
+                    <a href="mailto:accraeast@sereneinsurance.com">accraeast@sereneinsurance.com</a>
+                  </p>
+                </li>
+                <li class="branch">
+                  <div class="branch-top"><h4>Accra West</h4></div>
+                  <p class="addr">Club Corner Junction, Mataheko. GA-362-9318</p>
+                  <p class="contact-line"><a href="tel:+233501337117">050 133 7117</a></p>
+                  <p class="contact-line">
+                    <a href="mailto:accrawest@sereneinsurance.com">accrawest@sereneinsurance.com</a>
+                  </p>
+                </li>
+                <li class="branch">
+                  <div class="branch-top"><h4>Lapaz</h4></div>
+                  <p class="addr">1st Floor, Torch Plaza, on the N1 Highway, opposite ADB Bank</p>
+                  <p class="contact-line"><a href="tel:+233501337120">050 133 7120</a></p>
+                  <p class="contact-line">
+                    <a href="mailto:lapazstaff@sereneinsurance.com">lapazstaff@sereneinsurance.com</a>
+                  </p>
+                </li>
+                <li class="branch">
+                  <div class="branch-top"><h4>Tema Community 11</h4></div>
+                  <p class="addr">Vertical Plaza, Community 7/8 Traffic Light, Tema</p>
+                  <p class="contact-line"><a href="tel:+233501632251">050 163 2251</a></p>
+                  <p class="contact-line">
+                    <a href="mailto:community11@sereneinsurance.com">community11@sereneinsurance.com</a>
+                  </p>
+                </li>
+                <li class="branch">
+                  <div class="branch-top"><h4>Tema Community 25</h4></div>
+                  <p class="addr">
+                    First Floor, First Sky Towers, Community 25 Junction (after Kpone Barrier), Tema
+                  </p>
+                  <p class="contact-line"><a href="tel:+233501337133">050 133 7133</a></p>
+                  <p class="contact-line">
+                    <a href="mailto:community25@sereneinsurance.com">community25@sereneinsurance.com</a>
+                  </p>
+                </li>
+              </ul>
+            </section>
+            <section class="region" data-region="ashanti" aria-labelledby="r-as">
+              <h3 id="r-as" class="region-title">Ashanti <span>2 branches</span></h3>
+              <ul class="branch-grid">
+                <li class="branch">
+                  <div class="branch-top"><h4>Kumasi Main</h4></div>
+                  <p class="addr">2nd Floor, Sonar Centre, Ahodwo Roundabout, Ahodwo</p>
+                  <p class="contact-line"><a href="tel:+233501415550">050 141 5550</a></p>
+                  <p class="contact-line">
+                    <a href="mailto:kumasi@sereneinsurance.com">kumasi@sereneinsurance.com</a>
+                  </p>
+                </li>
+                <li class="branch">
+                  <div class="branch-top"><h4>Kumasi North (Suame)</h4></div>
+                  <p class="addr">Matthias Junction, adjacent to the Suame SSNIT office</p>
+                  <p class="contact-line"><a href="tel:+233509415414">050 941 5414</a></p>
+                  <p class="contact-line">
+                    <a href="mailto:suame@sereneinsurance.com">suame@sereneinsurance.com</a>
+                  </p>
+                </li>
+              </ul>
+            </section>
+            <section class="region" data-region="central" aria-labelledby="r-ce">
+              <h3 id="r-ce" class="region-title">Central <span>1 branch</span></h3>
+              <ul class="branch-grid">
+                <li class="branch">
+                  <div class="branch-top"><h4>Kasoa</h4></div>
+                  <p class="addr">
+                    Opposite UMB Centre for Businesses, on the main Kasoa–Cape Coast road near the first
+                    overhead bridge
+                  </p>
+                  <p class="contact-line"><a href="tel:+233501349325">050 134 9325</a></p>
+                  <p class="contact-line">
+                    <a href="mailto:kasoa@sereneinsurance.com">kasoa@sereneinsurance.com</a>
+                  </p>
+                </li>
+              </ul>
+            </section>
+            <section class="region" data-region="western" aria-labelledby="r-we">
+              <h3 id="r-we" class="region-title">Western <span>1 branch</span></h3>
+              <ul class="branch-grid">
+                <li class="branch">
+                  <div class="branch-top"><h4>Takoradi</h4></div>
+                  <p class="addr">Tinadeg Complex (His Majesty Place), Axim Road, Takoradi</p>
+                  <p class="contact-line"><a href="tel:+233509685586">050 968 5586</a></p>
+                  <p class="contact-line">
+                    <a href="mailto:takoradi@sereneinsurance.com">takoradi@sereneinsurance.com</a>
+                  </p>
+                </li>
+              </ul>
+            </section>
+            <section class="region" data-region="volta" aria-labelledby="r-vo">
+              <h3 id="r-vo" class="region-title">Volta <span>1 branch</span></h3>
+              <ul class="branch-grid">
+                <li class="branch">
+                  <div class="branch-top"><h4>Ho</h4></div>
+                  <p class="addr">
+                    First Floor, Elorm Plaza, Togbe Afede High Street, opposite Elorm EP Church, Bankoe, Ho
+                  </p>
+                  <p class="contact-line"><a href="tel:+233501415552">050 141 5552</a></p>
+                  <p class="contact-line">
+                    <a href="mailto:hostaff@sereneinsurance.com">hostaff@sereneinsurance.com</a>
+                  </p>
+                </li>
+              </ul>
+            </section>
+            <section class="region" data-region="northern" aria-labelledby="r-no">
+              <h3 id="r-no" class="region-title">Northern <span>1 branch</span></h3>
+              <ul class="branch-grid">
+                <li class="branch">
+                  <div class="branch-top"><h4>Tamale</h4></div>
+                  <p class="addr">1st Floor, Fuzzy Plaza, West Hospital Road, Tamale</p>
+                  <p class="contact-line"><a href="tel:+233509437266">050 943 7266</a></p>
+                  <p class="contact-line">
+                    <a href="mailto:tamale@sereneinsurance.com">tamale@sereneinsurance.com</a>
+                  </p>
+                </li>
+              </ul>
+            </section>
+            <section class="region" data-region="bono-east" aria-labelledby="r-be">
+              <h3 id="r-be" class="region-title">Bono East <span>1 branch</span></h3>
+              <ul class="branch-grid">
+                <li class="branch">
+                  <div class="branch-top"><h4>Techiman</h4></div>
+                  <p class="addr">A1 Nana Dwamena Street, Techiman</p>
+                  <p class="contact-line"><a href="tel:+233509415414">050 941 5414</a></p>
+                  <p class="contact-line">
+                    <a href="mailto:techiman@sereneinsurance.com">techiman@sereneinsurance.com</a>
+                  </p>
+                </li>
+              </ul>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- FEEDBACK BAND (links to the customer feedback form on this origin) -->
+      <section class="section section-tight" aria-labelledby="feedback-title">
+        <div class="wrap">
+          <div class="panel panel-brand feedback">
+            <div class="feedback-copy">
+              <h2 id="feedback-title">Tell us how we did.</h2>
+              <p>
+                Bought a policy, renewed, made a claim or visited a branch recently? Your answers go straight
+                to the branch and team that served you, so we can fix what went wrong and keep doing what went
+                right.
+              </p>
+              <div class="cta-row">
+                <a class="btn btn-on-brand" href="/customerfeedback">
+                  Share your feedback
+                  <svg class="ico" aria-hidden="true"><use href="#i-arrow" /></svg>
+                </a>
+                <a class="link-on-brand" href="/customerfeedback/privacy">How we use your answers</a>
+              </div>
+            </div>
+            <svg class="feedback-art" viewBox="0 0 320 240" aria-hidden="true" focusable="false">
+              <circle
+                cx="232"
+                cy="120"
+                r="96"
+                fill="none"
+                stroke="rgb(255 255 255 / 0.18)"
+                stroke-width="1.5"
+              />
+              <circle
+                cx="232"
+                cy="120"
+                r="140"
+                fill="none"
+                stroke="rgb(255 255 255 / 0.1)"
+                stroke-width="1.5"
+              />
+              <use href="#i-leaf" x="168" y="72" width="128" height="80" class="leaf-accent" />
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- ABOUT. Source: sereneinsurance.com /sections/pages/company-profile and /sections/pages/who-we-are.
+           Data Protection Commission registration: SPEC PROJECT CONFIGURATION [D-03]. -->
+      <section id="about" class="section" aria-labelledby="about-title">
+        <div class="wrap">
+          <div class="about-grid">
+            <div class="about-copy">
+              <p class="eyebrow">About us</p>
+              <h2 id="about-title">The new face of insurance.</h2>
+              <p>
+                Serene Insurance Company Limited was incorporated on 21 July 2016 and is a member of the First
+                Sky Group. We received our commencement certificate on 4 April 2018 and started full
+                operations in September 2018.
+              </p>
+              <p>
+                We are licensed by the National Insurance Commission to carry out general (non-life) insurance
+                business in Ghana, and we are capitalised above the Commission’s regulatory minimum. A
+                professional Board of Directors oversees our operations.
+              </p>
+              <blockquote class="vision">
+                <p>
+                  “Our ambition is to be the leading model for delivering value all the time in the insurance
+                  industry.”
+                </p>
+                <footer>Our vision</footer>
+              </blockquote>
+            </div>
+            <div class="about-facts">
+              <dl class="fact-list">
+                <div>
+                  <dt>Regulator</dt>
+                  <dd>
+                    National Insurance Commission (NIC), licensed for general (non-life) insurance business
+                  </dd>
+                </div>
+                <div>
+                  <dt>Data protection</dt>
+                  <dd>
+                    Registered with the Data Protection Commission under the Data Protection Act, 2012 (Act
+                    843)
+                  </dd>
+                </div>
+                <div>
+                  <dt>Group</dt>
+                  <dd>Member of the First Sky Group</dd>
+                </div>
+                <div>
+                  <dt>Head office</dt>
+                  <dd>4th Floor, SU Tower, No. 18 Castle Road, Ridge, Accra</dd>
+                </div>
+                <div>
+                  <dt>Core values</dt>
+                  <dd>
+                    <ul class="values">
+                      <li>Teamwork</li>
+                      <li>Integrity</li>
+                      <li>Customer focus</li>
+                    </ul>
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+          <!-- Image source: sereneinsurance.com home page carousel (alt "the new team") -->
+          <figure class="team">
+            <picture>
+              <img
+                src="{{asset:team1280}}"
+                srcset="{{asset:team720}} 720w, {{asset:team1280}} 1280w"
+                sizes="(min-width: 1280px) 1200px, 100vw"
+                width="1280"
+                height="523"
+                loading="lazy"
+                decoding="async"
+                alt="Members of the Serene Insurance team standing together in front of a Serene Insurance backdrop."
+              />
+            </picture>
+            <figcaption>The Serene Insurance team.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- CONTACT. Source: sereneinsurance.com /contacts ("The Office", "Business Hours") and home page footer.
+           Note for Serene: the site footer shows info@sereneinsurance.com.gh, while /contacts and /contacts/branches
+           show info@sereneinsurance.com. The latter is used here; please confirm the preferred address. -->
+      <section id="contact" class="section section-last" aria-labelledby="contact-title">
+        <div class="wrap">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow">Contact</p>
+              <h2 id="contact-title">Talk to us.</h2>
+            </div>
+            <p class="section-intro">Visit or call your nearest branch, or reach the head office directly.</p>
+          </div>
+          <ul class="contact-grid">
+            <li>
+              <span class="tile"
+                ><svg class="ico" aria-hidden="true"><use href="#i-pin" /></svg
+              ></span>
+              <h3>Head office</h3>
+              <p>4th Floor, SU Tower<br />No. 18 Castle Road, Ridge, Accra</p>
+            </li>
+            <li>
+              <span class="tile"
+                ><svg class="ico" aria-hidden="true"><use href="#i-phone" /></svg
+              ></span>
+              <h3>Phone</h3>
+              <p><a href="tel:+233302917444">+233 30 2917 444/6</a></p>
+            </li>
+            <li>
+              <span class="tile"
+                ><svg class="ico" aria-hidden="true"><use href="#i-mail" /></svg
+              ></span>
+              <h3>Email</h3>
+              <p><a href="mailto:info@sereneinsurance.com">info@sereneinsurance.com</a></p>
+            </li>
+            <li>
+              <span class="tile"
+                ><svg class="ico" aria-hidden="true"><use href="#i-clock" /></svg
+              ></span>
+              <h3>Office hours</h3>
+              <p>Monday to Friday, 9am to 5pm<br />Saturday, 9am to 2pm<br />Sunday, closed</p>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <img src="{{asset:logo}}" alt="Serene Insurance" width="124" height="60" loading="lazy" />
+            <!-- Source: sereneinsurance.com footer statement -->
+            <p>
+              Redefining cover with speed, reliability and care, with innovative insurance solutions
+              nationwide.
+            </p>
+          </div>
+          <nav class="footer-cols" aria-label="Footer">
+            <div>
+              <h2>Products</h2>
+              <ul>
+                <li>
+                  <a href="https://www.sereneinsurance.com/sections/product_details/1" rel="noopener"
+                    >Motor insurance</a
+                  >
+                </li>
+                <li>
+                  <a href="https://www.sereneinsurance.com/sections/product_details/2" rel="noopener"
+                    >Fire &amp; property insurance</a
+                  >
+                </li>
+                <li>
+                  <a href="https://www.sereneinsurance.com/sections/product_details/12" rel="noopener"
+                    >Travel insurance</a
+                  >
+                </li>
+                <li>
+                  <a href="https://www.sereneinsurance.com/sections/all_products" rel="noopener"
+                    >All products</a
+                  >
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h2>Help</h2>
+              <ul>
+                <li>
+                  <a href="https://www.sereneinsurance.com/sections/pages/claims" rel="noopener"
+                    >Making a claim</a
+                  >
+                </li>
+                <li><a href="https://serene.sibapps.com" rel="noopener">Buy or renew a policy</a></li>
+                <li><a href="#branches">Find a branch</a></li>
+                <li><a href="https://www.sereneinsurance.com/sections/faqs" rel="noopener">FAQs</a></li>
+              </ul>
+            </div>
+            <div>
+              <h2>Company</h2>
+              <ul>
+                <li><a href="#about">About us</a></li>
+                <li>
+                  <a href="https://www.sereneinsurance.com/sections/pages/who-we-are" rel="noopener"
+                    >Who we are</a
+                  >
+                </li>
+                <li><a href="#contact">Contact</a></li>
+                <li><a href="/customerfeedback">Share your feedback</a></li>
+              </ul>
+            </div>
+          </nav>
+        </div>
+        <div class="footer-bottom">
+          <p>© {{year}} Serene Insurance LTD. Licensed by the National Insurance Commission.</p>
+          <ul>
+            <li><a href="/customerfeedback/privacy">Privacy notice</a></li>
+            <li><a class="staff" href="/admin">Staff sign-in</a></li>
+          </ul>
+        </div>
+      </div>
+    </footer>
+    <script>
+      {
+        {
+          js;
+        }
+      }
+    </script>
+  </body>
+</html>

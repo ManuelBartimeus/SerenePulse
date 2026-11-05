@@ -6,6 +6,7 @@
   "exports": {
     "./tokens.css": "./src/tokens.css",
     "./tailwind.css": "./src/tailwind.css",
+    "./fonts.css": "./src/fonts.css",
     "./assets/*": "./assets/*"
   }
 }

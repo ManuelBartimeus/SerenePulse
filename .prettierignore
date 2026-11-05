@@ -3,3 +3,5 @@ docs/
 supabase/migrations/
 assets/
 *.md
+apps/survey-worker/public/
+apps/survey-worker/src/landing-csp.gen.ts

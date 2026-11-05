@@ -27,18 +27,23 @@
   --color-info: #0b5cad;
   --color-info-bg: #e6f0fa;
   --color-border: #d3d3d3;
+  --color-border-subtle: #e7e7e9; /* card and divider hairlines (decorative, never an input boundary) */
   --color-border-strong: #8a8a8a;
   --color-focus-ring: #1108bf;
   --color-scrim: rgb(17 17 17 / 0.48);
+  --color-brand-100: #dcdaf8; /* hover on brand-50 surfaces */
+  --color-ink-hover: #2b2b2b;
 
   /* E2 data-viz fixed meanings */
   --color-nps-detractor: var(--color-danger);
   --color-nps-passive: #8a8a8a;
   --color-nps-promoter: var(--color-success);
 
-  /* E3 typography. The survey uses the system stack only (A-148). */
-  --font-system: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-sans: 'Inter', var(--font-system);
+  /* E3 typography: Plus Jakarta Sans (self-hosted, font-display swap so first paint never waits on it; user direction 2026-11-05), system stack as fallback. */
+  --font-system:
+    system-ui, -apple-system, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-sans: 'Plus Jakarta Sans', var(--font-system);
   --text-display: 36px;
   --leading-display: 44px;
   --text-display-sm: 28px;
@@ -56,6 +61,7 @@
   --text-caption: 12px;
   --leading-caption: 16px;
   --tracking-display: -1px;
+  --tracking-tight: -0.02em;
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
@@ -83,18 +89,26 @@
   /* Elevation: only things that float (DS §7) */
   --shadow-float: 0 10px 30px 0 rgb(0 0 0 / 0.12);
   --shadow-float-strong: 0 10px 30px 0 rgb(0 0 0 / 0.16);
+  /* Hairline lift for resting surfaces that sit on the subtle app background (cards, sidebar). */
+  --shadow-xs: 0 1px 2px 0 rgb(17 17 17 / 0.04);
+  --shadow-sm: 0 1px 2px 0 rgb(17 17 17 / 0.05), 0 1px 1px 0 rgb(17 17 17 / 0.03);
 
   /* E9 motion */
   --duration-select: 120ms;
   --duration-fast: 200ms;
   --duration-page: 240ms;
   --ease-enter: cubic-bezier(0.2, 0, 0, 1);
+  --duration-press: 120ms;
 
   /* Controls (E4) */
   --control-h: 48px;
   --control-h-survey: 56px;
   --target-min: 44px;
   --target-min-survey: 48px;
+
+  /* App shell (E7) */
+  --shell-sidebar-w: 264px;
+  --shell-header-h: 64px;
 }
 
 @media (prefers-reduced-motion: reduce) {

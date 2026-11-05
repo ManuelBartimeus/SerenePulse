@@ -1,10 +1,12 @@
-# Survey Worker. Hosted on Cloudflare's workers.dev subdomain (D-37):
-#   staging     https://serene-pulse-survey-staging.<subdomain>.workers.dev
-#   production  https://serene-pulse-survey.<subdomain>.workers.dev
+# Site Worker: one origin for the landing site (/), the staff portal (/admin) and the customer
+# survey (/customerfeedback). Hosted on Cloudflare's workers.dev subdomain (D-37):
+#   staging     https://serene-staging.<subdomain>.workers.dev
+#   production  https://serene.<subdomain>.workers.dev
+# public/ is assembled by `node scripts/assemble-site.mjs` (landing at /, portal at /admin).
 # Secrets are NOT here: `node scripts/sync-secrets.mjs worker <env>` loads them
-# (SUPABASE_SERVICE_ROLE_KEY, SURVEY_HMAC_KEY, TURNSTILE_SECRET_KEY, SENTRY_DSN).
+# (SUPABASE_SERVICE_ROLE_KEY, SURVEY_HMAC_KEY, TURNSTILE_SECRET_KEY).
 # Local development reads .dev.vars (git-ignored), from `node scripts/sync-secrets.mjs local`.
-name = "serene-pulse-survey-local"
+name = "serene-local"
 main = "src/index.ts"
 compatibility_date = "2026-10-01"
 workers_dev = false
@@ -12,20 +14,58 @@ workers_dev = false
 [observability]
 enabled = true
 
+# The survey island and logo are bundled into dist/island/assets.gen.ts before every dev/deploy.
+[build]
+command = "node scripts/build-island.mjs"
+watch_dir = ["island", "shared", "src"]
+
+# Static files: public/ = landing dist at the root + portal dist in public/admin/ (assembled by the
+# build). The Worker runs first so it can route /customerfeedback, set per-area CSP and SPA fallback.
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+html_handling = "auto-trailing-slash"
+not_found_handling = "none"
+
 [vars]
 APP_ENV = "local"
 
+# Rate limiting (D-37 replaced the WAF rule, UG-12). Keyed per client IP. Periods may only be 10 s
+# or 60 s. RL_SUBMIT: 300 per 10 s lets a sustained 20 submits/s from one carrier IP through
+# (200 per window) and blocks 100/s within 3 s. RL_API covers drafts, telemetry and session starts
+# (≈ 12 requests per customer), sized so 20 customers/s on one IP still pass.
+[[ratelimits]]
+name = "RL_SUBMIT"
+namespace_id = "1101"
+simple = { limit = 300, period = 10 }
+
+[[ratelimits]]
+name = "RL_API"
+namespace_id = "1102"
+simple = { limit = 3000, period = 10 }
+
 # Daily keep-alive at 06:00 Africa/Accra (UTC+0): stops the free Supabase project pausing.
 [env.staging]
-name = "serene-pulse-survey-staging"
+name = "serene-staging"
 workers_dev = true
 preview_urls = false
 triggers = { crons = ["0 6 * * *"] }
 vars = { APP_ENV = "staging" }
+assets = { directory = "./public", binding = "ASSETS", run_worker_first = true, html_handling = "auto-trailing-slash", not_found_handling = "none" }
+ratelimits = [
+  { name = "RL_SUBMIT", namespace_id = "1101", simple = { limit = 300, period = 10 } },
+  { name = "RL_API", namespace_id = "1102", simple = { limit = 3000, period = 10 } },
+]
 
 [env.production]
-name = "serene-pulse-survey"
+name = "serene"
 workers_dev = true
 preview_urls = false
 triggers = { crons = ["0 6 * * *"] }
 vars = { APP_ENV = "production" }
+assets = { directory = "./public", binding = "ASSETS", run_worker_first = true, html_handling = "auto-trailing-slash", not_found_handling = "none" }
+ratelimits = [
+  { name = "RL_SUBMIT", namespace_id = "2101", simple = { limit = 300, period = 10 } },
+  { name = "RL_API", namespace_id = "2102", simple = { limit = 3000, period = 10 } },
+]

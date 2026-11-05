@@ -52,19 +52,19 @@ jobs:
             echo "No Edge Functions yet."
           fi
 
-      - name: Build portal
-        run: pnpm --filter @serene/portal build
+      - name: Build site (landing at /, portal at /admin)
+        run: node scripts/assemble-site.mjs
         env:
           VITE_APP_ENV: ${{ env.TARGET }}
           VITE_SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
           VITE_SENTRY_DSN: ${{ vars.SENTRY_DSN_PORTAL }}
-          VITE_SURVEY_URL: https://${{ env.TARGET == 'production' && 'serene-pulse-survey' || 'serene-pulse-survey-staging' }}.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev
+          VITE_SURVEY_URL: https://${{ env.TARGET == 'production' && 'serene' || 'serene-staging' }}.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/customerfeedback
 
       - name: No secret keys in any built bundle
         run: pnpm scan:bundles
 
-      - name: Deploy survey Worker
+      - name: Deploy site Worker (landing, /admin portal, /customerfeedback survey)
         working-directory: apps/survey-worker
         run: >-
           pnpm exec wrangler deploy --env "$TARGET"
@@ -73,14 +73,10 @@ jobs:
           --var "TURNSTILE_SITE_KEY:${{ vars.TURNSTILE_SITE_KEY }}"
           --var "CF_WEB_ANALYTICS_TOKEN:${{ vars.CF_WEB_ANALYTICS_TOKEN }}"
 
-      - name: Deploy portal
-        working-directory: apps/portal
-        run: pnpm exec wrangler deploy --env "$TARGET"
-
       - name: Smoke test
         run: |
           test -n "${{ vars.WORKERS_SUBDOMAIN }}" || { echo "WORKERS_SUBDOMAIN repository variable is not set"; exit 1; }
-          worker=$([ "$TARGET" = production ] && echo "serene-pulse-survey" || echo "serene-pulse-survey-staging")
+          worker=$([ "$TARGET" = production ] && echo "serene" || echo "serene-staging")
           for i in 1 2 3 4 5 6; do
             code=$(curl -s -o /tmp/h.json -w '%{http_code}' "https://$worker.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/healthz" || true)
             [ "$code" = 200 ] && { cat /tmp/h.json; exit 0; }

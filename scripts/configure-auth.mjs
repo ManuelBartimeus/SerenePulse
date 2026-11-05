@@ -12,7 +12,8 @@ if (!['staging', 'production'].includes(target)) {
 }
 const env = readEnv();
 const ref = forEnv(env, 'SUPABASE_PROJECT_REF', target);
-const portal = `https://${forEnv(env, 'PORTAL_HOST', target)}`;
+// One site origin (landing /, portal /admin, survey /customerfeedback); Auth links land in the portal.
+const portal = `https://${forEnv(env, 'PORTAL_HOST', target)}/admin`;
 const from = env.EMAIL_FROM.match(/^(.*?)\s*<([^>]+)>$/);
 const senderName = from ? from[1].trim() : 'Serene Insurance';
 const senderEmail = from ? from[2].trim() : env.EMAIL_FROM.trim();

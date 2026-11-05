@@ -1,5 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": { "types": ["@cloudflare/workers-types"], "lib": ["ES2022", "WebWorker"] },
-  "include": ["src"]
+  "include": ["src", "shared", "dist/island/assets.gen.ts"],
+  // Tests run in Node under vitest (node:fs etc.), so they are type-checked by vitest's transform only.
+  "exclude": ["src/**/*.test.ts"]
 }

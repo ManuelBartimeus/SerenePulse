@@ -25,6 +25,9 @@
   --color-info-bg: var(--color-info-bg);
   --color-border: var(--color-border);
   --color-border-strong: var(--color-border-strong);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-brand-100: var(--color-brand-100);
+  --color-ink-hover: var(--color-ink-hover);
 
   --font-sans: var(--font-sans);
 
@@ -42,4 +45,6 @@
 
   --shadow-float: var(--shadow-float);
   --shadow-float-strong: var(--shadow-float-strong);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
 }

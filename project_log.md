@@ -154,4 +154,21 @@ User feedback after reviewing the live site, and what was done:
    `node scripts/seed-demo.mjs production --clear`**: it removes every response, case, alert and
    notification and deactivates the sample staff, leaving configuration and real users.
 
-_(Results of this round are appended below when verified and deployed.)_
+**Verified and deployed (commit `aea0c4b`, 2026-11-05):** pgTAP 398/398 on a fresh database;
+SQL lint clean; unit tests 213 (portal 71, survey Worker 49, metrics 30, survey engine 18,
+contracts 5) plus Edge Functions 40; survey browser tests 26/26 on phone and desktop including
+accessibility and the new "Share more feedback" flow; a signed-in tour of 15 portal pages with
+realistic data showed no console errors and none of the removed jargon. CI and the automatic
+deploy to staging and production passed.
+
+**Sample data loaded on production** (`node scripts/seed-demo.mjs production
+--yes-sample-data-on-production`): 4 earlier test responses cleared; 5,179 responses, 6,579
+sessions, 3,238 flags, 501 cases, 475 call-back requests, 12 sample staff. Checked on production:
+roll-ups cover all 5,179 responses, device cooldown is 0 (repeat submissions allowed), no role
+grants are left pending, ~70% satisfied customers over the last 30 days, and every public path
+responds (`/customerfeedback/new` → fresh form; old `/q/…` links → the form).
+
+**Still open:** run `node scripts/seed-demo.mjs production --clear` before go-live; Gmail app
+password for email; XLSX exports of ~100k rows exceed the free Edge Function CPU limit; load test
+at 600k responses; privacy-notice contact details in Settings; official logo vector;
+Kumasi North/Techiman phone number to confirm.

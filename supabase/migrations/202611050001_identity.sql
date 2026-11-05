@@ -589,6 +589,10 @@ revoke insert, delete on public.settings from anon, authenticated;
 revoke all on public.departments, public.roles, public.permissions, public.role_permissions,
   public.profiles, public.user_role_grants, public.settings, public.settings_history from anon;
 revoke all on ops.known_devices from public, anon, authenticated;
+-- Explicit reads, so access never depends on the platform's default privileges (RLS still applies).
+grant select on public.departments, public.roles, public.permissions, public.role_permissions,
+  public.profiles, public.user_role_grants, public.settings, public.settings_history to authenticated;
+grant update on public.settings to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- RPCs (portal, user JWT)

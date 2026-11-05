@@ -12,24 +12,38 @@ $v2${"schema":1,"intro":"Thanks for choosing Serene Insurance. 5 quick questions
 -- V2-END
   ::jsonb;
   v_snap jsonb;
+  v_note text := 'Page 5 heading removed; improvement question required; recommendation and policy questions reworded.';
+  v_draft uuid;
 begin
   if exists (select 1 from public.survey_versions where status = 'published' and definition = v_def) then
     return;
   end if;
-  if exists (select 1 from public.survey_versions where status in ('draft', 'pending_approval')) then
-    raise exception 'A survey draft is open; withdraw it before applying this migration.';
-  end if;
   if jsonb_array_length(survey.guardrail_problems(v_def)) > 0 then
     raise exception 'Survey v2 breaks the guardrails: %', survey.guardrail_problems(v_def);
   end if;
+  -- An untouched draft (identical to the published survey, e.g. opened in the editor and never
+  -- changed) carries no one's work, so it becomes v2. A draft with real edits stops the migration.
+  select id into v_draft from public.survey_versions
+   where status = 'draft' and definition = (select definition from public.survey_versions where status = 'published');
+  if v_draft is null and exists (select 1 from public.survey_versions where status in ('draft', 'pending_approval')) then
+    raise exception 'A survey draft with changes is open; publish or withdraw it before applying this migration.';
+  end if;
   v_snap := survey.build_snapshot();
   update public.survey_versions set status = 'retired', retired_at = now() where status = 'published';
-  insert into public.survey_versions (version_no, status, definition, catalogue_snapshot, scale_signature, checksum,
-                                      change_note, published_at)
-  values ((select coalesce(max(version_no), 0) + 1 from public.survey_versions), 'published', v_def, v_snap,
-          survey.scale_signature(v_def),
-          encode(extensions.digest(convert_to(v_def::text || v_snap::text, 'UTF8'), 'sha256'), 'hex'),
-          'Page 5 heading removed; improvement question required; recommendation and policy questions reworded.',
-          now());
+  if v_draft is not null then
+    update public.survey_versions
+       set status = 'published', definition = v_def, catalogue_snapshot = v_snap,
+           scale_signature = survey.scale_signature(v_def),
+           checksum = encode(extensions.digest(convert_to(v_def::text || v_snap::text, 'UTF8'), 'sha256'), 'hex'),
+           change_note = v_note, prepared_by = null, requested_at = null, published_at = now()
+     where id = v_draft;
+  else
+    insert into public.survey_versions (version_no, status, definition, catalogue_snapshot, scale_signature, checksum,
+                                        change_note, published_at)
+    values ((select coalesce(max(version_no), 0) + 1 from public.survey_versions), 'published', v_def, v_snap,
+            survey.scale_signature(v_def),
+            encode(extensions.digest(convert_to(v_def::text || v_snap::text, 'UTF8'), 'sha256'), 'hex'),
+            v_note, now());
+  end if;
 end;
 $$;

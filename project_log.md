@@ -209,6 +209,14 @@ User feedback and what was done:
   Administration › Settings, then Overview. Exactly one section was open each time (none on
   Overview), with no console errors.
 
+**Production deploy note.** The first production deploy (commit `fddb16f`) stopped safely at the
+v2 migration because production had an open survey draft. That draft was version 2, opened in
+the survey editor at 15:05 and never changed (identical to the live survey). Survey versions can
+never be deleted, so the migration now takes over an *untouched* draft and publishes it as v2. A
+draft with real edits still stops the migration, so nobody's work is overwritten. Both paths
+were tested on a local database before redeploying. Staging had no draft and got v2 as a new
+row, with the same result.
+
 **Still open:** run `node scripts/seed-demo.mjs production --clear` before go-live; Gmail app
 password for email; XLSX exports of ~100k rows exceed the free Edge Function CPU limit; load test
 at 600k responses; privacy-notice contact details in Settings; official logo vector;

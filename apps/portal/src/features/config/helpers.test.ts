@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { displayLink, qrLink, smsLength, smsLink, suggestedSmsWording, surveyLink } from './links';
+import { displayLink, surveyLink } from './links';
 import { PDFDocument } from 'pdf-lib';
 import { MIN_QR_PT, MM, buildPosterPdf, posterLayout, winAnsi, wrapText } from './poster';
 import { qrMatrix, qrPath, qrSvg } from './qr';
@@ -8,34 +8,11 @@ import { codeError, keywordError, normaliseCode, parseSetting, settingInput } fr
 describe('survey links (T-M05-020)', () => {
   it('joins the base with paths and queries without double slashes', () => {
     expect(surveyLink('https://x.test/customerfeedback/')).toBe('https://x.test/customerfeedback');
-    expect(qrLink('https://x.test/customerfeedback/', 'K7P2')).toBe('https://x.test/customerfeedback/q/K7P2');
-    expect(qrLink('https://x.test/customerfeedback', 'K7P2')).toBe('https://x.test/customerfeedback/q/K7P2');
-    expect(smsLink('https://x.test/customerfeedback')).toBe('https://x.test/customerfeedback?src=sms');
-    expect(smsLink('https://x.test/customerfeedback//')).toBe('https://x.test/customerfeedback?src=sms');
-    expect(surveyLink('http://127.0.0.1:8787', '//q/A')).toBe('http://127.0.0.1:8787/q/A');
+    expect(surveyLink('http://127.0.0.1:8787', '//thanks')).toBe('http://127.0.0.1:8787/thanks');
+    expect(surveyLink('https://x.test/customerfeedback/', '', { lang: 'en' })).toBe(
+      'https://x.test/customerfeedback?lang=en',
+    );
     expect(displayLink('https://x.test/q/A')).toBe('x.test/q/A');
-  });
-});
-
-describe('SMS length', () => {
-  it('counts GSM-7 characters and segments', () => {
-    expect(smsLength('a'.repeat(160))).toMatchObject({
-      encoding: 'GSM-7',
-      units: 160,
-      segments: 1,
-      fitsOne: true,
-    });
-    expect(smsLength('a'.repeat(161))).toMatchObject({ segments: 2, fitsOne: false });
-    expect(smsLength('€').units).toBe(2);
-    expect(smsLength('').segments).toBe(0);
-  });
-  it('switches to UCS-2 for characters outside GSM-7', () => {
-    expect(smsLength('Thank you ’')).toMatchObject({ encoding: 'UCS-2', limit: 70 });
-    expect(smsLength('😀'.repeat(36)).segments).toBe(2);
-  });
-  it('keeps the suggested wording within one SMS for a realistic link', () => {
-    const text = suggestedSmsWording(smsLink('https://feedback.sereneinsurance.com.gh/customerfeedback'));
-    expect(smsLength(text).fitsOne).toBe(true);
   });
 });
 
@@ -91,7 +68,11 @@ describe('codes', () => {
 describe('settings validators (T-M17-010)', () => {
   it('validates whole numbers in range', () => {
     expect(parseSetting('device_cooldown_hours', '24')).toEqual({ ok: true, value: 24 });
-    expect(parseSetting('device_cooldown_hours', '0').ok).toBe(false);
+    expect(parseSetting('device_cooldown_hours', '0')).toEqual({ ok: true, value: 0 });
+    expect(parseSetting('device_cooldown_hours', '-1')).toEqual({
+      ok: false,
+      error: 'Enter a whole number of hours from 0 (off) to 168.',
+    });
     expect(parseSetting('device_cooldown_hours', '169').ok).toBe(false);
     expect(parseSetting('device_cooldown_hours', '1.5').ok).toBe(false);
     expect(parseSetting('minimum_sample', '1,000')).toEqual({ ok: true, value: 1000 });

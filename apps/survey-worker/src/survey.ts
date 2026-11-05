@@ -152,7 +152,17 @@ async function entry(c: C, src: string | null, qr: string | null): Promise<Respo
 }
 
 survey.get('/', (c) => entry(c, c.req.query('src') ?? null, null));
-survey.get('/q/:code', (c) => entry(c, 'qr', c.req.param('code').slice(0, 16)));
+// QR points were retired (revision Q): old printed codes still land on the form, without tracking.
+survey.get('/q/:code', (c) => c.redirect(BASE, 302));
+
+// "Share more feedback": a brand-new blank survey. A fresh session cookie means nothing from the
+// previous answers carries over; the device cooldown (when switched on) still applies server-side.
+survey.get('/new', (c) => {
+  const names = cookieNames(loadConfig(c.env), c.req.url);
+  const res = c.redirect(BASE, 303);
+  res.headers.set('cache-control', 'private, no-store');
+  return withCookies(res, [serializeCookie(names.session, newSecret(), SESSION_MAX_AGE, names.secure)]);
+});
 
 survey.get('/privacy', async (c) => {
   const nonce = c.get('cspNonce');

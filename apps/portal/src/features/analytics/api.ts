@@ -36,8 +36,6 @@ export interface Summary {
   minimum_sample: number;
   metrics: Record<KpiKey, Metric> & { completion_rate: Metric & { submitted: number } };
   main_factor: MainFactor;
-  unverified_excluded: number;
-  include_unverified: boolean;
   previous: {
     period: Period;
     n: number;
@@ -46,8 +44,7 @@ export interface Summary {
     main_factor: MainFactor;
   };
 }
-export type Dimension =
-  'branch' | 'region' | 'channel' | 'product' | 'factor' | 'source' | 'qr_point' | 'version';
+export type Dimension = 'branch' | 'region' | 'channel' | 'product' | 'factor';
 export interface BreakdownRow {
   key: string;
   code: string | null;
@@ -129,7 +126,6 @@ export interface Distribution {
   n: number;
   minimum_sample: number;
   low_sample: boolean;
-  unverified_excluded: number;
   buckets: { key: string; label: string; count: number; share: number | null; is_none?: boolean }[];
 }
 export interface FunnelCounts {
@@ -147,10 +143,7 @@ export interface FunnelCounts {
 export interface Funnel {
   period: Period;
   minimum_sample: number;
-  note: string;
   totals: FunnelCounts;
-  by_source: (FunnelCounts & { key: string | null; code: string | null; label: string })[];
-  by_qr_point: (FunnelCounts & { key: string; code: string; label: string; is_active: boolean })[];
 }
 export interface CompletionTime {
   period: Period;
@@ -172,8 +165,6 @@ export interface RecordRow {
   id: string;
   reference: string;
   submitted_at: string;
-  source: { code: string; label: string };
-  qr_point: { id: string; code: string; label: string } | null;
   channel: { id: string; code: string; label: string };
   branch_status: string;
   branch: { id: string; code: string; name: string } | null;
@@ -187,8 +178,6 @@ export interface RecordRow {
   factor: { id: string; code: string; label: string } | null;
   has_comment: boolean;
   contact_consent: boolean;
-  verification: string;
-  survey_version_no: number;
   case: { id: string; reference: string; status: string } | null;
 }
 export interface RecordPage {
@@ -209,10 +198,6 @@ export interface RecordDetail {
   duration_from_opened: boolean;
   navigated_back: boolean;
   changed_previous_answer: boolean;
-  verification: string;
-  version: { id: string; no: number };
-  source: { code: string; label: string };
-  qr_point: { id: string; code: string; label: string } | null;
   attribution: {
     branch_status: string;
     branch: { id: string; code: string; name: string } | null;

@@ -45,6 +45,8 @@ export interface SettingSpec {
   min?: number;
   max?: number;
   unit?: string;
+  /** Message when an int is out of range (defaults to "Enter a whole number from min to max."). */
+  rangeError?: string;
   optional?: boolean;
   inputType?: 'text' | 'email' | 'tel';
 }
@@ -52,14 +54,14 @@ export interface SettingSpec {
 export const SETTING_SPECS: SettingSpec[] = [
   {
     key: 'device_cooldown_hours',
-    label: 'Device cooldown',
+    label: 'Wait before the same device can submit again',
     kind: 'int',
     group: 'survey',
-    min: 1,
+    min: 0,
     max: 168,
     unit: 'hours',
-    helper:
-      'After submitting, the same device sees “You’ve already shared your feedback” for this long (1–168).',
+    rangeError: 'Enter a whole number of hours from 0 (off) to 168.',
+    helper: '0 turns this off — the same device can submit the form more than once.',
   },
   {
     key: 'session_expiry_hours',
@@ -73,21 +75,22 @@ export const SETTING_SPECS: SettingSpec[] = [
   },
   {
     key: 'minimum_sample',
-    label: 'Minimum sample',
+    label: 'Fewest responses to compare',
     kind: 'int',
     group: 'analytics',
     min: 5,
     max: 1000,
     unit: 'responses',
-    helper: 'Groups with fewer responses are marked “Low sample” and left out of rankings (5–1,000).',
+    helper:
+      'Branches and groups with fewer responses than this are left out of comparisons and rankings (5–1,000).',
   },
   {
     key: 'include_unverified_default',
-    label: 'Include unverified responses by default',
+    label: 'Count responses that skipped the robot check',
     kind: 'bool',
     group: 'analytics',
     helper:
-      'Unverified responses failed or skipped the bot check. When off, dashboards exclude them unless a user switches them on.',
+      'Some responses could not complete the quick robot check. When this is off, dashboards leave them out.',
   },
   {
     key: 'comment_keywords',
@@ -207,7 +210,9 @@ export function parseSetting(
       if (!Number.isInteger(n) || n < lo || n > hi) {
         return {
           ok: false,
-          error: `Enter a whole number from ${lo.toLocaleString('en-GH')} to ${hi.toLocaleString('en-GH')}.`,
+          error:
+            spec.rangeError ??
+            `Enter a whole number from ${lo.toLocaleString('en-GH')} to ${hi.toLocaleString('en-GH')}.`,
         };
       }
       return { ok: true, value: n };

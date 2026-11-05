@@ -165,8 +165,8 @@ reset role;
 -- ---------------------------------------------------------------------------
 select set_config('request.jwt.claims', pg_temp.claims_for('00000000-0000-0000-0000-00000000aa01'), true);
 set local role authenticated;
-select throws_ok($$update public.settings set value = '0' where key = 'device_cooldown_hours'$$, '22023', null,
-  'T-M17-010 cooldown hours outside 1–168 are rejected');
+select throws_ok($$update public.settings set value = '169' where key = 'device_cooldown_hours'$$, '22023', null,
+  'T-M17-010 cooldown hours outside 0–168 are rejected (0 = off)');
 select throws_ok($$update public.settings set value = '"thirty"' where key = 'minimum_sample'$$, '22023', null,
   'non-numeric minimum sample is rejected with a validation error');
 select throws_ok($$update public.settings set value = '["fraud","Fraud"]' where key = 'comment_keywords'$$, '22023', null,

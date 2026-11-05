@@ -3,6 +3,7 @@ import { PageHeader } from '../../pages/shell';
 import { EmptyState } from '../../ui/controls';
 import { FilterBar, useAnalyticsFilters } from '../analytics/filters';
 import { useRpc } from './api';
+import { priorityLabel } from './format';
 import { Card, ErrorAlert, Loading } from './ui';
 
 interface Metric {
@@ -31,22 +32,19 @@ export function metricText(v: number | null | undefined, unit = ''): string {
     : `${v.toLocaleString('en-GH', { maximumFractionDigits: 1 })}${unit}`;
 }
 
-function Kpi({ label, value, n, hint }: { label: string; value: string; n: number; hint?: string }) {
+function Kpi({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-lg bg-white p-4">
       <p className="text-[14px] text-secondary">{label}</p>
       <p className={`mt-1 text-[28px] font-medium leading-9 ${value === 'No data' ? 'text-muted' : ''}`}>
         {value}
       </p>
-      <p className="text-[12px] text-muted">
-        n = {n.toLocaleString('en-GH')}
-        {hint ? ` · ${hint}` : ''}
-      </p>
+      {hint && <p className="text-[12px] text-muted">{hint}</p>}
     </div>
   );
 }
 
-/** S-A8 Case performance (REQ §8.5): resolution time, SLA compliance, resolution and escalation rates. */
+/** S-A8 Case performance (REQ §8.5): time to resolve, cases resolved on time, resolution and escalation. */
 export function CasePerformancePage() {
   const rpc = useRpc();
   const { rpcFilters, periodText } = useAnalyticsFilters();
@@ -59,61 +57,40 @@ export function CasePerformancePage() {
     <>
       <PageHeader
         title="Case performance"
-        subtitle={`Cases on feedback submitted ${periodText}. Times are in working days (Mon–Fri 08:00–17:00, Accra, excluding holidays).`}
+        subtitle={`Cases opened on feedback received ${periodText}. Times are in working days (Monday to Friday, 8 am to 5 pm, excluding public holidays).`}
       />
       <FilterBar />
       {q.isPending ? (
-        <Loading label="Loading case metrics" />
+        <Loading label="Loading case performance" />
       ) : q.isError ? (
         <ErrorAlert error={q.error} retry={() => void q.refetch()} />
       ) : q.data.created === 0 ? (
         <section className="rounded-lg bg-white">
-          <EmptyState title="No data for this period">
+          <EmptyState title="No cases in this period">
             No cases were opened on feedback in this period.
           </EmptyState>
         </section>
       ) : (
         <div className="flex flex-col gap-6">
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Kpi label="Cases created" value={metricText(q.data.created)} n={q.data.created} />
+            <Kpi label="Cases opened" value={metricText(q.data.created)} />
+            <Kpi label="Cases resolved on time" value={metricText(q.data.sla_compliance_pct.value, '%')} />
             <Kpi
-              label="Resolution time (mean)"
-              value={metricText(q.data.resolution_time_days.mean, ' days')}
-              n={q.data.resolution_time_days.n}
-              hint={`median ${metricText(q.data.resolution_time_days.median, ' days')}`}
+              label="Average time to resolve (working days)"
+              value={metricText(q.data.resolution_time_days.mean)}
             />
-            <Kpi
-              label="SLA compliance"
-              value={metricText(q.data.sla_compliance_pct.value, '%')}
-              n={q.data.sla_compliance_pct.n}
-              hint="of resolved cases"
-            />
-            <Kpi
-              label="Resolution rate"
-              value={metricText(q.data.resolution_rate.value, '%')}
-              n={q.data.resolution_rate.n}
-            />
-            <Kpi
-              label="Escalation rate"
-              value={metricText(q.data.escalation_rate.value, '%')}
-              n={q.data.escalation_rate.n}
-            />
-            <Kpi label="Open now" value={metricText(q.data.open)} n={q.data.created} />
-            <Kpi
-              label="Overdue now"
-              value={metricText(q.data.overdue)}
-              n={q.data.open}
-              hint="of open cases"
-            />
+            <Kpi label="Escalated cases" value={metricText(q.data.escalation_rate.value, '%')} />
+            <Kpi label="Cases resolved" value={metricText(q.data.resolution_rate.value, '%')} />
+            <Kpi label="Still open" value={metricText(q.data.open)} />
+            <Kpi label="Past deadline now" value={metricText(q.data.overdue)} />
             <Kpi
               label="Repeat complaints"
               value={metricText(q.data.repeat_complaints.value)}
-              n={q.data.repeat_complaints.n}
-              hint={q.data.repeat_complaints.note}
+              hint="Customers who complained again"
             />
           </div>
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card title="Resolution time">
+            <Card title="Time to resolve">
               <table className="w-full text-[14px]">
                 <caption className="sr-only">Resolved cases by working days to resolve</caption>
                 <thead className="sr-only">
@@ -150,13 +127,13 @@ export function CasePerformancePage() {
                       Priority
                     </th>
                     <th scope="col" className="py-2 font-medium">
-                      Created
+                      Opened
                     </th>
                     <th scope="col" className="py-2 font-medium">
                       Resolved
                     </th>
                     <th scope="col" className="py-2 font-medium">
-                      SLA compliance
+                      Resolved on time
                     </th>
                   </tr>
                 </thead>
@@ -164,7 +141,7 @@ export function CasePerformancePage() {
                   {q.data.by_priority.map((p) => (
                     <tr key={p.priority} className="border-t border-border">
                       <th scope="row" className="py-2 font-medium">
-                        {p.priority}
+                        {priorityLabel(p.priority)}
                       </th>
                       <td className="py-2">{p.created}</td>
                       <td className="py-2">{p.resolved}</td>

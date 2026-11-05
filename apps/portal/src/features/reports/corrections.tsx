@@ -1,4 +1,4 @@
-// Attribution-correction approvals (FR-41, MS-13): queue for approvers and the decision history.
+// Branch corrections (FR-41, MS-13): queue for approvers and the decision history.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useSession } from '../../lib/session';
@@ -49,8 +49,8 @@ export function CorrectionsPage() {
   return (
     <>
       <PageHeader
-        title="Attribution corrections"
-        subtitle="Changes to the branch a response counts towards. The customer's answer is never overwritten; a second person must approve."
+        title="Branch corrections"
+        subtitle="Changes to the branch a response counts towards. The customer’s answer is never overwritten, and a second person confirms each change."
       />
       <div className="mb-4 flex gap-2" role="group" aria-label="Show">
         {[
@@ -89,7 +89,7 @@ export function CorrectionsPage() {
           </div>
         ) : list.data.length === 0 ? (
           <EmptyState title={tab ? 'Nothing waiting for approval' : 'No corrections yet'}>
-            Corrections are proposed from a feedback record.
+            Corrections are proposed from a customer response.
           </EmptyState>
         ) : (
           <ul className="divide-y divide-border">
@@ -138,7 +138,7 @@ export function CorrectionsPage() {
         open={rejecting !== null}
         onOpenChange={(o) => !o && setRejecting(null)}
         title="Reject this correction?"
-        description="The record keeps its current branch. The proposer sees your reason."
+        description="The response keeps its current branch. The person who proposed it sees your reason."
         footer={
           <>
             <Button variant="secondary" onClick={() => setRejecting(null)}>

@@ -7,6 +7,7 @@ import { Badge, Button, EmptyState, TextField } from '../../ui/controls';
 import { useCatalogues } from '../analytics/catalogues';
 import { useCasePeople, useRpc, type CaseItem, type CasePage } from './api';
 import { CASE_STATUSES, ESCALATION_LABELS, formatDate, nextCursor, PRIORITIES } from './format';
+import { CASE_TABS, MoreFilters, PageTabs } from './page-tabs';
 import { ErrorAlert, Loading, PriorityBadge, Select, SlaBadge, StatusBadge } from './ui';
 
 interface Filters {
@@ -95,6 +96,7 @@ export function CasesPage({ mine = false }: { mine?: boolean }) {
   });
   const items = q.data?.pages.flatMap((p) => p.items) ?? [];
   const set = (patch: Partial<Filters>) => setF((x) => ({ ...x, ...patch }));
+  const moreActive = [f.q.trim(), f.department, mine ? '' : f.officer, f.escalated].filter(Boolean).length;
 
   return (
     <>
@@ -103,7 +105,7 @@ export function CasesPage({ mine = false }: { mine?: boolean }) {
         subtitle={
           mine
             ? 'Cases assigned to you, newest first.'
-            : 'All new cases arrive in the CX central queue; CX Administrators assign them (D-17).'
+            : 'Every new case starts in the customer experience team’s queue, which assigns it to the right person.'
         }
         actions={
           <div
@@ -125,61 +127,83 @@ export function CasesPage({ mine = false }: { mine?: boolean }) {
           </div>
         }
       />
-      <section
-        aria-label="Filters"
-        className="mb-4 grid gap-3 rounded-lg bg-white p-4 sm:grid-cols-2 lg:grid-cols-4"
-      >
-        <TextField
-          label="Search reference"
-          value={f.q}
-          onChange={(e) => set({ q: e.target.value })}
-          placeholder="CASE-… or FB-…"
-        />
+      <PageTabs tabs={CASE_TABS} label="Cases" />
+      <section aria-label="Filters" className="mb-4 flex flex-wrap items-end gap-3 rounded-lg bg-white p-4">
         {layout === 'list' && (
-          <Select label="Status" value={f.status} onChange={(e) => set({ status: e.target.value })}>
-            <option value="open">Open (new, assigned, in progress)</option>
-            <option value="">All statuses</option>
-            {CASE_STATUSES.map((s) => (
-              <option key={s.key} value={s.key}>
-                {s.label}
-              </option>
-            ))}
-          </Select>
-        )}
-        <Select label="Priority" value={f.priority} onChange={(e) => set({ priority: e.target.value })}>
-          <option value="">All priorities</option>
-          {PRIORITIES.map((p) => (
-            <option key={p.key} value={p.key}>
-              {p.label}
-            </option>
-          ))}
-        </Select>
-        <Select label="Branch" value={f.branch} onChange={(e) => set({ branch: e.target.value })}>
-          <option value="">All branches</option>
-          {(catalogues.data?.branches ?? []).map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.label}
-            </option>
-          ))}
-        </Select>
-        {people.data && (
-          <>
-            <Select
-              label="Department"
-              value={f.department}
-              onChange={(e) => set({ department: e.target.value })}
-            >
-              <option value="">All departments</option>
-              {people.data.departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
+          <div className="w-full sm:w-52">
+            <Select label="Status" value={f.status} onChange={(e) => set({ status: e.target.value })}>
+              <option value="open">Open</option>
+              <option value="">Any status</option>
+              {CASE_STATUSES.map((s) => (
+                <option key={s.key} value={s.key}>
+                  {s.label}
                 </option>
               ))}
             </Select>
-            {!mine && (
-              <Select label="Officer" value={f.officer} onChange={(e) => set({ officer: e.target.value })}>
+          </div>
+        )}
+        <div className="w-full sm:w-44">
+          <Select label="Priority" value={f.priority} onChange={(e) => set({ priority: e.target.value })}>
+            <option value="">Any priority</option>
+            {PRIORITIES.map((p) => (
+              <option key={p.key} value={p.key}>
+                {p.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="w-full sm:w-52">
+          <Select label="Branch" value={f.branch} onChange={(e) => set({ branch: e.target.value })}>
+            <option value="">All branches</option>
+            {(catalogues.data?.branches ?? []).map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <label className="flex min-h-11 items-center gap-2 text-[14px]">
+          <input
+            type="checkbox"
+            className="size-5 accent-[var(--color-brand)]"
+            checked={f.overdue}
+            onChange={(e) => set({ overdue: e.target.checked })}
+          />
+          Past deadline only
+        </label>
+        <div className="ml-auto">
+          <MoreFilters
+            active={moreActive}
+            onClear={() => set({ q: '', department: '', officer: '', escalated: false })}
+          >
+            <TextField
+              label="Case reference"
+              value={f.q}
+              onChange={(e) => set({ q: e.target.value })}
+              placeholder="CASE-… or FB-…"
+            />
+            {people.data && (
+              <Select
+                label="Department"
+                value={f.department}
+                onChange={(e) => set({ department: e.target.value })}
+              >
+                <option value="">All departments</option>
+                {people.data.departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+            {people.data && !mine && (
+              <Select
+                label="Assigned to"
+                value={f.officer}
+                onChange={(e) => set({ officer: e.target.value })}
+              >
                 <option value="">Anyone</option>
-                <option value="unassigned">Unassigned (CX queue)</option>
+                <option value="unassigned">Not yet assigned</option>
                 {people.data.people
                   .filter((p) => p.can_work)
                   .map((p) => (
@@ -189,27 +213,16 @@ export function CasesPage({ mine = false }: { mine?: boolean }) {
                   ))}
               </Select>
             )}
-          </>
-        )}
-        <div className="flex flex-wrap items-end gap-4">
-          <label className="flex min-h-11 items-center gap-2 text-[14px]">
-            <input
-              type="checkbox"
-              className="size-5"
-              checked={f.overdue}
-              onChange={(e) => set({ overdue: e.target.checked })}
-            />
-            Overdue only
-          </label>
-          <label className="flex min-h-11 items-center gap-2 text-[14px]">
-            <input
-              type="checkbox"
-              className="size-5"
-              checked={f.escalated}
-              onChange={(e) => set({ escalated: e.target.checked })}
-            />
-            Escalated only
-          </label>
+            <label className="flex min-h-11 items-center gap-2 text-[14px]">
+              <input
+                type="checkbox"
+                className="size-5 accent-[var(--color-brand)]"
+                checked={f.escalated}
+                onChange={(e) => set({ escalated: e.target.checked })}
+              />
+              Escalated cases only
+            </label>
+          </MoreFilters>
         </div>
       </section>
 
@@ -220,7 +233,9 @@ export function CasesPage({ mine = false }: { mine?: boolean }) {
       ) : items.length === 0 ? (
         <section className="rounded-lg bg-white">
           <EmptyState title={mine ? 'No cases assigned to you' : 'No cases match these filters'}>
-            {mine ? 'New assignments appear here and in your notifications.' : 'Try clearing a filter.'}
+            {mine
+              ? 'New assignments appear here and in your notifications.'
+              : 'Try changing or clearing a filter.'}
           </EmptyState>
         </section>
       ) : layout === 'board' ? (
@@ -252,13 +267,20 @@ export function CasesPage({ mine = false }: { mine?: boolean }) {
               <caption className="sr-only">Cases</caption>
               <thead className="border-b border-border text-secondary">
                 <tr>
-                  {['Reference', 'Priority', 'Status', 'Branch', 'Assigned to', 'Created', 'Due', 'SLA'].map(
-                    (h) => (
-                      <th key={h} scope="col" className="px-4 py-3 font-medium">
-                        {h}
-                      </th>
-                    ),
-                  )}
+                  {[
+                    'Reference',
+                    'Priority',
+                    'Status',
+                    'Branch',
+                    'Assigned to',
+                    'Opened',
+                    'Deadline',
+                    'On time?',
+                  ].map((h) => (
+                    <th key={h} scope="col" className="px-4 py-3 font-medium">
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -285,7 +307,7 @@ export function CasesPage({ mine = false }: { mine?: boolean }) {
                       <StatusBadge status={c.status} />
                     </td>
                     <td className="px-4 py-3">{c.branch_name ?? '—'}</td>
-                    <td className="px-4 py-3">{c.officer_name ?? c.department_name ?? 'CX queue'}</td>
+                    <td className="px-4 py-3">{c.officer_name ?? c.department_name ?? 'Not yet assigned'}</td>
                     <td className="px-4 py-3">{formatDate(c.created_at)}</td>
                     <td className="px-4 py-3">{formatDate(c.target_resolution_at)}</td>
                     <td className="px-4 py-3">

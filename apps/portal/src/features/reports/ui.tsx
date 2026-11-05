@@ -161,7 +161,6 @@ export function FileRow({
           {file.period_from && file.period_to
             ? `${formatDate(file.period_from)} to ${formatDate(file.period_to)} · `
             : ''}
-          {file.row_count !== null ? `${file.row_count.toLocaleString('en-GH')} rows · ` : ''}
           {formatBytes(file.byte_size)} · created {formatDateTime(file.created_at)}
           {ready ? ` · available until ${formatDateTime(file.expires_at)}` : ''}
         </p>

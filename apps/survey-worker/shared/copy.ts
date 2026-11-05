@@ -65,6 +65,7 @@ export const COPY = {
   thanksReference: 'Reference',
   thanksBody: 'We read every response and use it to improve our service.',
   thanksContact: (masked: string) => `Our customer experience team may call you on ${masked}.`,
+  shareMore: 'Share more feedback',
   alreadyShared: 'You’ve already shared your feedback — thank you!',
   alreadySharedRef: (ref: string) => `Reference ${ref}`,
   unavailableHeading: 'We can’t take feedback right now.',

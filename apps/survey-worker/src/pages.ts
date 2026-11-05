@@ -379,6 +379,7 @@ export function confirmationPage(nonce: string, reference: string, contactMasked
           <p>${COPY.thanksBody}</p>
           ${contactMasked ? html`<p>${COPY.thanksContact(contactMasked)}</p>` : ''}
         </div>
+        <a class="btn btn-secondary" href="${BASE}/new" data-share-more>${COPY.shareMore}</a>
         <p class="foot">${privacyLink}</p>
       </main>
     </div>`,

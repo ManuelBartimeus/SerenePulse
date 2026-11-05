@@ -31,8 +31,8 @@ export function SurveyVersionsPage() {
   return (
     <>
       <PageHeader
-        title="Survey versions"
-        subtitle="Published versions never change. Edit a draft, preview it, then a second person approves it."
+        title="Survey questions"
+        subtitle="The questions customers answer. Edit a draft and preview it; a second person reviews it before it goes live."
         actions={
           canEdit &&
           !open && (
@@ -71,7 +71,7 @@ export function SurveyVersionsPage() {
             <ErrorAlert error={versions.error} />
           </div>
         ) : list.length === 0 ? (
-          <EmptyState title="No survey versions yet" />
+          <EmptyState title="No survey drafts yet" />
         ) : (
           <ul className="divide-y divide-border">
             {list.map((v) => (

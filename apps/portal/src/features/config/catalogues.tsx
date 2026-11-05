@@ -80,10 +80,10 @@ const SPECS: CatalogueSpec[] = [
   },
   {
     key: 'improvement_factors',
-    title: 'Improvement factors',
-    singular: 'factor',
+    title: 'Areas to improve',
+    singular: 'area',
     description:
-      'The “main thing we could improve” options on Page 5. Whether choosing a factor raises a flag or opens a case is set on the Flag rules screen.',
+      'The “main thing we could improve” options on Page 5. Whether choosing one flags the feedback for review or opens a case is set under Flagging rules.',
     select: 'id, code, label, is_other, is_none, is_active, sort_order, version',
     customerFacing: true,
   },
@@ -151,7 +151,7 @@ function CatalogueDialog({
       title={row ? `Edit ${row.label}` : `Add a ${spec.singular}`}
       description={
         spec.customerFacing
-          ? 'Customers see new options and label changes when the next survey version is published.'
+          ? 'Customers see new options and label changes the next time the survey questions are published.'
           : undefined
       }
     >
@@ -289,8 +289,8 @@ function CatalogueList({ spec }: { spec: CatalogueSpec }) {
       {spec.customerFacing && (
         <div className="px-4 pt-4">
           <Alert tone="info">
-            New options, label changes and order reach customers when the next survey version is published.
-            Deactivating an option removes it from new surveys straight away.
+            New options, label changes and order reach customers the next time the survey questions are
+            published. Deactivating an option removes it from new surveys straight away.
           </Alert>
         </div>
       )}
@@ -410,11 +410,11 @@ export function CataloguesPage() {
   return (
     <>
       <PageHeader
-        title="Catalogues"
-        subtitle="Controlled lists used by the survey and by case handling. Entries are deactivated, never deleted."
+        title="Lists & options"
+        subtitle="The answer options customers choose from, and the categories staff use for cases. Entries are switched off, never deleted."
       />
       <Tabs
-        label="Catalogues"
+        label="Lists & options"
         value={tab}
         onChange={(v) => setTab(v as CatalogueKey)}
         tabs={SPECS.map((s) => ({ value: s.key, label: s.title, content: <CatalogueList spec={s} /> }))}

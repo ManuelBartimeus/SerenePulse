@@ -1,31 +1,11 @@
-// M05 survey access: the "Feedback form" overview page and the SMS-link guide (S-B9).
-import { useQuery } from '@tanstack/react-query';
+// M05 survey access: the "Feedback form" overview page (public link, its QR code and posters).
 import { Link } from '@tanstack/react-router';
-import { useState } from 'react';
 import { useSession } from '../../lib/session';
 import { PageHeader } from '../../pages/shell';
 import { Alert, Badge } from '../../ui/controls';
-import { displayLink, smsLength, smsLink, suggestedSmsWording, surveyLink } from './links';
+import { displayLink, surveyLink } from './links';
 import { PosterDownloads, QrCodeView } from './qr-view';
-import { CopyButton, Section, TextArea } from './shared';
-
-function useCompanyName(): string {
-  const { supabase } = useSession();
-  const q = useQuery({
-    queryKey: ['config', 'company-display-name'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', 'company_display_name')
-        .maybeSingle();
-      if (error) throw error;
-      return typeof data?.value === 'string' && data.value.trim() ? data.value.trim() : 'Serene Insurance';
-    },
-    staleTime: 5 * 60 * 1000,
-  });
-  return q.data ?? 'Serene Insurance';
-}
+import { CopyButton, Section } from './shared';
 
 function LinkBox({ url, label }: { url: string; label: string }) {
   return (
@@ -54,102 +34,6 @@ function LinkBox({ url, label }: { url: string; label: string }) {
   );
 }
 
-/** Editable SMS wording with a live character count (≤ 160 GSM-7 characters is one SMS). */
-export function SmsWording() {
-  const { env } = useSession();
-  const company = useCompanyName();
-  const link = smsLink(env.VITE_SURVEY_URL);
-  const suggested = suggestedSmsWording(link, company);
-  const [text, setText] = useState<string | null>(null);
-  const value = text ?? suggested;
-  const len = smsLength(value);
-  const missingLink = !value.includes(link);
-  return (
-    <div className="flex flex-col gap-4">
-      <LinkBox url={link} label="SMS link (counts these visits as “SMS link”)" />
-      <TextArea
-        label="Suggested wording"
-        value={value}
-        onChange={(e) => setText(e.target.value)}
-        rows={4}
-        helper={
-          len.encoding === 'UCS-2'
-            ? 'Contains characters outside the standard SMS alphabet (for example curly quotes or emoji), so one SMS holds only 70 characters.'
-            : 'Standard SMS alphabet: one SMS holds 160 characters.'
-        }
-        counter={
-          <span className={len.fitsOne ? '' : 'font-medium text-danger'}>
-            {len.units}/{len.limit} characters{len.fitsOne ? '' : ` · ${len.segments} SMS`}
-          </span>
-        }
-        error={
-          !len.fitsOne
-            ? 'This is longer than one SMS. Shorten it so customers receive a single message.'
-            : missingLink
-              ? 'The wording no longer contains the exact SMS link above.'
-              : null
-        }
-      />
-      <div className="flex flex-wrap gap-2">
-        <CopyButton text={value} label="Copy wording" copiedLabel="Wording copied" />
-        {text !== null && text !== suggested && (
-          <button
-            type="button"
-            className="h-12 rounded-full px-5 font-medium text-brand hover:bg-brand-50"
-            onClick={() => setText(null)}
-          >
-            Restore suggested wording
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function SmsAdvice() {
-  return (
-    <ul className="list-disc space-y-2 pl-6 text-secondary">
-      <li>
-        Send the link <strong className="font-medium text-ink">right after each eligible transaction</strong>:
-        new policies and renewals, while the experience is fresh.
-      </li>
-      <li>Send it once per transaction, from the “SERENE” sender ID through your usual SMS provider.</li>
-      <li>Use the link exactly as shown, so these visits are counted as “SMS link” in the Sources report.</li>
-      <li>Don’t add policy numbers, names or other personal details to the link or the message.</li>
-    </ul>
-  );
-}
-
-/** S-B9 SMS-link guide for Serene's SMS team. */
-export function SmsGuidePage() {
-  return (
-    <>
-      <PageHeader title="SMS link guide" subtitle="For the team that sends Serene’s customer SMS." />
-      <div className="mb-4">
-        <Alert tone="info" title="This system doesn’t send or track SMS">
-          Your SMS team sends the message through Serene’s own provider. We only see the visits the link
-          brings in.
-        </Alert>
-      </div>
-      <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-        <Section
-          title="Link and wording"
-          description="Edit the wording if you need to; the counter shows whether it still fits one SMS."
-        >
-          <div className="p-4 md:p-5">
-            <SmsWording />
-          </div>
-        </Section>
-        <Section title="When to send it">
-          <div className="p-4 md:p-5">
-            <SmsAdvice />
-          </div>
-        </Section>
-      </div>
-    </>
-  );
-}
-
 function Shortcut({ to, title, children }: { to: string; title: string; children: string }) {
   return (
     <Link
@@ -162,7 +46,7 @@ function Shortcut({ to, title, children }: { to: string; title: string; children
   );
 }
 
-/** The feedback form at a glance: link, QR code, posters, SMS wording and shortcuts. */
+/** The feedback form at a glance: link, QR code, posters and shortcuts. */
 export function FeedbackFormPage() {
   const { env, can } = useSession();
   const main = surveyLink(env.VITE_SURVEY_URL);
@@ -190,22 +74,14 @@ export function FeedbackFormPage() {
                 {displayLink(main)}
               </h2>
               <p className="mt-2 max-w-xl text-secondary">
-                Anyone with this link can give feedback. Visits through it count as “direct”. Use the SMS link
-                below in text messages, and a QR point for each printed poster, so you can see where feedback
-                comes from.
+                Anyone with this link can give feedback. Share it with customers after a new policy or a
+                renewal, or print the poster for your branch.
               </p>
             </div>
             <LinkBox url={main} label="Feedback form link" />
             <div className="flex flex-col gap-2">
-              <p className="text-[14px] font-medium">Downloads for this link</p>
+              <p className="text-[14px] font-medium">Posters and images</p>
               <PosterDownloads url={main} filenameBase="serene-feedback" />
-              <p className="text-[14px] leading-5 text-secondary">
-                For printed posters, prefer a{' '}
-                <Link to="/config/qr-points" className="font-medium text-brand underline">
-                  QR point
-                </Link>
-                : its own code lets you see scans per location.
-              </p>
             </div>
           </div>
           <div className="flex flex-col items-center gap-3 rounded-lg bg-subtle p-6">
@@ -215,38 +91,20 @@ export function FeedbackFormPage() {
         </div>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-        <Section
-          title="SMS link and wording"
-          description="Give this to Serene’s SMS team. The system doesn’t send or track SMS."
-        >
-          <div className="flex flex-col gap-5 p-4 md:p-5">
-            <SmsWording />
-            <SmsAdvice />
-          </div>
-        </Section>
+      {(can('survey.edit') || can('survey.publish.approve')) && (
         <Section title="Manage the form">
-          <div className="flex flex-col gap-3 p-4 md:p-5">
-            {can('config.qr_points') && (
-              <Shortcut to="/config/qr-points" title="QR points">
-                Create a code per poster location, download posters and deactivate old ones.
-              </Shortcut>
-            )}
-            {(can('survey.edit') || can('survey.publish.approve')) && (
-              <Shortcut to="/config/survey" title="Survey versions">
-                Change wording and rules in a draft, preview it, and send it for approval.
-              </Shortcut>
-            )}
-            <Shortcut to="/config/sms-link" title="SMS link guide">
-              A page to share with the SMS team: the exact link, wording and when to send it.
+          <div className="grid gap-3 p-4 md:grid-cols-2 md:p-5">
+            <Shortcut to="/config/survey" title="Survey questions">
+              Change the questions and wording in a draft, preview it, then send it to an Executive to
+              publish.
             </Shortcut>
             <Alert tone="info">
-              A poster’s location never decides the branch. Customers say which branch issued their policy on
-              Page 1.
+              Where a poster hangs never decides the branch. Customers say which branch issued their policy on
+              the first page of the form.
             </Alert>
           </div>
         </Section>
-      </div>
+      )}
     </>
   );
 }

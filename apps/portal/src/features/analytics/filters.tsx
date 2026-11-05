@@ -1,29 +1,29 @@
 import * as Popover from '@radix-ui/react-popover';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, type ReactNode } from 'react';
+import { WORDS } from '../../lib/terms';
+import { IconChevronDown, IconFilter } from '../../ui/icons';
 import { useCatalogues, type Option } from './catalogues';
 import {
   accraToday,
   activeFilterCount,
-  BRANCH_STATUSES,
   CASE_STATUSES,
   DEFAULT_FILTERS,
   FILTER_SEARCH_KEYS,
   GRANULARITIES,
-  NPS_CLASSES,
+  MORE_KEYS,
   parseFilterSearch,
   periodLabel,
   PRESETS,
   resolvePeriod,
   SATISFACTION,
-  SOURCES,
   toFilterSearch,
   toRpcFilters,
   type FilterState,
-  type Granularity,
   type ListKey,
   type Preset,
 } from './filters-state';
+import { Segmented } from './ui';
 
 const STORAGE_KEY = 'serene.analytics.filters';
 
@@ -67,7 +67,7 @@ export function useAnalyticsFilters() {
   useEffect(() => {
     if (hasAny) return;
     const saved = readSaved();
-    if (saved && Object.keys(saved).length > 0) write(saved);
+    if (saved && Object.keys(saved).length > 0) write(toFilterSearch(parseFilterSearch(saved)));
     // Only on arrival.
   }, []);
 
@@ -90,80 +90,112 @@ export function useAnalyticsFilters() {
   };
 }
 
-const control =
-  'h-11 rounded-sm border border-border-strong bg-white px-3 text-[14px] outline-none hover:border-ink focus-visible:border-brand';
+/** Day / Week / Month / Quarter, shown on trend charts. */
+export function GranularityControl() {
+  const { filters, setFilters } = useAnalyticsFilters();
+  return (
+    <Segmented
+      label="Show by"
+      options={GRANULARITIES}
+      value={filters.granularity}
+      onChange={(granularity) => setFilters((f) => ({ ...f, granularity }))}
+    />
+  );
+}
 
+type Choice = { id: string; label: string; inactive?: boolean | undefined };
+
+const pill =
+  'inline-flex h-10 items-center gap-1.5 rounded-full border bg-white px-4 text-[14px] outline-none transition-colors hover:border-ink focus-visible:border-brand';
+const pillIdle = 'border-border-strong text-ink';
+const pillActive = 'border-brand bg-brand-50 font-medium text-brand';
+
+function CheckList({
+  legend,
+  options,
+  selected,
+  onChange,
+}: {
+  legend: string;
+  options: Choice[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const id = useId();
+  const toggle = (value: string) =>
+    onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
+  return (
+    <fieldset>
+      <legend className="px-2 pb-1 text-[12px] font-medium tracking-[0.02em] text-muted">{legend}</legend>
+      {options.length === 0 && <p className="px-2 py-2 text-[14px] text-secondary">Nothing to choose yet.</p>}
+      {options.map((o) => (
+        <label
+          key={o.id}
+          htmlFor={`${id}-${o.id}`}
+          className="flex min-h-10 cursor-pointer items-center gap-2.5 rounded-xs px-2 text-[14px] hover:bg-subtle"
+        >
+          <input
+            id={`${id}-${o.id}`}
+            type="checkbox"
+            className="size-4 accent-[var(--color-brand)]"
+            checked={selected.includes(o.id)}
+            onChange={() => toggle(o.id)}
+          />
+          <span>
+            {o.label}
+            {o.inactive && <span className="text-muted"> (no longer used)</span>}
+          </span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
+/** A compact dropdown: "All branches", "Accra Central", "3 branches". */
 function MultiSelect({
   label,
+  allLabel,
+  plural,
   options,
   selected,
   onChange,
 }: {
   label: string;
-  options: { id: string; label: string; group?: string; inactive?: boolean | undefined }[];
+  allLabel: string;
+  plural: string;
+  options: Choice[];
   selected: string[];
   onChange: (next: string[]) => void;
 }) {
-  const id = useId();
   const summary =
     selected.length === 0
-      ? 'All'
+      ? allLabel
       : selected.length === 1
-        ? (options.find((o) => o.id === selected[0])?.label ?? '1 selected')
-        : `${selected.length} selected`;
-  const toggle = (value: string) =>
-    onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
+        ? (options.find((o) => o.id === selected[0])?.label ?? `1 ${label.toLowerCase()}`)
+        : `${selected.length} ${plural}`;
   return (
     <Popover.Root>
       <Popover.Trigger
-        className={`${control} inline-flex max-w-[260px] items-center gap-1 ${selected.length ? 'border-brand bg-brand-50' : ''}`}
+        aria-label={`${label}: ${summary}`}
+        className={`${pill} max-w-[240px] ${selected.length ? pillActive : pillIdle}`}
       >
-        <span className="text-secondary">{label}:</span>
-        <span className="truncate font-medium">{summary}</span>
-        <span aria-hidden>▾</span>
+        <span className="truncate">{summary}</span>
+        <IconChevronDown size={16} aria-hidden className="shrink-0 opacity-70" />
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
           align="start"
-          sideOffset={4}
-          className="z-50 max-h-[60vh] w-[280px] overflow-y-auto rounded-sm border border-border bg-white p-2 shadow-float"
+          sideOffset={6}
+          className="z-50 max-h-[60vh] w-[280px] overflow-y-auto rounded-md border border-border bg-white p-2 shadow-float"
         >
-          <fieldset>
-            <legend className="px-2 pb-1 text-[12px] font-medium uppercase tracking-[1px] text-muted">
-              {label}
-            </legend>
-            {options.length === 0 && <p className="px-2 py-2 text-[14px] text-secondary">No options.</p>}
-            {options.map((o, i) => (
-              <div key={o.id}>
-                {o.group && o.group !== options[i - 1]?.group && (
-                  <p className="mt-2 border-t border-border px-2 pt-2 text-[12px] text-muted">{o.group}</p>
-                )}
-                <label
-                  htmlFor={`${id}-${o.id}`}
-                  className="flex min-h-11 cursor-pointer items-center gap-2 rounded-xs px-2 text-[14px] hover:bg-surface-muted"
-                >
-                  <input
-                    id={`${id}-${o.id}`}
-                    type="checkbox"
-                    className="size-4 accent-[var(--color-brand)]"
-                    checked={selected.includes(o.id)}
-                    onChange={() => toggle(o.id)}
-                  />
-                  <span>
-                    {o.label}
-                    {o.inactive && <span className="text-muted"> (inactive)</span>}
-                  </span>
-                </label>
-              </div>
-            ))}
-          </fieldset>
+          <CheckList legend={label} options={options} selected={selected} onChange={onChange} />
           {selected.length > 0 && (
             <button
               type="button"
               onClick={() => onChange([])}
-              className="mt-1 h-11 w-full rounded-xs text-[14px] font-medium text-brand hover:bg-brand-50"
+              className="mt-1 h-10 w-full rounded-xs text-[14px] font-medium text-brand hover:bg-brand-50"
             >
-              Clear {label.toLowerCase()}
+              Show {allLabel.toLowerCase()}
             </button>
           )}
         </Popover.Content>
@@ -172,58 +204,84 @@ function MultiSelect({
   );
 }
 
-const fromOptions = (xs: readonly { key: string; label: string }[], group?: string) =>
-  xs.map((x) => ({ id: x.key, label: x.label, ...(group ? { group } : {}) }));
-const fromCatalogue = (xs: Option[] | undefined) =>
+const fromOptions = (xs: readonly { key: string; label: string }[]): Choice[] =>
+  xs.map((x) => ({ id: x.key, label: x.label }));
+const fromCatalogue = (xs: Option[] | undefined): Choice[] =>
   (xs ?? []).map((x) => ({ id: x.id, label: x.label, inactive: x.inactive }));
 
 /**
- * The global filter bar (SPEC M08 common filter set). `granularity` shows the time-granularity
- * switch; `caseStatus` adds the case-status filter (records and case views only); `hide` removes
- * filters that don't apply to a view (e.g. answers on the funnel).
+ * The global filter bar: Period, Branch, Channel and Product in one row; Region, customer rating, area
+ * to improve (and case status where it applies) under "More filters". `hide` removes filters that don't
+ * apply to a view (e.g. the branch filter on a single branch's page).
  */
 export function FilterBar({
-  granularity = false,
   caseStatus = false,
   hide = [],
+  periodOnly = false,
   children,
 }: {
-  granularity?: boolean;
   caseStatus?: boolean;
   hide?: ListKey[];
+  /** Only the period applies on this view. */
+  periodOnly?: boolean;
   children?: ReactNode;
 }) {
   const { filters, setFilters, periodText } = useAnalyticsFilters();
   const catalogues = useCatalogues();
-  const [open, setOpen] = useState(false);
-  const panelId = useId();
-  const count = activeFilterCount(filters);
   const set = (key: ListKey, values: string[]) =>
     setFilters((f) => ({ ...f, lists: { ...f.lists, [key]: values } }));
-  const branchSelection = [...(filters.lists.branch ?? []), ...(filters.lists.bstatus ?? [])];
-  const statusKeys: string[] = BRANCH_STATUSES.map((s) => s.key);
-  const lists: { key: ListKey; label: string; options: ReturnType<typeof fromOptions> }[] = [
+  const shown = (k: ListKey) => !periodOnly && !hide.includes(k);
+
+  const main: { key: ListKey; label: string; all: string; plural: string; options: Choice[] }[] = [
+    {
+      key: 'branch',
+      label: 'Branch',
+      all: 'All branches',
+      plural: 'branches',
+      options: fromCatalogue(catalogues.data?.branches),
+    },
+    {
+      key: 'channel',
+      label: 'Channel',
+      all: 'All channels',
+      plural: 'channels',
+      options: fromCatalogue(catalogues.data?.channels),
+    },
+    {
+      key: 'product',
+      label: 'Product',
+      all: 'All products',
+      plural: 'products',
+      options: fromCatalogue(catalogues.data?.products),
+    },
+  ];
+  const more: { key: ListKey; label: string; options: Choice[] }[] = [
     { key: 'region', label: 'Region', options: fromCatalogue(catalogues.data?.regions) },
-    { key: 'channel', label: 'Channel', options: fromCatalogue(catalogues.data?.channels) },
-    { key: 'product', label: 'Product', options: fromCatalogue(catalogues.data?.products) },
-    { key: 'sat', label: 'Satisfaction', options: fromOptions(SATISFACTION) },
-    { key: 'nps', label: 'NPS class', options: fromOptions(NPS_CLASSES) },
-    { key: 'factor', label: 'Improvement factor', options: fromCatalogue(catalogues.data?.factors) },
-    { key: 'src', label: 'Source', options: fromOptions(SOURCES) },
-    { key: 'qr', label: 'QR point', options: fromCatalogue(catalogues.data?.qrPoints) },
-    { key: 'ver', label: 'Survey version', options: fromCatalogue(catalogues.data?.versions) },
+    { key: 'sat', label: 'Customer rating', options: fromOptions(SATISFACTION) },
+    { key: 'factor', label: WORDS.factor, options: fromCatalogue(catalogues.data?.factors) },
     ...(caseStatus
       ? [{ key: 'case' as const, label: 'Case status', options: fromOptions(CASE_STATUSES) }]
       : []),
   ];
+  const moreShown = more.filter((m) => shown(m.key));
+  const visibleKeys = [...main.map((m) => m.key), ...moreShown.map((m) => m.key)].filter(shown);
+  const count = activeFilterCount(filters, visibleKeys);
+  const moreCount = activeFilterCount(
+    filters,
+    MORE_KEYS.filter((k) => moreShown.some((m) => m.key === k)),
+  );
+  const canClear = count > 0 || filters.preset !== DEFAULT_FILTERS.preset;
 
   return (
-    <section aria-label="Filters" className="mb-6 rounded-lg bg-white p-4">
-      <div className="flex flex-wrap items-end gap-3">
-        <label className="flex flex-col gap-1 text-[14px] font-medium">
+    <section aria-label="Filters" className="mb-8">
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="sr-only" htmlFor="analytics-period">
           Period
+        </label>
+        <div className="relative">
           <select
-            className={control}
+            id="analytics-period"
+            className={`${pill} appearance-none pr-9 ${filters.preset !== DEFAULT_FILTERS.preset ? pillActive : pillIdle}`}
             value={filters.preset}
             onChange={(e) => {
               const preset = e.target.value as Preset;
@@ -242,115 +300,103 @@ export function FilterBar({
               </option>
             ))}
           </select>
-        </label>
-        {filters.preset === 'custom' && (
-          <>
-            <label className="flex flex-col gap-1 text-[14px] font-medium">
-              From
-              <input
-                type="date"
-                className={control}
-                value={filters.from ?? ''}
-                max={filters.to}
-                onChange={(e) => e.target.value && setFilters((f) => ({ ...f, from: e.target.value }))}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-[14px] font-medium">
-              To
-              <input
-                type="date"
-                className={control}
-                value={filters.to ?? ''}
-                min={filters.from}
-                onChange={(e) => e.target.value && setFilters((f) => ({ ...f, to: e.target.value }))}
-              />
-            </label>
-          </>
-        )}
-        {granularity && (
-          <label className="flex flex-col gap-1 text-[14px] font-medium">
-            Granularity
-            <select
-              className={control}
-              value={filters.granularity}
-              onChange={(e) => setFilters((f) => ({ ...f, granularity: e.target.value as Granularity }))}
-            >
-              {GRANULARITIES.map((g) => (
-                <option key={g.key} value={g.key}>
-                  {g.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        <button
-          type="button"
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={() => setOpen((o) => !o)}
-          className={`${control} font-medium md:hidden`}
-        >
-          Filters{count > 0 ? ` (${count})` : ''}
-        </button>
-        <p className="text-[14px] text-secondary" aria-live="polite">
-          {periodText} · Africa/Accra · by submission date
-        </p>
-      </div>
-      <div id={panelId} className={`${open ? 'flex' : 'hidden'} mt-3 flex-wrap items-center gap-2 md:flex`}>
-        {!hide.includes('branch') && (
-          <MultiSelect
-            label="Branch"
-            options={[
-              ...fromCatalogue(catalogues.data?.branches),
-              ...fromOptions(BRANCH_STATUSES, 'No issuing branch'),
-            ]}
-            selected={branchSelection}
-            onChange={(next) =>
-              setFilters((f) => ({
-                ...f,
-                lists: {
-                  ...f.lists,
-                  branch: next.filter((v) => !statusKeys.includes(v)),
-                  bstatus: next.filter((v) => statusKeys.includes(v)),
-                },
-              }))
-            }
+          <IconChevronDown
+            size={16}
+            aria-hidden
+            className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 opacity-70"
           />
+        </div>
+        {filters.preset === 'custom' && (
+          <span className="inline-flex items-center gap-1.5 text-[14px]">
+            <label className="sr-only" htmlFor="analytics-from">
+              From
+            </label>
+            <input
+              id="analytics-from"
+              type="date"
+              className={`${pill} ${pillIdle}`}
+              value={filters.from ?? ''}
+              max={filters.to}
+              onChange={(e) => e.target.value && setFilters((f) => ({ ...f, from: e.target.value }))}
+            />
+            <span aria-hidden className="text-muted">
+              to
+            </span>
+            <label className="sr-only" htmlFor="analytics-to">
+              To
+            </label>
+            <input
+              id="analytics-to"
+              type="date"
+              className={`${pill} ${pillIdle}`}
+              value={filters.to ?? ''}
+              min={filters.from}
+              onChange={(e) => e.target.value && setFilters((f) => ({ ...f, to: e.target.value }))}
+            />
+          </span>
         )}
-        {lists
-          .filter((l) => !hide.includes(l.key))
-          .map((l) => (
+        {main
+          .filter((m) => shown(m.key))
+          .map((m) => (
             <MultiSelect
-              key={l.key}
-              label={l.label}
-              options={l.options}
-              selected={filters.lists[l.key] ?? []}
-              onChange={(v) => set(l.key, v)}
+              key={m.key}
+              label={m.label}
+              allLabel={m.all}
+              plural={m.plural}
+              options={m.options}
+              selected={filters.lists[m.key] ?? []}
+              onChange={(v) => set(m.key, v)}
             />
           ))}
-        <label className="inline-flex min-h-11 items-center gap-2 px-2 text-[14px]">
-          <input
-            type="checkbox"
-            className="size-4 accent-[var(--color-brand)]"
-            checked={filters.includeUnverified}
-            onChange={(e) => setFilters((f) => ({ ...f, includeUnverified: e.target.checked }))}
-          />
-          Include unverified submissions
-        </label>
-        {(count > 0 || filters.preset !== DEFAULT_FILTERS.preset) && (
+        {moreShown.length > 0 && (
+          <Popover.Root>
+            <Popover.Trigger className={`${pill} ${moreCount ? pillActive : pillIdle}`}>
+              <IconFilter size={16} aria-hidden className="opacity-70" />
+              More filters
+              {moreCount > 0 && (
+                <span className="grid size-5 place-items-center rounded-full bg-brand text-[11px] font-semibold text-white">
+                  {moreCount}
+                  <span className="sr-only"> active</span>
+                </span>
+              )}
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                align="start"
+                sideOffset={6}
+                className="z-50 grid max-h-[70vh] w-[300px] gap-3 overflow-y-auto rounded-md border border-border bg-white p-3 shadow-float"
+              >
+                {moreShown.map((m, i) => (
+                  <div key={m.key} className={i > 0 ? 'border-t border-border-subtle pt-3' : ''}>
+                    <CheckList
+                      legend={m.label}
+                      options={m.options}
+                      selected={filters.lists[m.key] ?? []}
+                      onChange={(v) => set(m.key, v)}
+                    />
+                  </div>
+                ))}
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
+        )}
+        {canClear && (
           <button
             type="button"
             onClick={() => setFilters({ ...DEFAULT_FILTERS, granularity: filters.granularity })}
-            className="h-11 rounded-full px-4 text-[14px] font-medium text-brand hover:bg-brand-50"
+            className="h-10 rounded-full px-3 text-[14px] font-medium text-brand hover:bg-brand-50"
           >
-            Reset filters
+            Clear{count > 0 ? ` (${count})` : ''}
           </button>
         )}
         {children}
+        <p className="ml-auto text-[13px] text-muted" aria-live="polite">
+          {periodText}
+        </p>
       </div>
       {catalogues.isError && (
         <p role="alert" className="mt-2 text-[14px] text-danger">
-          Filter options couldn’t load. Figures still use the filters in the address bar.
+          Filter options couldn’t load. The figures still use the filters already chosen.
         </p>
       )}
     </section>

@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import { MEASURES, RECOMMEND_GROUPS, WORDS } from '../../lib/terms';
 import { PageHeader } from '../../pages/shell';
 import { Alert } from '../../ui/controls';
 import {
@@ -13,64 +14,69 @@ import {
   type TrendMetric,
 } from './api';
 import { NPS_COLOURS } from './chart-palette';
-import { FilterBar, useAnalyticsFilters } from './filters';
-import { formatCount, formatMetric, formatPct } from './format';
+import { FilterBar, GranularityControl, useAnalyticsFilters } from './filters';
+import { formatCount, formatPct, MEASURE_OPTIONS, METRIC_INFO } from './format';
 import { TrendChart } from './trend-chart';
 import {
   BRANCH_SUBTITLE,
   Card,
+  ChangeLine,
   FilterLink,
   KpiCard,
   MetricsTable,
+  MetricValue,
   QueryView,
+  reliableFirst,
+  selectClass,
   Skeleton,
-  UnverifiedNote,
+  StatTile,
+  td,
+  tdNum,
+  th,
+  thNum,
 } from './ui';
 
-const KPIS: { key: KpiKey; label: string }[] = [
-  { key: 'csat_pct', label: 'CSAT %' },
-  { key: 'csat_avg', label: 'Average CSAT' },
-  { key: 'nps', label: 'NPS' },
-  { key: 'ces_avg', label: 'Average CES' },
-];
+const LEAD: KpiKey[] = ['csat_pct', 'nps', 'ces_avg', 'csat_avg'];
 
-/** Total responses with delta vs previous period. */
 function ResponsesCard({ s }: { s: Summary }) {
-  const diff = s.n - s.previous.n;
   return (
-    <div className="flex flex-col gap-1 rounded-lg bg-white p-4">
-      <p className="text-[14px] font-medium text-secondary">Total responses</p>
-      <p className="text-[32px] font-medium leading-10">{formatCount(s.n)}</p>
-      <p className="text-[12px] text-muted">valid responses in the period</p>
-      <p className="text-[12px] text-secondary">
-        {diff > 0 ? '+' : diff < 0 ? '−' : '±'}
-        {formatCount(Math.abs(diff))} vs previous period ({formatCount(s.previous.n)})
-      </p>
-      <UnverifiedNote count={s.unverified_excluded} included={s.include_unverified} />
-    </div>
+    <StatTile
+      label={MEASURES.responses.label}
+      explain={MEASURES.responses.explain}
+      value={s.n === 0 ? WORDS.noData : formatCount(s.n)}
+      large={s.n > 0}
+      muted={s.n === 0}
+      footer={s.n > 0 && s.previous.n > 0 && <ChangeLine metric="responses" delta={s.n - s.previous.n} />}
+    />
   );
 }
 
 function MainFactorCard({ s }: { s: Summary }) {
   const mf = s.main_factor;
+  const none = mf.labels.length === 0;
   return (
-    <div className="flex flex-col gap-1 rounded-lg bg-white p-4">
-      <p className="text-[14px] font-medium text-secondary">Main improvement factor</p>
-      <p className={`text-[20px] font-medium leading-7 ${mf.labels.length === 0 ? 'text-muted' : ''}`}>
-        {mf.labels.length === 0 ? 'No data' : mf.labels.join(' / ')}
-      </p>
-      <p className="text-[12px] text-muted">
-        {mf.labels.length > 0 && `${formatPct(mf.share)} of `}n = {formatCount(mf.n)} customers who named a
-        factor
-      </p>
-      {mf.labels.length > 1 && (
-        <p className="text-[12px] text-secondary">Tied ({formatCount(mf.count)} each)</p>
-      )}
-    </div>
+    <StatTile
+      label={MEASURES.main_factor.label}
+      explain={MEASURES.main_factor.explain}
+      large={false}
+      muted={none}
+      value={none ? WORDS.noData : mf.labels.join(' / ')}
+      footer={
+        !none && (
+          <p className="text-secondary">
+            {mf.labels.length > 1
+              ? 'Mentioned equally often'
+              : `Raised in ${formatPct(mf.share)} of suggestions`}
+          </p>
+        )
+      }
+    />
   );
 }
 
-/** NPS composition: detractors · passives · promoters (fixed colours, E2) with labels, never colour alone. */
+const GROUP_ORDER = ['promoter', 'passive', 'detractor'] as const;
+
+/** Would customers recommend us? Likely · Neutral · Unlikely, with labels (never colour alone). */
 export function NpsComposition({ filters }: { filters: Record<string, unknown> }) {
   const dist = useRpc<{
     n: number;
@@ -78,13 +84,15 @@ export function NpsComposition({ filters }: { filters: Record<string, unknown> }
   }>('analytics_distribution', { p_metric: 'nps_class', p_filters: filters });
   return (
     <QueryView query={dist} skeleton="h-24">
-      {(d) =>
-        d.n === 0 ? (
-          <p className="text-secondary">No data</p>
-        ) : (
+      {(d) => {
+        if (d.n === 0) return <p className="py-6 text-secondary">{WORDS.noData}</p>;
+        const buckets = GROUP_ORDER.map((k) => d.buckets.find((b) => b.key === k)).filter(
+          (b): b is NonNullable<typeof b> => !!b,
+        );
+        return (
           <div>
-            <div className="flex h-8 w-full gap-[2px] overflow-hidden rounded-xs" aria-hidden>
-              {d.buckets.map((b) => (
+            <div className="flex h-3 w-full gap-[3px] overflow-hidden rounded-full" aria-hidden>
+              {buckets.map((b) => (
                 <div
                   key={b.key}
                   style={{
@@ -94,58 +102,59 @@ export function NpsComposition({ filters }: { filters: Record<string, unknown> }
                 />
               ))}
             </div>
-            <ul className="mt-3 grid gap-1 text-[14px]">
-              {d.buckets.map((b) => (
-                <li key={b.key} className="flex items-center gap-2">
-                  <span
-                    aria-hidden
-                    className="inline-block size-3 rounded-full"
-                    style={{ background: NPS_COLOURS[b.key as keyof typeof NPS_COLOURS] }}
-                  />
-                  {b.label}: <span className="font-medium">{formatPct(b.share)}</span>
-                  <span className="text-muted">({formatCount(b.count)})</span>
+            <ul className="mt-5 grid gap-3 text-[14px]">
+              {buckets.map((b) => (
+                <li key={b.key} className="flex items-center justify-between gap-3">
+                  <span className="inline-flex items-center gap-2">
+                    <span
+                      aria-hidden
+                      className="inline-block size-2.5 rounded-full"
+                      style={{ background: NPS_COLOURS[b.key as keyof typeof NPS_COLOURS] }}
+                    />
+                    {RECOMMEND_GROUPS[b.key as keyof typeof RECOMMEND_GROUPS] ?? b.label}
+                  </span>
+                  <span className="font-semibold tabular-nums">{formatPct(b.share)}</span>
                 </li>
               ))}
             </ul>
           </div>
-        )
-      }
+        );
+      }}
     </QueryView>
   );
 }
 
 function MiniComparison({ rows, title }: { rows: BreakdownRow[]; title: string }) {
-  const visible = rows.filter((r) => r.n > 0).sort((a, b) => b.n - a.n);
-  if (visible.length === 0) return <p className="text-secondary">No data</p>;
+  const visible = reliableFirst(rows.filter((r) => r.n > 0).sort((a, b) => b.n - a.n));
+  if (visible.length === 0) return <p className="py-6 text-secondary">{WORDS.noData}</p>;
   return (
-    <table className="w-full text-[14px]">
+    <table className="w-full">
       <caption className="sr-only">{title}</caption>
       <thead>
-        <tr className="text-left text-[12px] uppercase tracking-[1px] text-muted">
-          <th scope="col" className="py-1 font-medium">
+        <tr className="border-b border-border">
+          <th scope="col" className={`${th} pl-0`}>
             Name
           </th>
-          <th scope="col" className="py-1 text-right font-medium">
-            n
+          <th scope="col" className={thNum} title={MEASURES.csat_pct.explain}>
+            Satisfied
           </th>
-          <th scope="col" className="py-1 text-right font-medium">
-            CSAT %
-          </th>
-          <th scope="col" className="py-1 text-right font-medium">
-            NPS
+          <th scope="col" className={`${thNum} pr-0`} title={MEASURES.nps.explain}>
+            Recommend
           </th>
         </tr>
       </thead>
       <tbody>
         {visible.map((r) => (
-          <tr key={r.key} className={`border-t border-border ${r.low_sample ? 'text-secondary' : ''}`}>
-            <th scope="row" className="py-2 text-left font-normal">
+          <tr key={r.key} className="border-b border-border-subtle last:border-0">
+            <th scope="row" className={`${td} pl-0 text-left font-normal`}>
               {r.label}
-              {r.low_sample && <span className="text-[12px] text-warning"> · low sample</span>}
             </th>
-            <td className="py-2 text-right tabular-nums">{formatCount(r.n)}</td>
-            <td className="py-2 text-right tabular-nums">{formatMetric('csat_pct', r.csat_pct)}</td>
-            <td className="py-2 text-right tabular-nums">{formatMetric('nps', r.nps)}</td>
+            <td className={tdNum}>
+              <MetricValue metric="csat_pct" value={r.csat_pct} few={r.low_sample} />
+            </td>
+            <td className={`${tdNum} pr-0`}>
+              <MetricValue metric="nps" value={r.nps} few={r.low_sample} />
+            </td>
           </tr>
         ))}
       </tbody>
@@ -153,7 +162,7 @@ function MiniComparison({ rows, title }: { rows: BreakdownRow[]; title: string }
   );
 }
 
-/** "Needs attention" (MS-10's public.needs_attention). Hidden only while that RPC does not exist yet. */
+/** "Needs attention" (public.needs_attention). Hidden only while that RPC does not exist yet. */
 function NeedsAttention() {
   const q = useRpc<{ open_flags: number; overdue_cases: number; fired_alerts: number }>(
     'needs_attention',
@@ -162,22 +171,22 @@ function NeedsAttention() {
   if (q.isError && isMissingRpc(q.error)) return null;
   const items = q.data
     ? [
-        { label: 'Open flags', value: q.data.open_flags },
-        { label: 'Overdue cases', value: q.data.overdue_cases },
-        { label: 'Fired alerts', value: q.data.fired_alerts },
+        { label: WORDS.flags, value: q.data.open_flags },
+        { label: `Cases ${WORDS.slaBreached.toLowerCase()}`, value: q.data.overdue_cases },
+        { label: 'Alerts raised', value: q.data.fired_alerts },
       ]
     : [];
   return (
-    <section aria-label="Needs attention" className="rounded-lg bg-accent-50 p-4 md:p-6">
-      <h2 className="mb-3 text-[18px] font-medium leading-6">Needs attention</h2>
+    <section aria-label="Needs attention" className="rounded-lg bg-accent-50 p-5 md:p-6">
+      <h2 className="mb-4 text-[18px] font-semibold leading-6 tracking-[-0.01em]">Needs attention</h2>
       {q.isPending && <Skeleton className="h-16 bg-white/60" />}
-      {q.isError && <Alert tone="danger">The attention summary couldn’t load. Try again shortly.</Alert>}
+      {q.isError && <Alert tone="danger">This summary couldn’t load. Try again shortly.</Alert>}
       {q.data && (
-        <ul className="grid gap-2">
+        <ul className="grid gap-3">
           {items.map((i) => (
-            <li key={i.label} className="flex items-center justify-between gap-2 text-[16px]">
+            <li key={i.label} className="flex items-center justify-between gap-2 text-[15px]">
               <span>{i.label}</span>
-              <span className="text-[24px] font-medium tabular-nums">{formatCount(i.value)}</span>
+              <span className="text-[22px] font-semibold tabular-nums">{formatCount(i.value)}</span>
             </li>
           ))}
         </ul>
@@ -186,97 +195,93 @@ function NeedsAttention() {
   );
 }
 
-/** S-A1 Executive overview (REQ §6.1). */
+/** Executive overview (REQ §6.1). */
 export function HomePage() {
-  const { rpcFilters, period, filters } = useAnalyticsFilters();
+  const { rpcFilters, filters } = useAnalyticsFilters();
   const summary = useSummary(rpcFilters);
   const branches = useBreakdown('branch', rpcFilters);
   const channels = useBreakdown('channel', rpcFilters);
   const products = useBreakdown('product', rpcFilters);
   const [metric, setMetric] = useState<TrendMetric>('csat_pct');
   const trend = useTrend(metric, filters.granularity, rpcFilters);
-  const rows = useMemo(() => branches.data ?? [], [branches.data]);
 
   return (
     <>
-      <PageHeader title="Executive overview" subtitle="Customer feedback across Serene Insurance." />
-      <FilterBar granularity />
+      <PageHeader
+        title="Overview"
+        subtitle="How customers feel about their experience with Serene Insurance."
+      />
+      <FilterBar />
       <QueryView query={summary} skeleton="h-44">
         {(s) => (
           <>
             {s.n === 0 && (
-              <div className="mb-4">
-                <Alert tone="info" title="No feedback for this period">
-                  No valid responses match these filters. Figures show “No data” rather than zero.
+              <div className="mb-6">
+                <Alert tone="info" title={WORDS.noData}>
+                  No customer responses match this period and these filters. Try a longer period or clear the
+                  filters.
                 </Alert>
               </div>
             )}
-            <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4" aria-live="polite">
-              {KPIS.map((k) => (
-                <KpiCard key={k.key} metric={k.key} label={k.label} m={s.metrics[k.key]} />
+            <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" aria-live="polite">
+              {LEAD.map((k) => (
+                <KpiCard key={k} metric={k} m={s.metrics[k]} />
               ))}
               <ResponsesCard s={s} />
-              <KpiCard
-                metric="completion_rate"
-                label="Completion rate"
-                m={s.metrics.completion_rate}
-                hint="Submitted ÷ started surveys (all surveys opened, whatever the branch). Not a response rate."
-              />
-              <KpiCard metric="negative_rate" label="Negative feedback rate" m={s.metrics.negative_rate} />
+              <KpiCard metric="negative_rate" m={s.metrics.negative_rate} />
+              <KpiCard metric="completion_rate" m={s.metrics.completion_rate} />
               <MainFactorCard s={s} />
             </div>
           </>
         )}
       </QueryView>
 
-      <div className="mb-6 grid gap-6 lg:grid-cols-3">
+      <div className="mb-8 grid gap-6 lg:grid-cols-3">
         <Card
-          title="Trend"
-          period={period}
-          n={summary.data?.n}
+          title="Over time"
           className="lg:col-span-2"
           actions={
-            <label className="flex items-center gap-2 text-[14px]">
-              Metric
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="sr-only" htmlFor="overview-trend-measure">
+                Measure
+              </label>
               <select
-                className="h-11 rounded-sm border border-border-strong bg-white px-3"
+                id="overview-trend-measure"
+                className={selectClass}
                 value={metric}
                 onChange={(e) => setMetric(e.target.value as TrendMetric)}
               >
-                <option value="csat_pct">CSAT %</option>
-                <option value="csat_avg">Average CSAT</option>
-                <option value="nps">NPS</option>
-                <option value="ces_avg">Average CES</option>
-                <option value="negative_rate">Negative rate</option>
-                <option value="responses">Responses</option>
-                <option value="completion_rate">Completion rate</option>
+                {MEASURE_OPTIONS.map((m) => (
+                  <option key={m} value={m}>
+                    {METRIC_INFO[m].label}
+                  </option>
+                ))}
               </select>
-            </label>
+              <GranularityControl />
+            </div>
           }
         >
           <QueryView query={trend} skeleton="h-64">
             {(t) => <TrendChart trend={t} />}
           </QueryView>
         </Card>
-        <Card title="NPS composition" period={period} n={summary.data?.n}>
+        <Card title="Would customers recommend us?" subtitle={MEASURES.nps.explain}>
           <NpsComposition filters={rpcFilters} />
         </Card>
       </div>
 
       <Card
         title="Branch performance"
-        period={period}
-        n={rows.reduce((a, r) => a + r.n, 0)}
-        className="mb-6"
+        subtitle={BRANCH_SUBTITLE}
+        className="mb-8"
         actions={<FilterLink to="/branches">All branches</FilterLink>}
       >
-        <p className="mb-3 text-[14px] text-secondary">{BRANCH_SUBTITLE}</p>
         <QueryView query={branches}>
           {(b) => (
             <MetricsTable
               rows={b}
               caption="Branch performance"
-              showTarget
+              nameHeader="Branch"
               showFactor={false}
               linkTo={(r) => <FilterLink to={`/branches/${r.key}`}>{r.label}</FilterLink>}
             />
@@ -285,10 +290,10 @@ export function HomePage() {
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card title="By channel" period={period} n={channels.data?.reduce((a, r) => a + r.n, 0)}>
+        <Card title="By channel">
           <QueryView query={channels}>{(c) => <MiniComparison rows={c} title="By channel" />}</QueryView>
         </Card>
-        <Card title="By product" period={period} n={products.data?.reduce((a, r) => a + r.n, 0)}>
+        <Card title="By product">
           <QueryView query={products}>{(p) => <MiniComparison rows={p} title="By product" />}</QueryView>
         </Card>
         <NeedsAttention />

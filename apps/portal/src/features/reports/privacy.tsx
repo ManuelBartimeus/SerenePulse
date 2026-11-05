@@ -119,7 +119,7 @@ export function PrivacyPage() {
       {find.data && (
         <section className="mt-6 rounded-lg bg-white" aria-labelledby="dsr-results">
           <h2 id="dsr-results" className="border-b border-border p-4 text-[18px] font-medium">
-            Records for {find.data.phone_masked}
+            Responses for {find.data.phone_masked}
           </h2>
           {find.data.contacts.length === 0 ? (
             <EmptyState title="Nothing held for this number">

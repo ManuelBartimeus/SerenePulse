@@ -141,27 +141,20 @@ select is((select count(*)::int from public.admin_list_users()), 5, 'System Admi
 select is(public.admin_set_grants('00000000-0000-0000-0000-0000000000d1',
   '[{"role":"auditor"}]'::jsonb) ->> 'pending_approval', '0', 'a non-sensitive role is granted immediately');
 select is(public.admin_set_grants('00000000-0000-0000-0000-0000000000c1',
-  '[{"role":"cx_admin"}]'::jsonb) ->> 'pending_approval', '1', 'a role with pii.view waits for a second approver (A-68)');
-select throws_ok(
-  $$select public.admin_decide_grant((select g.id from public.user_role_grants g
-    where g.user_id = '00000000-0000-0000-0000-0000000000c1' and g.status = 'pending_approval'), true)$$,
-  '42501', null, 'the person who requested a grant cannot approve it (D-36)');
+  '[{"role":"cx_admin"}]'::jsonb) ->> 'pending_approval', '0',
+  'a role with pii.view is also granted immediately (second approval removed, revision Q)');
 select throws_ok(
   $$select public.admin_set_grants('00000000-0000-0000-0000-0000000000a1', '[{"role":"executive"}]'::jsonb)$$,
   'P0001', null, 'removing the last System Administrator grant is refused');
 reset role;
 
--- The second Executive approves.
-select set_config('request.jwt.claims', pg_temp.claims_for('00000000-0000-0000-0000-0000000000a2'), true);
-set local role authenticated;
-select lives_ok(
-  $$select public.admin_decide_grant((select g.id from public.user_role_grants g
-    where g.user_id = '00000000-0000-0000-0000-0000000000c1' and g.status = 'pending_approval'), true)$$,
-  'a different Executive can approve it');
-reset role;
 select is((select g.status from public.user_role_grants g join public.roles r on r.id = g.role_id
            where g.user_id = '00000000-0000-0000-0000-0000000000c1' and r.key = 'cx_admin'), 'active',
-  'the approved grant is active');
+  'the sensitive grant is active straight away');
+select is((select count(*)::int from public.permissions where requires_second_approval), 0,
+  'no permission requires a second approver any more');
+select is((select count(*)::int from public.user_role_grants where status = 'pending_approval'), 0,
+  'no grant is left waiting for approval');
 
 -- A revoked grant stops working before the JWT expires (A-133).
 select set_config('request.jwt.claims', pg_temp.claims_for('00000000-0000-0000-0000-0000000000a1'), true);

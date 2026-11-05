@@ -7,23 +7,45 @@ import { Alert, Badge, Button, EmptyState, TextField } from '../../ui/controls';
 import { Dialog } from '../../ui/dialog';
 import { useCatalogues } from '../analytics/catalogues';
 import { accraToday } from '../analytics/filters-state';
+import { MEASURES } from '../../lib/terms';
 import { formatDate } from './format';
+import { ALERT_TABS, PageTabs } from './page-tabs';
 import { Card, ErrorAlert, Loading, Select, TextArea } from './ui';
 
 export const TARGET_METRICS = [
-  { key: 'csat_pct', label: 'CSAT %', direction: 'higher_is_better', unit: '%' },
-  { key: 'csat_avg', label: 'Average CSAT (out of 5)', direction: 'higher_is_better', unit: '' },
-  { key: 'nps', label: 'NPS (−100 to +100)', direction: 'higher_is_better', unit: '' },
-  { key: 'ces_avg', label: 'Average CES (out of 5)', direction: 'higher_is_better', unit: '' },
-  { key: 'completion_rate', label: 'Completion rate %', direction: 'higher_is_better', unit: '%' },
-  { key: 'negative_rate', label: 'Negative feedback rate %', direction: 'lower_is_better', unit: '%' },
+  { key: 'csat_pct', label: `${MEASURES.csat_pct.label} (%)`, direction: 'higher_is_better', unit: '%' },
+  {
+    key: 'csat_avg',
+    label: `${MEASURES.csat_avg.label} (out of 5)`,
+    direction: 'higher_is_better',
+    unit: '',
+  },
+  { key: 'nps', label: `${MEASURES.nps.label} (−100 to +100)`, direction: 'higher_is_better', unit: '' },
+  { key: 'ces_avg', label: `${MEASURES.ces_avg.label} (out of 5)`, direction: 'higher_is_better', unit: '' },
+  {
+    key: 'completion_rate',
+    label: `${MEASURES.completion_rate.label} (%)`,
+    direction: 'higher_is_better',
+    unit: '%',
+  },
+  {
+    key: 'negative_rate',
+    label: `${MEASURES.negative_rate.label} (%)`,
+    direction: 'lower_is_better',
+    unit: '%',
+  },
   {
     key: 'resolution_time_days',
-    label: 'Resolution time (working days)',
+    label: 'Average time to resolve cases (working days)',
     direction: 'lower_is_better',
     unit: ' days',
   },
-  { key: 'sla_compliance_pct', label: 'SLA compliance %', direction: 'higher_is_better', unit: '%' },
+  {
+    key: 'sla_compliance_pct',
+    label: 'Cases resolved on time (%)',
+    direction: 'higher_is_better',
+    unit: '%',
+  },
 ] as const;
 const SCOPES = [
   { key: 'organisation', label: 'Whole organisation' },
@@ -72,8 +94,9 @@ export function validateTarget(v: {
     return 'Percentages must be between 0 and 100.';
   if (['csat_avg', 'ces_avg'].includes(v.metric) && (n < 1 || n > 5))
     return 'Averages must be between 1 and 5.';
-  if (v.metric === 'nps' && (n < -100 || n > 100)) return 'NPS must be between −100 and +100.';
-  if (v.metric === 'resolution_time_days' && n <= 0) return 'Resolution time must be more than 0.';
+  if (v.metric === 'nps' && (n < -100 || n > 100))
+    return 'The recommendation score must be between −100 and +100.';
+  if (v.metric === 'resolution_time_days' && n <= 0) return 'The time to resolve must be more than 0.';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(v.effective_from)) return 'Choose the date the target starts.';
   if (v.effective_to && v.effective_to < v.effective_from)
     return 'The end date must be on or after the start date.';
@@ -132,10 +155,11 @@ export function TargetsPage() {
   return (
     <>
       <PageHeader
-        title="Targets"
-        subtitle="Set a target for a metric and a scope from a start date. Dashboards show “No target” where none applies."
+        title="Alerts"
+        subtitle="Targets for each measure, for the whole company or one branch, region, channel or product."
         actions={manage ? <Button onClick={() => setAdding(true)}>Add target</Button> : null}
       />
+      <PageTabs tabs={ALERT_TABS} label="Alerts" />
       <div aria-live="polite" className="mb-4">
         {err && (
           <Alert tone="danger" detail={err.detail}>
@@ -153,7 +177,7 @@ export function TargetsPage() {
             title="No targets yet"
             action={manage ? <Button onClick={() => setAdding(true)}>Add target</Button> : undefined}
           >
-            There are no default targets. Every metric shows “No target” until one is added.
+            No targets have been set yet. Add one to be alerted when a measure falls short of it.
           </EmptyState>
         </section>
       ) : (
@@ -252,7 +276,7 @@ function AddTargetDialog({ onClose, today }: { onClose: () => void; today: strin
       open
       onOpenChange={(o) => !o && onClose()}
       title="Add a target"
-      description="A newer target for the same metric and scope replaces the older one from its start date."
+      description="A newer target for the same measure replaces the older one from its start date."
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -265,7 +289,7 @@ function AddTargetDialog({ onClose, today }: { onClose: () => void; today: strin
       }
     >
       <div className="flex flex-col gap-4">
-        <Select label="Metric" value={v.metric} onChange={(e) => setV({ ...v, metric: e.target.value })}>
+        <Select label="Measure" value={v.metric} onChange={(e) => setV({ ...v, metric: e.target.value })}>
           {TARGET_METRICS.map((m) => (
             <option key={m.key} value={m.key}>
               {m.label} ({m.direction === 'higher_is_better' ? 'higher is better' : 'lower is better'})

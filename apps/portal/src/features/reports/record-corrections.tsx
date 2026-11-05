@@ -1,4 +1,4 @@
-// Attribution corrections in the record drawer (FR-41, MS-13): the submitted branch is always shown,
+// Branch corrections in the response drawer (FR-41, MS-13): the submitted branch is always shown,
 // then the effective one, the history and (with permission) a propose form. Rendered by C's drawer.
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
@@ -95,7 +95,7 @@ export function RecordCorrectionsPanel({ responseId }: { responseId: string }) {
   return (
     <section aria-labelledby={`corr-${responseId}`} className="grid gap-3">
       <h3 id={`corr-${responseId}`} className="font-medium">
-        Branch attribution
+        Branch
       </h3>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[14px]">
         <dt className="text-secondary">Customer said</dt>

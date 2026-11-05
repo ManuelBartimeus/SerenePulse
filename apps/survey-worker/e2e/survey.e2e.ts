@@ -171,7 +171,7 @@ test.describe('Page 5 and submission', () => {
     ).toBe('0');
   });
 
-  test('T-M06-110 Back and reload after submit show the confirmation; FR-34 already shared', async ({
+  test('T-M06-110 Back and reload after submit show the confirmation; cooldown off allows another response', async ({
     page,
     context,
   }) => {
@@ -187,14 +187,40 @@ test.describe('Page 5 and submission', () => {
     await expect(page.locator('[data-reference]')).toHaveText(ref);
     await expect(page.locator('form#sv-form')).toHaveCount(0);
     expect(responseCount(id)).toBe(1);
-    // A new session from the same device inside the cooldown: "already shared".
+    // The device cooldown is off (device_cooldown_hours = 0): a new session from the same device
+    // gets a fresh, blank form — never the "already shared" page.
+    expect(sql(`select value::text from public.settings where key = 'device_cooldown_hours'`)).toBe('0');
     const cookies = (await context.cookies()).filter((c) => c.name !== 'dev-svs');
     await context.clearCookies();
     await context.addCookies(cookies);
     await page.goto(START);
-    await expect(
-      page.getByRole('heading', { name: 'You’ve already shared your feedback — thank you!' }),
-    ).toBeVisible();
+    await expect(page.locator('form#sv-form')).toHaveCount(1);
+    expect(await sessionId(page)).not.toBe(id);
+    await expect(page.getByRole('heading', { name: /already shared/ })).toHaveCount(0);
+  });
+
+  test('"Share more feedback" starts a brand-new blank survey on the same device', async ({ page }) => {
+    await page.goto(START);
+    const id = await sessionId(page);
+    await toPage5(page);
+    await submitAndConfirm(page);
+    await page.getByRole('link', { name: 'Share more feedback' }).click();
+    await expect(page).toHaveURL(/\/customerfeedback$/);
+    await expect(page.locator('form#sv-form')).toHaveCount(1);
+    const fresh = await sessionId(page);
+    expect(fresh).not.toBe(id);
+    expect(draft(fresh, 'csat')).toBe('');
+    await expectStep(page, 1);
+    // The new form may save its own (empty) draft at once; nothing of the previous survey survives.
+    const stored = await page.evaluate(() =>
+      Object.keys(sessionStorage).map(
+        (k) => JSON.parse(sessionStorage.getItem(k) ?? '{}') as { sid?: string; answers?: object },
+      ),
+    );
+    for (const s of stored) {
+      expect(s.sid).toBe(fresh);
+      expect(Object.keys(s.answers ?? {})).toEqual([]);
+    }
   });
 });
 
@@ -258,15 +284,16 @@ test.describe('accessibility (WCAG 2.2 AA, axe)', () => {
   });
 });
 
-test.describe('source and QR (M05)', () => {
-  test('T-M05-020/030 a QR scan records source qr; unknown codes still open the survey', async ({ page }) => {
+test.describe('retired QR points (revision Q)', () => {
+  test('old QR-point links redirect to the form and record no QR source', async ({ page }) => {
     await page.goto('/customerfeedback/q/ZZZZ');
+    expect(new URL(page.url()).pathname).toBe('/customerfeedback');
     const id = await sessionId(page);
     expect(
       sql(
-        `select s.code from survey.sessions x join public.survey_sources s on s.id = x.source_id where x.id = '${id}'`,
+        `select coalesce(s.code, '') from survey.sessions x left join public.survey_sources s on s.id = x.source_id where x.id = '${id}'`,
       ),
-    ).toBe('qr');
+    ).not.toBe('qr');
     await expectStep(page, 1);
   });
 });

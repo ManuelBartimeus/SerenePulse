@@ -32,10 +32,10 @@ export function casesRoutes(parent: AnyRoute): AnyRoute[] {
   ];
 }
 
+/** Sidebar entries; sub-pages (My cases, Flagging rules, Alert rules, Targets) are tabs on these pages. */
 export const casesNav: NavItem[] = [
   { to: '/flags', label: 'Flagged feedback', permission: 'flags.view', group: 'operations' },
   { to: '/cases', label: 'Cases', permission: 'cases.view', group: 'operations' },
-  { to: '/cases/mine', label: 'My cases', permission: 'cases.work', group: 'operations' },
   {
     to: '/cases/performance',
     label: 'Case performance',
@@ -43,7 +43,4 @@ export const casesNav: NavItem[] = [
     group: 'operations',
   },
   { to: '/alerts', label: 'Alerts', permission: ['alerts.manage', 'analytics.view'], group: 'operations' },
-  { to: '/flags/rules', label: 'Flag rules', permission: 'flags.configure', group: 'admin' },
-  { to: '/targets', label: 'Targets', permission: 'targets.manage', group: 'admin' },
-  { to: '/alerts/rules', label: 'Alert rules', permission: 'alerts.manage', group: 'admin' },
 ];

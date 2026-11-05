@@ -10,7 +10,7 @@ select is(
   '48'::jsonb, 'settings changes are recorded in settings_history');
 select is(
   (select old_value from public.settings_history where key = 'device_cooldown_hours' order by id desc limit 1),
-  '24'::jsonb, 'history keeps the previous value');
+  '0'::jsonb, 'history keeps the previous value (cooldown is off, 0, since 202611110002)');
 
 select ok(
   not has_function_privilege('authenticated', 'public.vault_upsert_secret(text, text)', 'execute')

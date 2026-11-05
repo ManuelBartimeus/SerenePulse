@@ -56,7 +56,7 @@ const SOURCE_LABEL: Record<string, string> = {
   service_channels: 'Service channels',
   branches: 'Branches',
   insurance_products: 'Products',
-  improvement_factors: 'Improvement factors',
+  improvement_factors: 'Areas to improve',
 };
 
 /** Mirrors the engine's guardrail cap for max_length. */
@@ -187,7 +187,8 @@ function QuestionInspector({
         </p>
         {q.options_source && (
           <p className="mt-1 text-[14px] text-secondary">
-            Options come from the {SOURCE_LABEL[q.options_source] ?? q.options_source} catalogue.
+            Options come from the “{SOURCE_LABEL[q.options_source] ?? q.options_source}” list under Lists &
+            options.
           </p>
         )}
       </div>
@@ -207,7 +208,7 @@ function QuestionInspector({
         disabled={readOnly}
         maxLength={300}
         onChange={(e) => set({ label: e.target.value })}
-        helper="What the customer reads. Plain words; never “CSAT”, “NPS” or “CES”."
+        helper="What the customer reads. Use plain, friendly words."
       />
       <TextArea
         label="Help text"
@@ -562,18 +563,18 @@ function ApprovalPanel({
   });
   return (
     <Section
-      title="Approval"
-      description={`Prepared by ${preparerName}. The approver must be a different person from the preparer (four-eyes).`}
+      title="Review and publish"
+      description={`Prepared by ${preparerName}. Someone other than the person who prepared it must publish it.`}
     >
       <div className="flex flex-col gap-4 p-4 md:p-5">
         {own ? (
           <Alert tone="warning" title="You prepared this version">
-            Someone other than the preparer must approve it. Ask another approver to review it.
+            Someone other than the person who prepared it must publish it. Ask another Executive to review it.
           </Alert>
         ) : (
           <p className="text-secondary">
             Check the preview and the changes, then publish or send it back. Publishing retires the current
-            version; new surveys use this one straight away, with the catalogue lists as they are at that
+            version; new surveys use this one straight away, with the answer options as they are at that
             moment.
           </p>
         )}
@@ -851,7 +852,7 @@ function VersionEditor({
             rows={2}
             maxLength={500}
             onChange={(e) => setNote(e.target.value)}
-            helper="What changed and why, for the approver and the version list."
+            helper="What changed and why, for the reviewer and the list of versions."
             counter={`${note.length}/500`}
           />
         )}
@@ -898,7 +899,7 @@ function VersionEditor({
   return (
     <div className="flex flex-col gap-6">
       {row.status === 'draft' && row.rejection_reason && (
-        <Alert tone="warning" title="Sent back by the approver">
+        <Alert tone="warning" title="Sent back by the reviewer">
           {row.rejection_reason}
         </Alert>
       )}
@@ -914,7 +915,7 @@ function VersionEditor({
         </Alert>
       )}
       {snapshotError ? (
-        <ErrorAlert error={snapshotError} title="The live catalogue lists couldn’t be loaded" />
+        <ErrorAlert error={snapshotError} title="The current answer options couldn’t be loaded" />
       ) : null}
       {actionError && <ErrorAlert error={actionError} />}
       {(editable || row.status === 'pending_approval') && can('survey.edit') && (
@@ -960,7 +961,7 @@ function VersionEditor({
         <ApprovalPanel row={row} preparerName={preparerName} onDone={refresh} />
       )}
       <Tabs
-        label="Survey version views"
+        label="Survey views"
         value={tab}
         onChange={setTab}
         tabs={[
@@ -1024,7 +1025,7 @@ export function SurveyVersionPage() {
   return (
     <>
       <PageHeader
-        title={row ? `Survey version ${row.version_no}` : 'Survey version'}
+        title={row ? `Survey questions · version ${row.version_no}` : 'Survey questions'}
         subtitle={
           row ? (
             <span className="flex flex-wrap items-center gap-2">

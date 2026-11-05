@@ -1,4 +1,4 @@
-// Pure helpers for the cases feature (labels, SLA countdown, mentions, errors). Unit-tested.
+// Pure helpers for the cases feature (labels, response-deadline countdown, mentions, errors). Unit-tested.
 
 export type CaseStatus = 'new' | 'assigned' | 'in_progress' | 'resolved' | 'closed';
 export type Priority = 'P1' | 'P2' | 'P3' | 'P4';
@@ -12,10 +12,10 @@ export const CASE_STATUSES: { key: CaseStatus; label: string }[] = [
   { key: 'closed', label: 'Closed' },
 ];
 export const PRIORITIES: { key: Priority; label: string; days: number }[] = [
-  { key: 'P1', label: 'P1 · Urgent', days: 1 },
-  { key: 'P2', label: 'P2 · High', days: 3 },
-  { key: 'P3', label: 'P3 · Normal', days: 5 },
-  { key: 'P4', label: 'P4 · Low', days: 10 },
+  { key: 'P1', label: 'Urgent', days: 1 },
+  { key: 'P2', label: 'High', days: 3 },
+  { key: 'P3', label: 'Normal', days: 5 },
+  { key: 'P4', label: 'Low', days: 10 },
 ];
 export const FOLLOW_UP_OUTCOMES = [
   { key: 'not_required', label: 'No follow-up needed' },
@@ -45,6 +45,11 @@ export function statusTone(s: string): 'brand' | 'info' | 'warning' | 'success' 
   }
 }
 
+/** Plain priority name (Urgent / High / Normal / Low) for a stored P1–P4 value. */
+export function priorityLabel(p: string): string {
+  return PRIORITIES.find((x) => x.key === p)?.label ?? p;
+}
+
 export function priorityTone(p: string): 'danger' | 'warning' | 'info' | 'neutral' {
   return p === 'P1' ? 'danger' : p === 'P2' ? 'warning' : p === 'P3' ? 'info' : 'neutral';
 }
@@ -54,10 +59,10 @@ export function slaLabel(state: string): string {
     (
       {
         on_track: 'On track',
-        warning: 'SLA warning',
-        breached: 'Overdue',
-        met: 'Met SLA',
-        missed: 'Missed SLA',
+        warning: 'Deadline approaching',
+        breached: 'Past deadline',
+        met: 'Resolved on time',
+        missed: 'Resolved late',
       } as Record<string, string>
     )[state] ?? state
   );
@@ -84,7 +89,7 @@ export function formatWorkingDays(days: number | null | undefined): string {
   return parts.join(' ');
 }
 
-/** SLA countdown text and progress for the case header. */
+/** Response-deadline countdown text and progress for the case header. */
 export function slaSummary(sla: {
   state: string;
   target_working_days: number;
@@ -96,10 +101,10 @@ export function slaSummary(sla: {
     0,
     Math.min(100, Math.round(((sla.elapsed_working_days ?? 0) / (sla.target_working_days || 1)) * 100)),
   );
-  if (sla.state === 'met') return { text: 'Resolved within the SLA', pct };
-  if (sla.state === 'missed') return { text: 'Resolved after the SLA target', pct };
+  if (sla.state === 'met') return { text: 'Resolved before the deadline', pct };
+  if (sla.state === 'missed') return { text: 'Resolved after the deadline', pct };
   if (sla.state === 'breached')
-    return { text: `Overdue by ${formatWorkingDays(sla.overdue_working_days)}`, pct: 100 };
+    return { text: `Past deadline by ${formatWorkingDays(sla.overdue_working_days)}`, pct: 100 };
   return { text: `${formatWorkingDays(sla.remaining_working_days)} left`, pct };
 }
 
@@ -179,8 +184,8 @@ export const ACTIVITY_LABELS: Record<string, string> = {
   resolved: 'Resolved',
   closed: 'Closed',
   reopened: 'Reopened',
-  sla_warning: 'SLA warning',
-  sla_breached: 'SLA breached',
+  sla_warning: 'Deadline approaching',
+  sla_breached: 'Past deadline',
   follow_up_recorded: 'Follow-up recorded',
   contact_revealed: 'Contact details revealed',
 };
@@ -189,8 +194,19 @@ export function activityValue(type: string, v: string | null): string | null {
   if (v === null) return null;
   if (type === 'status_changed' || type === 'resolved' || type === 'closed' || type === 'reopened')
     return statusLabel(v);
+  if (type === 'priority_changed') return priorityLabel(v);
   if (type === 'follow_up_recorded') return FOLLOW_UP_OUTCOMES.find((o) => o.key === v)?.label ?? v;
   return v;
+}
+
+/**
+ * Plain wording for system-written reasons and descriptions ("CSAT 2; comment keyword" →
+ * "Satisfaction rating 2 of 5; concerning comment").
+ */
+export function plainReason(text: string): string {
+  return text
+    .replace(/\bCSAT (\d)\b/g, 'Satisfaction rating $1 of 5')
+    .replace(/\bcomment keyword\b/g, 'concerning comment');
 }
 
 /** True when an error is the optimistic-lock conflict (P0409). */

@@ -8,16 +8,25 @@ import { PageHeader } from '../../pages/shell';
 import { Alert, Badge, Button, EmptyState, TextField } from '../../ui/controls';
 import { Dialog } from '../../ui/dialog';
 import { useCaseMutation, useRpc, type FlagItem, type FlagPage } from './api';
-import { nextCursor, PRIORITIES, timeAgo } from './format';
+import { WORDS } from '../../lib/terms';
+import { nextCursor, plainReason, PRIORITIES, timeAgo } from './format';
+import { FLAG_TABS, MoreFilters, PageTabs } from './page-tabs';
 import { Card, ErrorAlert, Loading, PriorityBadge, Select, TextActionDialog, TextArea } from './ui';
 
 const RULE_LABELS: Record<string, string> = {
-  low_csat: 'Low satisfaction',
-  improvement_factor: 'Improvement factor',
+  low_csat: 'Low satisfaction rating',
+  improvement_factor: WORDS.factor,
   comment_keyword: 'Concerning comment',
 };
+/** Plain explanations shown on the Flagging rules tab (the stored text uses older jargon). */
+const RULE_HELP: Record<string, string> = {
+  low_csat: 'The customer rated their overall experience poorly.',
+  improvement_factor:
+    'The customer picked something we could do better. Each area below has its own switches; “Nothing, I am satisfied” never raises a flag.',
+  comment_keyword: 'The customer’s comment contains one of the words listed at the bottom of this page.',
+};
 
-/** S-B3 Flag queue: default view "CSAT ≤ 2" (A-126), group by rule, bulk dismiss, convert to case. */
+/** S-B3 Flagged feedback: default view is unhappy customers (A-126); group by reason, bulk dismiss, open a case. */
 export function FlagQueuePage() {
   const rpc = useRpc();
   const { can } = useSession();
@@ -71,46 +80,51 @@ export function FlagQueuePage() {
     <>
       <PageHeader
         title="Flagged feedback"
-        subtitle="Review flagged responses: dismiss them with a reason or open a case. Low satisfaction is shown first."
-        actions={
-          can('flags.configure') ? (
-            <Link
-              to="/flags/rules"
-              className="inline-flex h-12 items-center font-medium text-brand hover:underline"
-            >
-              Flag rules
-            </Link>
-          ) : null
-        }
+        subtitle="Feedback that needs a closer look. Open a case to follow it up, or dismiss it with a reason."
       />
-      <div className="mb-4 grid gap-3 rounded-lg bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Select label="View" value={view} onChange={(e) => setView(e.target.value as typeof view)}>
-          <option value="csat_lte_2">CSAT ≤ 2</option>
-          <option value="all">All flags</option>
-        </Select>
-        <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
-          <option value="open">Waiting for review</option>
-          <option value="dismissed">Dismissed</option>
-          <option value="converted">Converted to a case</option>
-          <option value="all">All</option>
-        </Select>
-        <Select label="Rule" value={rule} onChange={(e) => setRule(e.target.value)}>
-          <option value="">All rules</option>
-          {Object.entries(RULE_LABELS).map(([k, l]) => (
-            <option key={k} value={k}>
-              {l} ({counts[k] ?? 0})
-            </option>
-          ))}
-        </Select>
-        <label className="flex min-h-11 items-center gap-3 self-end text-[14px]">
-          <input
-            type="checkbox"
-            className="size-5 accent-[var(--color-brand)]"
-            checked={grouped}
-            onChange={(e) => setGrouped(e.target.checked)}
-          />
-          Group by rule
-        </label>
+      <PageTabs tabs={FLAG_TABS} label="Flagged feedback" />
+      <div className="mb-4 flex flex-wrap items-end gap-3 rounded-lg bg-white p-4">
+        <div className="w-full sm:w-64">
+          <Select label="Show" value={view} onChange={(e) => setView(e.target.value as typeof view)}>
+            <option value="csat_lte_2">Unhappy customers</option>
+            <option value="all">All flagged feedback</option>
+          </Select>
+        </div>
+        <div className="w-full sm:w-56">
+          <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
+            <option value="open">Waiting for review</option>
+            <option value="dismissed">Dismissed</option>
+            <option value="converted">Turned into a case</option>
+            <option value="all">Any status</option>
+          </Select>
+        </div>
+        <div className="ml-auto">
+          <MoreFilters
+            active={(rule ? 1 : 0) + (grouped ? 0 : 1)}
+            onClear={() => {
+              setRule('');
+              setGrouped(true);
+            }}
+          >
+            <Select label="Reason" value={rule} onChange={(e) => setRule(e.target.value)}>
+              <option value="">Any reason</option>
+              {Object.entries(RULE_LABELS).map(([k, l]) => (
+                <option key={k} value={k}>
+                  {l} ({counts[k] ?? 0})
+                </option>
+              ))}
+            </Select>
+            <label className="flex min-h-11 items-center gap-3 text-[14px]">
+              <input
+                type="checkbox"
+                className="size-5 accent-[var(--color-brand)]"
+                checked={grouped}
+                onChange={(e) => setGrouped(e.target.checked)}
+              />
+              Group by reason
+            </label>
+          </MoreFilters>
+        </div>
       </div>
 
       {canReview && status === 'open' && (
@@ -139,26 +153,22 @@ export function FlagQueuePage() {
       </div>
 
       {q.isPending ? (
-        <Loading label="Loading flags" />
+        <Loading label="Loading flagged feedback" />
       ) : q.isError ? (
         <ErrorAlert error={q.error} retry={() => void q.refetch()} />
       ) : items.length === 0 ? (
         <section className="rounded-lg bg-white">
-          <EmptyState title={status === 'open' ? 'Nothing waiting for review' : 'No flags here'}>
+          <EmptyState title={status === 'open' ? 'Nothing waiting for review' : 'Nothing to show'}>
             {view === 'csat_lte_2'
-              ? 'Switch the view to "All flags" to see every rule.'
+              ? 'Choose “All flagged feedback” under Show to see everything.'
               : 'Try another status.'}
           </EmptyState>
         </section>
       ) : (
         <div className="flex flex-col gap-6">
           {groups.map((g) => (
-            <section key={g.key} aria-label={RULE_LABELS[g.key] ?? 'Flags'}>
-              {grouped && (
-                <h2 className="mb-2 text-[16px] font-medium">
-                  {RULE_LABELS[g.key]} <span className="text-secondary">({g.items.length} shown)</span>
-                </h2>
-              )}
+            <section key={g.key} aria-label={RULE_LABELS[g.key] ?? WORDS.flags}>
+              {grouped && <h2 className="mb-2 text-[16px] font-medium">{RULE_LABELS[g.key]}</h2>}
               <ul className="flex flex-col gap-2">
                 {g.items.map((f) => (
                   <li key={f.id} className="flex gap-3 rounded-lg bg-white p-4">
@@ -174,8 +184,10 @@ export function FlagQueuePage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-medium">{f.response_reference}</span>
-                        <Badge tone={f.csat_score <= 2 ? 'danger' : 'neutral'}>CSAT {f.csat_score}</Badge>
-                        <span className="text-[14px]">{f.reason}</span>
+                        <Badge tone={f.csat_score <= 2 ? 'danger' : 'neutral'}>
+                          Rated {f.csat_score} of 5
+                        </Badge>
+                        <span className="text-[14px]">{plainReason(f.reason)}</span>
                         <PriorityBadge priority={f.suggested_priority} />
                       </div>
                       <p className="mt-1 text-[14px] text-secondary">
@@ -200,7 +212,7 @@ export function FlagQueuePage() {
                     </div>
                     {canReview && can('cases.create') && f.status === 'open' && (
                       <Button variant="secondary" className="h-11 shrink-0" onClick={() => setConvert(f)}>
-                        Convert
+                        Open a case
                       </Button>
                     )}
                   </li>
@@ -219,14 +231,14 @@ export function FlagQueuePage() {
       <TextActionDialog
         open={dismissOpen}
         onOpenChange={setDismissOpen}
-        title={`Dismiss ${selected.size} flag${selected.size === 1 ? '' : 's'}`}
-        description="The reason is kept with each flag and shown to other reviewers."
+        title={`Dismiss ${selected.size} item${selected.size === 1 ? '' : 's'}`}
+        description="The reason is kept with each item and shown to other reviewers."
         label="Reason"
         confirmLabel="Dismiss"
         onConfirm={async (reason) => {
           const n = await dismiss.mutateAsync(reason);
           setSelected(new Set());
-          setNotice(`${n as number} flag${n === 1 ? '' : 's'} dismissed.`);
+          setNotice(`${n as number} item${n === 1 ? '' : 's'} dismissed.`);
         }}
       />
       {convert && <ConvertDialog flag={convert} onClose={() => setConvert(null)} />}
@@ -238,7 +250,7 @@ function ConvertDialog({ flag, onClose }: { flag: FlagItem; onClose: () => void 
   const rpc = useRpc();
   const navigate = useNavigate();
   const [priority, setPriority] = useState(flag.suggested_priority);
-  const [description, setDescription] = useState(flag.reason);
+  const [description, setDescription] = useState(plainReason(flag.reason));
   const m = useCaseMutation(() =>
     rpc<{ case_id: string; reference: string; created: boolean }>('flag_convert_to_case', {
       p_flag_id: flag.id,
@@ -252,7 +264,7 @@ function ConvertDialog({ flag, onClose }: { flag: FlagItem; onClose: () => void 
       open
       onOpenChange={(o) => !o && onClose()}
       title={`Open a case for ${flag.response_reference}`}
-      description="The case goes to the CX central queue. Other open flags on this response are linked to it."
+      description="The case goes to the customer experience team’s queue. Anything else flagged on this response is linked to it."
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -297,7 +309,7 @@ function ConvertDialog({ flag, onClose }: { flag: FlagItem; onClose: () => void 
 }
 
 // ---------------------------------------------------------------------------
-// S-B9a Flag rules (flags.configure): Flag / Auto-create case per rule and per factor (D-19)
+// S-B9a Flagging rules (flags.configure): Flag / Auto-create case per rule and per factor (D-19)
 // ---------------------------------------------------------------------------
 interface RuleRow {
   id: string;
@@ -398,7 +410,7 @@ export function FlagRulesPage() {
     await qc.invalidateQueries({ queryKey: ['flags', 'rules'] });
   };
 
-  // "Auto-create case" implies "Flag"; turning "Flag" off also turns auto-case off.
+  // "Open a case automatically" implies "Flag"; turning "Flag" off also turns auto-case off.
   const flagPatch = (flagKey: string, autoKey: string, which: 'flag' | 'auto', v: boolean) =>
     which === 'flag'
       ? { [flagKey]: v, ...(v ? {} : { [autoKey]: false }) }
@@ -407,16 +419,17 @@ export function FlagRulesPage() {
   const [keywords, setKeywords] = useState<string | null>(null);
   const kwValue = keywords ?? data.data?.keywords ?? '';
 
-  if (data.isPending) return <Loading label="Loading flag rules" />;
+  if (data.isPending) return <Loading label="Loading flagging rules" />;
   if (data.isError) return <ErrorAlert error={data.error} retry={() => void data.refetch()} />;
   const { rules, factors } = data.data;
   const err = error ? toUserError(error) : null;
   return (
     <>
       <PageHeader
-        title="Flag rules"
-        subtitle="Everything is flagged by default; no case is created automatically unless you switch it on (D-19). NPS on its own never raises a flag."
+        title="Flagged feedback"
+        subtitle="Choose which feedback is flagged for review, and where a case should open automatically."
       />
+      <PageTabs tabs={FLAG_TABS} label="Flagged feedback" />
       <div aria-live="polite" className="mb-4 flex flex-col gap-2">
         {err && (
           <Alert tone="danger" detail={err.detail}>
@@ -426,7 +439,7 @@ export function FlagRulesPage() {
         {saved && <Alert tone="success">{saved}</Alert>}
       </div>
       <div className="flex flex-col gap-6">
-        <Card title="Rules">
+        <Card title={WORDS.flagRules}>
           <ul className="divide-y divide-border">
             {rules.map((r) => (
               <li
@@ -434,12 +447,12 @@ export function FlagRulesPage() {
                 className="flex flex-col gap-3 py-4 lg:flex-row lg:items-start lg:justify-between"
               >
                 <div className="max-w-xl">
-                  <p className="font-medium">{r.name}</p>
-                  <p className="text-[14px] text-secondary">{r.description}</p>
+                  <p className="font-medium">{RULE_LABELS[r.key] ?? r.name}</p>
+                  <p className="text-[14px] text-secondary">{RULE_HELP[r.key] ?? r.description}</p>
                 </div>
                 {r.key === 'improvement_factor' ? (
                   <Toggle
-                    label="Use the factor switches below"
+                    label="Use the switches for each area below"
                     checked={r.is_active}
                     onChange={(v) => void save('flag_rules', r, { is_active: v })}
                   />
@@ -453,7 +466,7 @@ export function FlagRulesPage() {
                       }
                     />
                     <Toggle
-                      label="Auto-create case"
+                      label="Open a case automatically"
                       checked={r.auto_create_case}
                       onChange={(v) =>
                         void save('flag_rules', r, flagPatch('flag_enabled', 'auto_create_case', 'auto', v))
@@ -475,7 +488,7 @@ export function FlagRulesPage() {
                     {r.key === 'low_csat' && (
                       <div className="w-40">
                         <Select
-                          label="Flag CSAT up to"
+                          label="Flag ratings up to"
                           value={String(r.params.csat_lte ?? 2)}
                           onChange={(e) =>
                             void save('flag_rules', r, {
@@ -483,9 +496,9 @@ export function FlagRulesPage() {
                             })
                           }
                         >
-                          <option value="1">1</option>
-                          <option value="2">2</option>
-                          <option value="3">3</option>
+                          <option value="1">1 of 5</option>
+                          <option value="2">2 of 5</option>
+                          <option value="3">3 of 5</option>
                         </Select>
                       </div>
                     )}
@@ -496,7 +509,7 @@ export function FlagRulesPage() {
           </ul>
         </Card>
 
-        <Card title="Improvement factors">
+        <Card title={WORDS.factors}>
           <ul className="divide-y divide-border">
             {factors.map((f) => (
               <li
@@ -507,7 +520,7 @@ export function FlagRulesPage() {
                   {f.label} {!f.is_active && <Badge>Inactive</Badge>}
                 </p>
                 {f.is_none ? (
-                  <p className="text-[14px] text-secondary">Never flags or opens a case.</p>
+                  <p className="text-[14px] text-secondary">Never flagged and never opens a case.</p>
                 ) : (
                   <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
                     <Toggle
@@ -522,7 +535,7 @@ export function FlagRulesPage() {
                       }
                     />
                     <Toggle
-                      label="Auto-create case"
+                      label="Open a case automatically"
                       checked={f.auto_create_case}
                       onChange={(v) =>
                         void save(
@@ -579,7 +592,7 @@ export function FlagRulesPage() {
           >
             <TextField
               label="Keywords, separated by commas"
-              helper="A comment containing any of these words raises the “Concerning comment” flag (A-111)."
+              helper="A comment containing any of these words is flagged as a “Concerning comment”."
               value={kwValue}
               onChange={(e) => setKeywords(e.target.value)}
             />

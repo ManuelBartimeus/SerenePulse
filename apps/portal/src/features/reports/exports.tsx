@@ -5,6 +5,7 @@ import { useSession } from '../../lib/session';
 import { PageHeader } from '../../pages/shell';
 import { Alert, Button, EmptyState, Spinner, TextField } from '../../ui/controls';
 import { FilterBar, useAnalyticsFilters } from '../analytics/filters';
+import { PageTabs, REPORT_TABS } from '../cases/page-tabs';
 import { functionErrorMessage, useFunctions, type ReportFile } from './api';
 import { Check, ErrorBox, FileRow, SelectField, TextArea } from './ui';
 
@@ -47,11 +48,10 @@ function RecentExports({
   return (
     <section className="mt-6 rounded-lg bg-white" aria-labelledby="recent-exports">
       <h2 id="recent-exports" className="border-b border-border p-4 text-[18px] font-medium">
-        Your recent exports
+        Your recent downloads
       </h2>
       <p className="px-4 pt-3 text-[14px] text-secondary">
-        Exports are deleted after 7 days. Each download link works for 15 minutes and is recorded in the audit
-        log.
+        Files are kept for 7 days. Each download link works for 15 minutes and is recorded in the audit log.
       </p>
       {dl.isError && (
         <div className="p-4">
@@ -67,7 +67,7 @@ function RecentExports({
           <ErrorBox error={list.error} />
         </div>
       ) : list.data.length === 0 ? (
-        <EmptyState title="No exports yet">Exports you create appear here for 7 days.</EmptyState>
+        <EmptyState title="No downloads yet">Files you create appear here for 7 days.</EmptyState>
       ) : (
         <ul className="divide-y divide-border">
           {list.data.map((f) => (
@@ -122,19 +122,20 @@ export function ExportsPage() {
   return (
     <>
       <PageHeader
-        title="Export feedback records"
-        subtitle="Download the records you can see, with the filters below. Contact details are left out unless you need them."
+        title="Reports"
+        subtitle="Download customer feedback, schedule regular reports and find the files sent to you."
       />
+      <PageTabs tabs={REPORT_TABS} label="Reports" />
       <div className="mb-4">
         <FilterBar />
       </div>
       <section className="rounded-lg bg-white p-4 md:p-6" aria-labelledby="export-settings">
         <h2 id="export-settings" className="text-[18px] font-medium">
-          Export settings
+          Download customer responses
         </h2>
         <p className="mt-1 text-secondary">
-          Period: {periodText} (Africa/Accra). Up to 200,000 rows. Comments are included only if you may view
-          them.
+          {periodText}, using the filters above. Customers’ comments are included if you may view them;
+          contact details are left out unless you ask for them.
         </p>
         <div className="mt-4 grid gap-4 md:max-w-md">
           <SelectField
@@ -167,23 +168,22 @@ export function ExportsPage() {
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <Button busy={create.isPending} onClick={submit}>
-            Create export
+            Download responses
           </Button>
         </div>
         <div aria-live="polite" className="mt-4">
           {create.isPending && (
-            <p className="text-secondary">Building your export. Large exports can take up to a minute…</p>
+            <p className="text-secondary">Preparing your file. Large downloads can take up to a minute…</p>
           )}
           {create.isSuccess && (
             <Alert tone="success">
-              Your export of {create.data.rows.toLocaleString('en-GH')} rows is downloading. You can download
-              it again below for 7 days.
+              Your file is downloading. You can download it again below for 7 days.
             </Alert>
           )}
           {create.isError && <Alert tone="danger">{functionErrorMessage(create.error)}</Alert>}
         </div>
       </section>
-      <RecentExports reportKey="responses_export" title="Feedback export" />
+      <RecentExports reportKey="responses_export" title="Customer responses" />
     </>
   );
 }
@@ -194,7 +194,7 @@ const ACTION_FILTERS = [
   { value: 'export.', label: 'Exports and downloads' },
   { value: 'privacy.', label: 'Data-protection requests' },
   { value: 'pii.', label: 'Contact reveals' },
-  { value: 'response.correction', label: 'Attribution corrections' },
+  { value: 'response.correction', label: 'Branch corrections' },
   { value: 'retention.', label: 'Retention runs' },
   { value: 'public.settings', label: 'Settings changes' },
 ];
@@ -277,11 +277,7 @@ export function AuditExportPage() {
           </Button>
         </div>
         <div aria-live="polite" className="mt-4">
-          {create.isSuccess && (
-            <Alert tone="success">
-              {create.data.rows.toLocaleString('en-GH')} audit entries exported; the download has started.
-            </Alert>
-          )}
+          {create.isSuccess && <Alert tone="success">The audit log is downloading.</Alert>}
           {create.isError && <Alert tone="danger">{functionErrorMessage(create.error)}</Alert>}
         </div>
       </section>

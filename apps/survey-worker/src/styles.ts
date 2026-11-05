@@ -90,6 +90,8 @@ font:inherit;font-size:18px;font-weight:600;cursor:pointer;background:var(--bran
 .btn:hover{background:var(--brand-700)}
 .btn[aria-disabled=true]{background:var(--border);color:var(--text2)}
 .btn[aria-busy=true]{cursor:progress}
+.btn-secondary{background:#fff;color:var(--brand);box-shadow:inset 0 0 0 2px var(--brand)}
+.btn-secondary:hover{background:var(--brand-50,#eef4f2);color:var(--brand-700)}
 .spin{width:20px;height:20px;border:3px solid rgb(255 255 255 / .4);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
 @media (prefers-reduced-motion:reduce){.spin{animation-duration:2.4s}}
 @keyframes spin{to{transform:rotate(360deg)}}

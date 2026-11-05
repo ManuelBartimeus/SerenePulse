@@ -7,6 +7,7 @@ import { PageHeader } from '../../pages/shell';
 import { Alert, Badge, Button, EmptyState, TextField } from '../../ui/controls';
 import { useCaseMutation, useCasePeople, useRpc } from './api';
 import { formatDateTime } from './format';
+import { ALERT_TABS, PageTabs } from './page-tabs';
 import { Card, ErrorAlert, Loading, Select, TextActionDialog } from './ui';
 
 interface AlertEvent {
@@ -26,6 +27,56 @@ interface AlertEvent {
 }
 
 const SEVERITY_TONE = { info: 'info', warning: 'warning', critical: 'danger' } as const;
+const SEVERITY_LABEL: Record<string, string> = {
+  info: 'For information',
+  warning: 'Warning',
+  critical: 'Critical',
+};
+
+/** Plain names and explanations per alert type (the stored text uses older jargon). */
+const TYPE_INFO: Record<string, { name: string; help: string; seededName: string }> = {
+  csat_decline: {
+    seededName: 'Sudden decline in branch CSAT',
+    name: 'Sudden drop in branch satisfaction',
+    help: 'A branch’s share of satisfied customers in recent days falls well below its usual level.',
+  },
+  negative_volume: {
+    seededName: 'High volume of negative feedback',
+    name: 'Many unhappy customers',
+    help: 'A branch receives several poor ratings in a short time.',
+  },
+  open_cases_increase: {
+    seededName: 'Unresolved cases increase',
+    name: 'Unresolved cases rising',
+    help: 'The number of open cases grows sharply from one week to the next.',
+  },
+  repeated_factor: {
+    seededName: 'Repeated improvement factor',
+    name: 'Same issue raised repeatedly',
+    help: 'One area to improve is mentioned by a large share of a branch’s customers.',
+  },
+  sla_case: {
+    seededName: 'SLA approaching / exceeded',
+    name: 'Case deadline approaching or passed',
+    help: 'Sent for each case as its response deadline approaches and when it passes. The people working the case are always told; add anyone else here.',
+  },
+  below_target: {
+    seededName: 'Below target',
+    name: 'Below target',
+    help: 'A measure is worse than the target set for it.',
+  },
+  tech_spike: {
+    seededName: 'Technical issues spike',
+    name: 'More technical problems online',
+    help: 'Customers using the app, website or WhatsApp report technical problems much more often than before.',
+  },
+};
+/** The rule's display name: the plain default unless an administrator renamed it. */
+export function alertName(rule: { name: string; type: string } | null | undefined): string {
+  if (!rule) return 'Alert';
+  const info = TYPE_INFO[rule.type];
+  return info && rule.name === info.seededName ? info.name : rule.name;
+}
 
 /** S-B14 Alert inbox: fired alerts with acknowledge / resolve (alerts.manage). */
 export function AlertInboxPage() {
@@ -56,14 +107,15 @@ export function AlertInboxPage() {
     <>
       <PageHeader
         title="Alerts"
-        subtitle="Alerts are checked every 15 minutes. Each rule fires at most once per scope within its cooldown."
+        subtitle="Early warnings when something needs attention. Checked every 15 minutes."
       />
+      <PageTabs tabs={ALERT_TABS} label="Alerts" />
       <div className="mb-4 max-w-xs">
         <Select label="Status" value={status} onChange={(e) => setStatus(e.target.value as typeof status)}>
           <option value="open">Open</option>
           <option value="acknowledged">Acknowledged</option>
           <option value="resolved">Resolved</option>
-          <option value="all">All</option>
+          <option value="all">Any status</option>
         </Select>
       </div>
       <div aria-live="polite" className="mb-4">
@@ -93,9 +145,9 @@ export function AlertInboxPage() {
                 <Badge
                   tone={SEVERITY_TONE[(e.alert_rules?.severity ?? 'info') as keyof typeof SEVERITY_TONE]}
                 >
-                  {e.alert_rules?.severity ?? 'info'}
+                  {SEVERITY_LABEL[e.alert_rules?.severity ?? 'info'] ?? e.alert_rules?.severity}
                 </Badge>
-                <span className="font-medium">{e.alert_rules?.name ?? 'Alert'}</span>
+                <span className="font-medium">{alertName(e.alert_rules)}</span>
                 <span className="text-secondary">· {e.scope_label}</span>
                 <Badge
                   tone={e.status === 'open' ? 'warning' : e.status === 'resolved' ? 'success' : 'neutral'}
@@ -103,18 +155,15 @@ export function AlertInboxPage() {
                   {e.status === 'open' ? 'Open' : e.status === 'resolved' ? 'Resolved' : 'Acknowledged'}
                 </Badge>
               </div>
-              <p className="mt-1 text-[14px]">
-                {e.observed_value !== null && <>Observed {e.observed_value}</>}
-                {e.threshold_value !== null && <> · threshold {e.threshold_value}</>}
-                {typeof e.detail.n === 'number' && <> · n = {e.detail.n}</>}
-                {typeof e.detail.n_recent === 'number' && <> · n = {e.detail.n_recent}</>}
-              </p>
-              <p className="text-[12px] text-muted">
-                Fired {formatDateTime(e.fired_at)}
+              {e.alert_rules && TYPE_INFO[e.alert_rules.type] && (
+                <p className="mt-1 text-[14px] text-secondary">{TYPE_INFO[e.alert_rules.type]?.help}</p>
+              )}
+              <p className="mt-1 text-[12px] text-muted">
+                Raised {formatDateTime(e.fired_at)}
                 {e.window_from && (
                   <>
                     {' '}
-                    · window {formatDateTime(e.window_from)} – {formatDateTime(e.window_to)}
+                    · covering {formatDateTime(e.window_from)} – {formatDateTime(e.window_to)}
                   </>
                 )}
               </p>
@@ -175,21 +224,21 @@ interface AlertRule {
 }
 
 export const PARAM_LABELS: Record<string, string> = {
-  recent_days: 'Recent window (days)',
-  baseline_days: 'Baseline window (days)',
-  drop_points: 'Drop (CSAT points)',
-  min_n: 'Minimum responses (n)',
-  hours: 'Window (hours)',
-  min_count: 'Minimum negative responses',
-  increase_pct: 'Increase week on week (%)',
-  min_open: 'Minimum open cases',
-  days: 'Window (days)',
-  share_pct: 'Share of responses (%)',
-  ratio: 'Ratio to prior window',
+  recent_days: 'Look at the last (days)',
+  baseline_days: 'Compare with the previous (days)',
+  drop_points: 'Drop in satisfied customers (percentage points)',
+  min_n: 'Only when at least this many responses',
+  hours: 'Within (hours)',
+  min_count: 'Number of poor ratings',
+  increase_pct: 'Rise from last week (%)',
+  min_open: 'Only when at least this many open cases',
+  days: 'Look at the last (days)',
+  share_pct: 'Share of customers (%)',
+  ratio: 'Times more often than before',
 };
 const ROLES = [
   { key: 'executive', label: 'Executives' },
-  { key: 'cx_admin', label: 'CX Administrators' },
+  { key: 'cx_admin', label: 'Customer experience administrators' },
   { key: 'branch_manager', label: 'Branch managers (all)' },
   { key: 'resolution_officer', label: 'Resolution officers' },
   { key: 'system_admin', label: 'System Administrators' },
@@ -210,9 +259,10 @@ export function AlertRulesPage() {
   return (
     <>
       <PageHeader
-        title="Alert rules"
-        subtitle="Recipients get an in-app notice and an email (D-30). Cooldown stops repeats for the same rule and scope."
+        title="Alerts"
+        subtitle="Choose when each alert is raised and who hears about it. Recipients get a notice in the portal and an email."
       />
+      <PageTabs tabs={ALERT_TABS} label="Alerts" />
       {q.isPending ? (
         <Loading label="Loading alert rules" />
       ) : q.isError ? (
@@ -232,7 +282,7 @@ function RuleEditor({ rule }: { rule: AlertRule }) {
   const { supabase } = useSession();
   const qc = useQueryClient();
   const people = useCasePeople();
-  const [draft, setDraft] = useState(rule);
+  const [draft, setDraft] = useState({ ...rule, name: alertName(rule) });
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{
     tone: 'danger' | 'success';
@@ -275,10 +325,10 @@ function RuleEditor({ rule }: { rule: AlertRule }) {
 
   return (
     <Card
-      title={rule.name}
+      title={alertName(rule)}
       actions={<Badge tone={draft.is_active ? 'success' : 'neutral'}>{draft.is_active ? 'On' : 'Off'}</Badge>}
     >
-      <p className="mb-4 text-[14px] text-secondary">{rule.description}</p>
+      <p className="mb-4 text-[14px] text-secondary">{TYPE_INFO[rule.type]?.help ?? rule.description}</p>
       <div className="grid gap-4 md:grid-cols-3">
         <TextField
           label="Name"
@@ -290,12 +340,12 @@ function RuleEditor({ rule }: { rule: AlertRule }) {
           value={draft.severity}
           onChange={(e) => setDraft({ ...draft, severity: e.target.value })}
         >
-          <option value="info">Info</option>
+          <option value="info">For information</option>
           <option value="warning">Warning</option>
-          <option value="critical">Critical (high-priority email)</option>
+          <option value="critical">Critical (marked as urgent in email)</option>
         </Select>
         <TextField
-          label="Cooldown (hours)"
+          label="Don’t repeat for (hours)"
           type="number"
           min={1}
           max={720}
@@ -402,10 +452,10 @@ function RuleEditor({ rule }: { rule: AlertRule }) {
             checked={draft.is_active}
             onChange={(e) => setDraft({ ...draft, is_active: e.target.checked })}
           />
-          Rule is on
+          Alert is on
         </label>
         <Button busy={busy} onClick={() => void save()}>
-          Save rule
+          Save alert
         </Button>
       </div>
       <div aria-live="polite" className="mt-3">

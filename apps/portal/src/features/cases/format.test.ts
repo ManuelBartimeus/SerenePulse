@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   activityValue,
+  plainReason,
   findMentions,
   formatWorkingDays,
   isConflict,
@@ -42,7 +43,7 @@ describe('slaSummary', () => {
         remaining_working_days: 0,
         overdue_working_days: 1,
       }),
-    ).toEqual({ text: 'Overdue by 1 working day', pct: 100 });
+    ).toEqual({ text: 'Past deadline by 1 working day', pct: 100 });
   });
   it('tones', () => {
     expect(slaTone('breached')).toBe('danger');
@@ -76,6 +77,12 @@ describe('labels', () => {
     expect(activityValue('reopened', 'closed')).toBe('Closed');
     expect(activityValue('follow_up_recorded', 'unreachable')).toBe('Could not reach the customer');
     expect(activityValue('assigned', 'Ama')).toBe('Ama');
+    expect(activityValue('priority_changed', 'P1')).toBe('Urgent');
+  });
+  it('rewrites system reasons in plain words', () => {
+    expect(plainReason('Raised automatically: CSAT 2; comment keyword.')).toBe(
+      'Raised automatically: Satisfaction rating 2 of 5; concerning comment.',
+    );
   });
   it('recognises version conflicts', () => {
     expect(isConflict({ code: 'P0409' })).toBe(true);

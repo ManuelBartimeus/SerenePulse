@@ -11,7 +11,7 @@ interface Grant {
   role: string;
   role_name: string;
   scope_id: string | null;
-  status: 'active' | 'pending_approval';
+  status: string;
 }
 interface UserRow {
   user_id: string;
@@ -164,16 +164,16 @@ function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
   const [name, setName] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
   const [error, setError] = useState<UserFacingError | null>(null);
-  const [done, setDone] = useState<{ pending: number; link: string } | null>(null);
+  const [done, setDone] = useState<{ link: string } | null>(null);
 
   const invite = useMutation({
     mutationFn: () =>
-      callInvite<{ pendingApproval: number; link: string }>(
+      callInvite<{ link: string }>(
         { email: email.trim(), displayName: name.trim(), grants: selected.map((role) => ({ role })) },
         "We couldn't create the invitation.",
       ),
     onSuccess: (body) => {
-      setDone({ pending: body.pendingApproval, link: body.link });
+      setDone({ link: body.link });
       qc.invalidateQueries({ queryKey: ['users'] });
     },
     onError: (e) => setError(e as UserFacingError),
@@ -213,12 +213,6 @@ function InviteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o:
         <div className="flex flex-col gap-4">
           <Alert tone="success">{email} has been invited. Send them this link.</Alert>
           <AccessLink link={done.link} kind="invite" />
-          {done.pending > 0 && (
-            <Alert tone="warning" title="Waiting for a second approver">
-              One of the roles can reveal customers’ contact details, so another Executive must approve it
-              before it takes effect.
-            </Alert>
-          )}
           <Button onClick={() => close(false)}>Done</Button>
         </div>
       ) : (
@@ -489,9 +483,8 @@ export function UsersPage() {
                   <span className="flex flex-wrap gap-1.5">
                     {u.grants.length === 0 && <span className="text-[14px] text-muted">No roles</span>}
                     {u.grants.map((g) => (
-                      <Badge key={g.id} tone={g.status === 'pending_approval' ? 'warning' : 'brand'}>
+                      <Badge key={g.id} tone="brand">
                         {g.role_name}
-                        {g.status === 'pending_approval' ? ' · awaiting approval' : ''}
                       </Badge>
                     ))}
                   </span>
@@ -512,118 +505,6 @@ export function UsersPage() {
       </section>
       <InviteDialog open={inviteOpen} onOpenChange={setInviteOpen} />
       {editing && <EditUserDialog user={editing} onClose={() => setEditing(null)} />}
-    </>
-  );
-}
-
-interface PendingGrant {
-  id: string;
-  user_id: string;
-  granted_by: string | null;
-  granted_at: string;
-  roles: { name: string } | null;
-}
-
-/** Executives approve or reject grants that can reveal contact details (A-68, D-36). */
-export function ApprovalsPage() {
-  const { supabase, claims } = useSession();
-  const qc = useQueryClient();
-  const [error, setError] = useState<UserFacingError | null>(null);
-  const pending = useQuery({
-    queryKey: ['pending-grants'],
-    queryFn: async () => {
-      const { data, error: e } = await supabase
-        .from('user_role_grants')
-        .select('id, user_id, granted_by, granted_at, roles(name)')
-        .eq('status', 'pending_approval')
-        .order('granted_at');
-      if (e) throw e;
-      const ids = [...new Set(data.flatMap((g) => [g.user_id, g.granted_by]).filter(Boolean))] as string[];
-      const { data: people } = await supabase
-        .from('profiles')
-        .select('user_id, display_name')
-        .in('user_id', ids);
-      const names = new Map((people ?? []).map((p) => [p.user_id, p.display_name]));
-      return (data as unknown as PendingGrant[]).map((g) => ({
-        ...g,
-        userName: names.get(g.user_id) || 'A user',
-        grantorName: g.granted_by ? names.get(g.granted_by) || 'a System Administrator' : 'the system',
-      }));
-    },
-  });
-  const decide = useMutation({
-    mutationFn: async ({ id, approve }: { id: string; approve: boolean }) => {
-      const { error: e } = await supabase.rpc('admin_decide_grant', { p_grant_id: id, p_approve: approve });
-      if (e) throw e;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['pending-grants'] }),
-    onError: (e) => setError(toUserError(e)),
-  });
-
-  return (
-    <>
-      <PageHeader
-        title="Approvals"
-        subtitle="Roles that can reveal customers’ contact details need a second person’s approval."
-      />
-      {error && (
-        <div className="mb-4">
-          <Alert tone="danger" detail={error.detail}>
-            {error.message}
-          </Alert>
-        </div>
-      )}
-      <section className="rounded-lg bg-white">
-        {pending.isPending ? (
-          <div className="p-4">
-            <Spinner label="Loading" />
-          </div>
-        ) : pending.isError ? (
-          <div className="p-4">
-            <Alert tone="danger">{toUserError(pending.error).message}</Alert>
-          </div>
-        ) : pending.data.length === 0 ? (
-          <EmptyState title="Nothing waiting for approval" />
-        ) : (
-          <ul className="divide-y divide-border">
-            {pending.data.map((g) => {
-              const own = g.granted_by === claims?.sub || g.user_id === claims?.sub;
-              return (
-                <li
-                  key={g.id}
-                  className="flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between"
-                >
-                  <p>
-                    <span className="font-medium">{g.userName}</span> → {g.roles?.name}
-                    <span className="block text-[14px] text-secondary">Requested by {g.grantorName}</span>
-                    {own && (
-                      <span className="block text-[14px] text-warning">
-                        You requested this grant or would receive it, so another Executive must decide.
-                      </span>
-                    )}
-                  </p>
-                  <div className="flex gap-3">
-                    <Button
-                      variant="secondary"
-                      disabled={own}
-                      onClick={() => decide.mutate({ id: g.id, approve: false })}
-                    >
-                      Reject
-                    </Button>
-                    <Button
-                      disabled={own}
-                      busy={decide.isPending}
-                      onClick={() => decide.mutate({ id: g.id, approve: true })}
-                    >
-                      Approve
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
     </>
   );
 }

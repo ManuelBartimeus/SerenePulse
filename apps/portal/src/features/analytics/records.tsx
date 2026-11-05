@@ -8,17 +8,15 @@ import { PageHeader } from '../../pages/shell';
 import { Alert, Badge, Button, EmptyState, Spinner } from '../../ui/controls';
 import { RecordCasePanel } from '../cases/record-panels';
 import { RecordCorrectionsPanel } from '../reports/record-corrections';
+import { RATING_BANDS, RECOMMEND_GROUPS, WORDS } from '../../lib/terms';
 import { useRpc, type RecordDetail, type RecordPage, type RecordRow } from './api';
 import { FilterBar, useAnalyticsFilters } from './filters';
-import { formatDateTime, formatSeconds } from './format';
+import { formatCount, formatDateTime, formatDuration } from './format';
 import { QueryView, Skeleton } from './ui';
 
-const NPS_TONE = { promoter: 'success', passive: 'neutral', detractor: 'danger' } as const;
-const VERIFICATION: Record<string, string> = {
-  verified: 'Verified',
-  unverified_turnstile_outage: 'Unverified (bot check unavailable)',
-  unverified_no_js: 'Unverified (no JavaScript)',
-};
+const RECOMMEND_TONE = { promoter: 'success', passive: 'neutral', detractor: 'danger' } as const;
+const bandOf = (csat: number) => (csat >= 4 ? 'positive' : csat <= 2 ? 'negative' : 'neutral');
+const BAND_TONE = { positive: 'success', neutral: 'neutral', negative: 'danger' } as const;
 const CASE_LABEL: Record<string, string> = {
   new: 'New',
   assigned: 'Assigned',
@@ -27,16 +25,27 @@ const CASE_LABEL: Record<string, string> = {
   closed: 'Closed',
 };
 
-function Indicators({ r }: { r: RecordRow }) {
+/** "Satisfied · 4 of 5": the band in words, the score for detail. */
+function Satisfaction({ csat }: { csat: number }) {
+  const band = bandOf(csat);
   return (
-    <span className="inline-flex flex-wrap gap-1">
-      {r.has_comment && <Badge tone="info">Comment</Badge>}
-      {r.contact_consent && <Badge tone="brand">Contact consented</Badge>}
-      {r.verification !== 'verified' && <Badge tone="warning">Unverified</Badge>}
-      {r.is_corrected && <Badge tone="neutral">Branch corrected</Badge>}
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <Badge tone={BAND_TONE[band]}>{RATING_BANDS[band]}</Badge>
+      <span className="text-[12px] text-muted tabular-nums">{csat} of 5</span>
     </span>
   );
 }
+
+function Recommend({ r }: { r: RecordRow }) {
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <Badge tone={RECOMMEND_TONE[r.nps_class]}>{RECOMMEND_GROUPS[r.nps_class]}</Badge>
+      <span className="text-[12px] text-muted tabular-nums">{r.nps} of 10</span>
+    </span>
+  );
+}
+
+const yesNo = (v: boolean) => (v ? 'Yes' : <span className="text-muted">—</span>);
 
 function RecordDrawer({ id, onClose }: { id: string; onClose: () => void }) {
   const detail = useRpc<RecordDetail>('record_detail', { p_response_id: id });
@@ -59,7 +68,7 @@ function RecordDrawer({ id, onClose }: { id: string; onClose: () => void }) {
         >
           <div className="mb-4 flex items-start justify-between gap-3">
             <RadixDialog.Title className="text-[24px] font-medium leading-8">
-              {detail.data?.reference ?? 'Feedback record'}
+              {detail.data?.reference ?? WORDS.record}
             </RadixDialog.Title>
             <RadixDialog.Close
               className="grid size-11 place-items-center rounded-full hover:bg-surface-muted"
@@ -79,42 +88,28 @@ function RecordDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                     {copied ? 'Link copied.' : ''}
                   </span>
                 </div>
-                <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1">
-                  <dt className="text-secondary">Submitted</dt>
-                  <dd>{formatDateTime(d.submitted_at)} (Africa/Accra)</dd>
-                  <dt className="text-secondary">Opened</dt>
-                  <dd>{formatDateTime(d.opened_at)}</dd>
-                  <dt className="text-secondary">Interactive</dt>
-                  <dd>{d.interactive_at ? formatDateTime(d.interactive_at) : 'Not recorded'}</dd>
-                  <dt className="text-secondary">Completion time</dt>
-                  <dd>
-                    {d.completion_duration_ms === null
-                      ? 'Not recorded'
-                      : formatSeconds(d.completion_duration_ms / 1000)}
-                    {d.duration_from_opened && ' (measured from opening; interactivity not recorded)'}
-                  </dd>
-                  <dt className="text-secondary">Source</dt>
-                  <dd>
-                    {d.source.label}
-                    {d.qr_point && ` · QR “${d.qr_point.label}” (${d.qr_point.code})`}
-                  </dd>
-                  <dt className="text-secondary">Survey version</dt>
-                  <dd>Version {d.version.no}</dd>
-                  <dt className="text-secondary">Verification</dt>
-                  <dd>{VERIFICATION[d.verification] ?? d.verification}</dd>
-                  <dt className="text-secondary">Issuing branch</dt>
+                <dl className="grid grid-cols-[max-content_1fr] gap-x-5 gap-y-2">
+                  <dt className="text-secondary">Received</dt>
+                  <dd>{formatDateTime(d.submitted_at)}</dd>
+                  <dt className="text-secondary">Branch</dt>
                   <dd>
                     {d.attribution.label}
                     {d.attribution.region && ` · ${d.attribution.region.name}`}
                     {d.attribution.is_corrected && (
                       <span className="block text-secondary">
-                        Corrected. The customer answered: {d.attribution.original.label}
+                        Corrected. The customer originally chose: {d.attribution.original.label}
                       </span>
                     )}
                   </dd>
+                  <dt className="text-secondary">Time to complete</dt>
+                  <dd>
+                    {d.completion_duration_ms === null
+                      ? 'Not recorded'
+                      : formatDuration(d.completion_duration_ms / 1000)}
+                  </dd>
                 </dl>
                 <section aria-label="Answers">
-                  <h3 className="mb-2 text-[18px] font-medium">Answers (version {d.version.no} wording)</h3>
+                  <h3 className="mb-2 text-[18px] font-medium">Answers</h3>
                   <ul className="grid gap-2">
                     {d.answers.map((a) => (
                       <li key={a.question_id} className="rounded-sm bg-subtle p-3">
@@ -130,7 +125,7 @@ function RecordDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                   {!d.comment_visible ? (
                     <p className="text-secondary">
                       {d.has_comment
-                        ? 'A comment was left. Viewing it needs the comment permission.'
+                        ? 'The customer left a comment, but your role can’t view comments.'
                         : 'No comment.'}
                     </p>
                   ) : d.comment ? (
@@ -139,18 +134,22 @@ function RecordDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                     <p className="text-secondary">No comment.</p>
                   )}
                   {d.text_redacted_at && (
-                    <p className="mt-1 text-[12px] text-muted">Free text removed by the retention policy.</p>
+                    <p className="mt-1 text-[12px] text-muted">
+                      The comment was removed when its keeping period ended.
+                    </p>
                   )}
                 </section>
-                <section aria-label="Contact">
-                  <h3 className="mb-2 text-[18px] font-medium">Contact</h3>
+                <section aria-label="Call back">
+                  <h3 className="mb-2 text-[18px] font-medium">Call back</h3>
                   {!d.has_contact_consent ? (
-                    <p className="text-secondary">The customer didn’t ask to be contacted.</p>
+                    <p className="text-secondary">The customer didn’t ask for a call back.</p>
                   ) : d.contact?.erased ? (
-                    <p className="text-secondary">Consented, but the number has been erased.</p>
+                    <p className="text-secondary">
+                      Asked for a call back, but the number has since been deleted.
+                    </p>
                   ) : (
                     <p>
-                      Consented ·{' '}
+                      Asked for a call back ·{' '}
                       <span className="font-medium tabular-nums">{d.contact?.masked ?? 'Unavailable'}</span>
                     </p>
                   )}
@@ -169,11 +168,11 @@ function RecordDrawer({ id, onClose }: { id: string; onClose: () => void }) {
 /** Feedback records explorer (M10, REQ §6.6): keyset-paginated list, search, detail drawer. */
 export function RecordsPage() {
   const { supabase, can } = useSession();
-  const { rpcFilters, periodText } = useAnalyticsFilters();
+  const { rpcFilters } = useAnalyticsFilters();
   const search = useSearch({ strict: false }) as { record?: string; q?: string };
   const navigate = useNavigate();
   const [text, setText] = useState(search.q ?? '');
-  const [limit, setLimit] = useState(25);
+  const limit = 25;
   const term = search.q ?? '';
   const commentSearch = can('responses.comment.view');
   const setSearch = (next: { record?: string | undefined; q?: string | undefined }) =>
@@ -209,10 +208,7 @@ export function RecordsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Feedback records"
-        subtitle="Individual responses, newest first. Answers can’t be edited."
-      />
+      <PageHeader title={WORDS.records} subtitle="Each customer’s answers, newest first." />
       <FilterBar caseStatus />
       <section className="rounded-lg bg-white">
         <form
@@ -221,7 +217,7 @@ export function RecordsPage() {
           className="flex flex-wrap items-end gap-2 border-b border-border p-4"
         >
           <label className="flex min-w-[240px] flex-1 flex-col gap-1 text-[14px] font-medium">
-            {commentSearch ? 'Search by reference or comment text' : 'Search by reference'}
+            {commentSearch ? 'Search by reference or a word in the comment' : 'Search by reference'}
             <input
               type="search"
               maxLength={100}
@@ -234,24 +230,11 @@ export function RecordsPage() {
           <Button type="submit" className="h-11">
             Search
           </Button>
-          <label className="flex flex-col gap-1 text-[14px] font-medium">
-            Rows per page
-            <select
-              className="h-11 rounded-sm border border-border-strong bg-white px-3"
-              value={limit}
-              onChange={(e) => setLimit(Number(e.target.value))}
-            >
-              {[25, 50, 100].map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </select>
-          </label>
         </form>
         <p className="px-4 pt-3 text-[12px] text-muted" aria-live="polite">
-          {periodText} ·{' '}
-          {list.isSuccess ? `${rows.length} shown${list.hasNextPage ? ', more available' : ''}` : ''}
+          {list.isSuccess && rows.length > 0
+            ? `Showing ${formatCount(rows.length)} response${rows.length === 1 ? '' : 's'}${list.hasNextPage ? '. Load more below.' : ''}`
+            : ''}
         </p>
         {list.isPending && (
           <div className="p-4" role="status" aria-label="Loading">
@@ -266,30 +249,30 @@ export function RecordsPage() {
           </div>
         )}
         {list.isSuccess && rows.length === 0 && (
-          <EmptyState title="No records match">Try a longer period or fewer filters.</EmptyState>
+          <EmptyState title={WORDS.noData}>Try a longer period or clear some filters.</EmptyState>
         )}
         {rows.length > 0 && (
           <>
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[1100px] text-[14px]">
-                <caption className="sr-only">Feedback records</caption>
+                <caption className="sr-only">{WORDS.records}</caption>
                 <thead>
                   <tr className="text-left text-[12px] uppercase tracking-[1px] text-muted">
                     {[
                       'Reference',
-                      'Submitted',
-                      'Source',
+                      'Date',
                       'Channel',
-                      'Issuing branch',
+                      'Branch',
                       'Product',
-                      'CSAT',
-                      'CES',
-                      'NPS',
-                      'Factor',
-                      'Indicators',
+                      'Satisfaction',
+                      'Ease of service',
+                      'Would recommend',
+                      WORDS.factor,
+                      'Comment',
+                      'Wants a call back',
                       'Case',
                     ].map((h) => (
-                      <th key={h} scope="col" className="sticky top-0 bg-white px-3 py-2">
+                      <th key={h} scope="col" className="sticky top-0 bg-white px-3 py-2.5 font-medium">
                         {h}
                       </th>
                     ))}
@@ -308,20 +291,19 @@ export function RecordsPage() {
                         </button>
                       </th>
                       <td className="px-3 py-3 tabular-nums">{formatDateTime(r.submitted_at)}</td>
-                      <td className="px-3 py-3">{r.source.label}</td>
                       <td className="px-3 py-3">{r.channel.label}</td>
                       <td className="px-3 py-3">{r.branch_label}</td>
                       <td className="px-3 py-3">{r.product.label}</td>
-                      <td className="px-3 py-3 text-right tabular-nums">{r.csat}</td>
-                      <td className="px-3 py-3 text-right tabular-nums">{r.ces}</td>
                       <td className="px-3 py-3">
-                        <span className="tabular-nums">{r.nps}</span>{' '}
-                        <Badge tone={NPS_TONE[r.nps_class]}>{r.nps_class}</Badge>
+                        <Satisfaction csat={r.csat} />
+                      </td>
+                      <td className="px-3 py-3 tabular-nums">{r.ces} of 5</td>
+                      <td className="px-3 py-3">
+                        <Recommend r={r} />
                       </td>
                       <td className="px-3 py-3">{r.factor?.label ?? '—'}</td>
-                      <td className="px-3 py-3">
-                        <Indicators r={r} />
-                      </td>
+                      <td className="px-3 py-3">{yesNo(r.has_comment)}</td>
+                      <td className="px-3 py-3">{yesNo(r.contact_consent)}</td>
                       <td className="px-3 py-3">
                         {r.case ? `${r.case.reference} · ${CASE_LABEL[r.case.status] ?? r.case.status}` : '—'}
                       </td>
@@ -338,10 +320,14 @@ export function RecordsPage() {
                   <p>
                     {r.channel.label} · {r.branch_label}
                   </p>
-                  <p>
-                    CSAT {r.csat} · CES {r.ces} · NPS {r.nps}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <Satisfaction csat={r.csat} />
+                    <Recommend r={r} />
+                  </div>
+                  <p className="mt-1 text-[13px] text-secondary">
+                    Ease of service {r.ces} of 5{r.has_comment && ' · Comment'}
+                    {r.contact_consent && ' · Wants a call back'}
                   </p>
-                  <Indicators r={r} />
                   <Button
                     variant="secondary"
                     className="mt-2 h-11 w-full text-[14px]"

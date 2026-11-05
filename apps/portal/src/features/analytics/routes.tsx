@@ -1,6 +1,7 @@
 import { createRoute, type AnyRoute } from '@tanstack/react-router';
 import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 import type { NavItem } from '../../lib/nav';
+import { WORDS } from '../../lib/terms';
 import { RequirePerm } from '../../lib/require-perm';
 import { useSession } from '../../lib/session';
 import { EmptyState, Spinner } from '../../ui/controls';
@@ -14,8 +15,7 @@ const BranchesPage = named(() => import('./branches'), 'BranchesPage');
 const BranchDetailPage = named(() => import('./branches'), 'BranchDetailPage');
 const TrendsPage = named(() => import('./trends'), 'TrendsPage');
 const FactorsPage = named(() => import('./factors'), 'FactorsPage');
-const SourcesPage = named(() => import('./sources'), 'SourcesPage');
-const CompletionPage = named(() => import('./sources'), 'CompletionPage');
+const CompletionPage = named(() => import('./completion'), 'CompletionPage');
 const RecordsPage = named(() => import('./records'), 'RecordsPage');
 const ChannelsPage = lazy(() =>
   import('./dimension').then((m) => ({
@@ -23,8 +23,8 @@ const ChannelsPage = lazy(() =>
       <m.DimensionPage
         dimension="channel"
         noun="channel"
-        title="Channels"
-        subtitle="How customers who obtained their policy through each channel rate the experience."
+        title="Channel performance"
+        subtitle="How customers rate their experience, by the channel they used to get their policy."
       />
     ),
   })),
@@ -35,8 +35,8 @@ const ProductsPage = lazy(() =>
       <m.DimensionPage
         dimension="product"
         noun="product"
-        title="Products"
-        subtitle="Experience by type of insurance policy."
+        title="Product performance"
+        subtitle="How customers rate their experience, by type of policy."
       />
     ),
   })),
@@ -73,15 +73,15 @@ function Home() {
       <PageHeader title="Welcome" />
       <section className="rounded-lg bg-white">
         <EmptyState title="No dashboards for your role">
-          Your roles ({claims?.app_roles.join(', ') || 'none'}) don’t include analytics. Use the menu for the
-          areas you work in.
+          Your roles ({claims?.app_roles.join(', ') || 'none'}) don’t include the dashboards. Use the menu for
+          the areas you work in.
         </EmptyState>
       </section>
     </>
   );
 }
 
-/** Routes for dashboards and feedback records. This area owns "/" (the overview). Paths are relative to the router basepath. */
+/** Routes for dashboards and customer responses. This area owns "/" (the overview). Paths are relative to the router basepath. */
 export function analyticsRoutes(parent: AnyRoute): AnyRoute[] {
   const route = (path: string, permission: string, Page: ComponentType) =>
     createRoute({
@@ -101,7 +101,6 @@ export function analyticsRoutes(parent: AnyRoute): AnyRoute[] {
     route('/products', 'analytics.view', ProductsPage),
     route('/trends', 'analytics.view', TrendsPage),
     route('/factors', 'analytics.view', FactorsPage),
-    route('/sources', 'analytics.view', SourcesPage),
     route('/completion', 'analytics.view', CompletionPage),
     route('/records', 'responses.view', RecordsPage),
   ];
@@ -113,8 +112,7 @@ export const analyticsNav: NavItem[] = [
   { to: '/channels', label: 'Channels', permission: 'analytics.view', group: 'insights' },
   { to: '/products', label: 'Products', permission: 'analytics.view', group: 'insights' },
   { to: '/trends', label: 'Trends', permission: 'analytics.view', group: 'insights' },
-  { to: '/factors', label: 'Improvement factors', permission: 'analytics.view', group: 'insights' },
-  { to: '/sources', label: 'Sources & funnel', permission: 'analytics.view', group: 'insights' },
-  { to: '/completion', label: 'Completion time', permission: 'analytics.view', group: 'insights' },
-  { to: '/records', label: 'Records', permission: 'responses.view', group: 'insights' },
+  { to: '/factors', label: WORDS.factors, permission: 'analytics.view', group: 'insights' },
+  { to: '/completion', label: 'Survey completion', permission: 'analytics.view', group: 'insights' },
+  { to: '/records', label: WORDS.records, permission: 'responses.view', group: 'insights' },
 ];

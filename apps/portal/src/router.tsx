@@ -16,7 +16,7 @@ import { configRoutes } from './features/config/routes';
 import { reportsRoutes } from './features/reports/routes';
 import { RequirePerm } from './lib/require-perm';
 import { NotFoundPage, Shell } from './pages/shell';
-import { ApprovalsPage, UsersPage } from './pages/users';
+import { UsersPage } from './pages/users';
 import { Spinner } from './ui/controls';
 
 function FullPageSpinner() {
@@ -61,15 +61,6 @@ const users = createRoute({
     </RequirePerm>
   ),
 });
-const approvals = createRoute({
-  getParentRoute: () => app,
-  path: '/approvals',
-  component: () => (
-    <RequirePerm permission="survey.publish.approve">
-      <ApprovalsPage />
-    </RequirePerm>
-  ),
-});
 const audit = createRoute({
   getParentRoute: () => app,
   path: '/audit',
@@ -91,7 +82,6 @@ const routeTree = rootRoute.addChildren([
     ...configRoutes(app),
     ...reportsRoutes(app),
     users,
-    approvals,
     audit,
     profile,
   ]),

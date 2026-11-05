@@ -49,12 +49,10 @@ type Job = PosterSize | 'svg' | 'png';
 
 export function PosterDownloads({
   url,
-  code,
   filenameBase,
   compact = false,
 }: {
   url: string;
-  code?: string;
   filenameBase: string;
   compact?: boolean;
 }) {
@@ -76,7 +74,7 @@ export function PosterDownloads({
         const px = (m.size + QUIET_ZONE * 2) * 16;
         download(await svgToPng(qrSvg(url, 'QR code'), px, px), `${filenameBase}-qr.png`);
       } else {
-        const bytes = await buildPosterPdf({ size: job, url, code, logoPng: await logoPng() });
+        const bytes = await buildPosterPdf({ size: job, url, logoPng: await logoPng() });
         download(
           new Blob([bytes as BlobPart], { type: 'application/pdf' }),
           `${filenameBase}-poster-${job}.pdf`,

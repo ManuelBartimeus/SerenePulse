@@ -9,7 +9,7 @@ import { toUserError } from '../../lib/errors';
 import { Alert, Badge, Button } from '../../ui/controls';
 import { Dialog } from '../../ui/dialog';
 import { useCaseMutation, useRpc } from './api';
-import { PRIORITIES } from './format';
+import { plainReason, PRIORITIES } from './format';
 import { ErrorAlert, Loading, Select, StatusBadge, TextActionDialog, TextArea } from './ui';
 
 interface PanelData {
@@ -129,7 +129,7 @@ export function RecordCasePanel({
     }),
   );
 
-  if (q.isPending) return <Loading label="Loading flags and cases" />;
+  if (q.isPending) return <Loading label="Loading flagged feedback and cases" />;
   if (q.isError) return <ErrorAlert error={q.error} retry={() => void q.refetch()} />;
   const d = q.data;
   const convertErr = convertM.error ? toUserError(convertM.error) : null;
@@ -137,10 +137,10 @@ export function RecordCasePanel({
 
   return (
     <div className="flex flex-col gap-5">
-      <section aria-label="Flags">
-        <h3 className="mb-2 text-[14px] font-medium">Flags</h3>
+      <section aria-label="Flagged">
+        <h3 className="mb-2 text-[14px] font-medium">Flagged for review</h3>
         {d.flags.length === 0 ? (
-          <p className="text-[14px] text-secondary">No flags on this response.</p>
+          <p className="text-[14px] text-secondary">This response hasn’t been flagged.</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {d.flags.map((f) => (
@@ -148,9 +148,9 @@ export function RecordCasePanel({
                 key={f.id}
                 className="flex flex-wrap items-center gap-2 rounded-sm bg-subtle p-3 text-[14px]"
               >
-                <span className="flex-1">{f.reason}</span>
+                <span className="flex-1">{plainReason(f.reason)}</span>
                 <Badge tone={f.status === 'open' ? 'warning' : 'neutral'}>
-                  {f.status === 'open' ? 'Open' : f.status === 'dismissed' ? 'Dismissed' : 'Converted'}
+                  {f.status === 'open' ? 'Open' : f.status === 'dismissed' ? 'Dismissed' : 'Case opened'}
                 </Badge>
                 {f.status === 'open' && d.can_review_flags && (
                   <>
@@ -175,7 +175,7 @@ export function RecordCasePanel({
                         })
                       }
                     >
-                      Convert to case
+                      Open a case
                     </Button>
                   </>
                 )}
@@ -232,7 +232,7 @@ export function RecordCasePanel({
       <TextActionDialog
         open={dismiss !== null}
         onOpenChange={(o) => !o && setDismiss(null)}
-        title="Dismiss the flag"
+        title="Dismiss this item"
         label="Reason"
         confirmLabel="Dismiss"
         onConfirm={(reason) => dismissM.mutateAsync({ id: dismiss ?? '', reason })}
@@ -241,7 +241,7 @@ export function RecordCasePanel({
         open={create}
         onOpenChange={setCreate}
         title="Create a case"
-        description="The case goes to the CX central queue (D-17). Open flags on this response are linked to it."
+        description="The case goes to the customer experience team’s queue. Anything flagged on this response is linked to it."
         footer={
           <>
             <Button variant="secondary" onClick={() => setCreate(false)}>

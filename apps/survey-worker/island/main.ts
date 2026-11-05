@@ -556,7 +556,11 @@ function start(): void {
     ref.setAttribute('data-reference', '');
     panel.append(h, el('p', COPY.thanksReference), ref, el('p', COPY.thanksBody));
     if (masked) panel.append(el('p', COPY.thanksContact(masked)));
-    finish([panel, privacy()]);
+    // A brand-new blank survey; the draft was already cleared by finish().
+    const more = el('a', COPY.shareMore, 'btn btn-secondary');
+    more.href = `${BASE}/new`;
+    more.setAttribute('data-share-more', '');
+    finish([panel, more, privacy()]);
   }
 
   function alreadyShared(): void {

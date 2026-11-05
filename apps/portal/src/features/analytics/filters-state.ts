@@ -2,49 +2,38 @@
  * Global analytics filters (SPEC M08 "Common filter set", REQ §7, §17.1.6): pure state, URL
  * serialisation and the RPC filter object (CONTRACTS "Filter object"). No React here, so it is unit
  * tested on its own.
+ *
+ * Revision 2026-11-05 (user direction): a short, plain filter set. Source, QR point, survey version,
+ * branch-status pseudo-values, recommendation group and "include unverified" were removed; their old
+ * URL params are ignored (and dropped on the next filter change).
  */
+import { RATING_BANDS } from '../../lib/terms';
 
 export const PRESETS = [
-  { key: 'today', label: 'Today' },
   { key: 'last7', label: 'Last 7 days' },
   { key: 'last30', label: 'Last 30 days' },
-  { key: 'month', label: 'Current month' },
-  { key: 'prev_month', label: 'Previous month' },
-  { key: 'quarter', label: 'Current quarter' },
-  { key: 'prev_quarter', label: 'Previous quarter' },
-  { key: 'ytd', label: 'Year to date' },
-  { key: 'custom', label: 'Custom' },
+  { key: 'month', label: 'This month' },
+  { key: 'prev_month', label: 'Last month' },
+  { key: 'quarter', label: 'This quarter' },
+  { key: 'prev_quarter', label: 'Last quarter' },
+  { key: 'ytd', label: 'This year' },
+  { key: 'custom', label: 'Custom…' },
 ] as const;
 export type Preset = (typeof PRESETS)[number]['key'];
 
+/** Time steps for trend charts (chosen on the chart, not in the filter bar). */
 export const GRANULARITIES = [
   { key: 'day', label: 'Day' },
-  { key: 'week', label: 'Week (Mon–Sun)' },
+  { key: 'week', label: 'Week' },
   { key: 'month', label: 'Month' },
   { key: 'quarter', label: 'Quarter' },
-  { key: 'year', label: 'Year' },
 ] as const;
 export type Granularity = (typeof GRANULARITIES)[number]['key'];
 
-export const BRANCH_STATUSES = [
-  { key: 'other', label: 'Other branch' },
-  { key: 'not_applicable', label: 'Not applicable' },
-  { key: 'not_provided', label: 'Not provided' },
-] as const;
 export const SATISFACTION = [
-  { key: 'negative', label: 'Negative (1–2)' },
-  { key: 'neutral', label: 'Neutral (3)' },
-  { key: 'positive', label: 'Positive (4–5)' },
-] as const;
-export const NPS_CLASSES = [
-  { key: 'promoter', label: 'Promoters (9–10)' },
-  { key: 'passive', label: 'Passives (7–8)' },
-  { key: 'detractor', label: 'Detractors (0–6)' },
-] as const;
-export const SOURCES = [
-  { key: 'sms', label: 'SMS link' },
-  { key: 'direct', label: 'Direct visit' },
-  { key: 'qr', label: 'QR poster' },
+  { key: 'positive', label: RATING_BANDS.positive },
+  { key: 'neutral', label: RATING_BANDS.neutral },
+  { key: 'negative', label: RATING_BANDS.negative },
 ] as const;
 export const CASE_STATUSES = [
   { key: 'none', label: 'No case' },
@@ -58,19 +47,21 @@ export const CASE_STATUSES = [
 /** Multi-select filters: URL key → filter-object key. */
 export const LIST_KEYS = {
   branch: 'branch_ids',
-  bstatus: 'branch_statuses',
-  region: 'region_ids',
   channel: 'channel_ids',
   product: 'product_ids',
-  factor: 'factor_ids',
+  region: 'region_ids',
   sat: 'satisfaction',
-  nps: 'nps_classes',
-  src: 'source_codes',
-  qr: 'qr_point_ids',
-  ver: 'survey_version_ids',
+  factor: 'factor_ids',
   case: 'case_statuses',
 } as const;
 export type ListKey = keyof typeof LIST_KEYS;
+
+/** Filters shown in the main row; the rest sit under "More filters". */
+export const MAIN_KEYS: ListKey[] = ['branch', 'channel', 'product'];
+export const MORE_KEYS: ListKey[] = ['region', 'sat', 'factor', 'case'];
+
+/** URL params from earlier versions of the filter bar: ignored when read, removed on the next write. */
+const LEGACY_KEYS = ['bstatus', 'nps', 'src', 'qr', 'ver', 'unv'];
 
 export interface FilterState {
   preset: Preset;
@@ -79,14 +70,12 @@ export interface FilterState {
   to?: string | undefined;
   granularity: Granularity;
   lists: Partial<Record<ListKey, string[]>>;
-  includeUnverified: boolean;
 }
 
 export const DEFAULT_FILTERS: FilterState = {
   preset: 'last30',
   granularity: 'day',
   lists: {},
-  includeUnverified: false,
 };
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -112,7 +101,6 @@ export function parseFilterSearch(search: Record<string, unknown>): FilterState 
     preset,
     granularity: isGranularity(search.gran) ? search.gran : DEFAULT_FILTERS.granularity,
     lists,
-    includeUnverified: search.unv === '1' || search.unv === 1 || search.unv === true,
   };
   if (preset === 'custom') {
     const from = validDate(search.from);
@@ -140,14 +128,13 @@ export function toFilterSearch(state: FilterState): Record<string, string> {
     const values = state.lists[key];
     if (values && values.length > 0) out[key] = values.join(',');
   }
-  if (state.includeUnverified) out.unv = '1';
   return out;
 }
 
 /** The search keys this module owns (other search params on a page are left alone). */
-export const FILTER_SEARCH_KEYS = ['period', 'from', 'to', 'gran', 'unv', ...Object.keys(LIST_KEYS)];
+export const FILTER_SEARCH_KEYS = ['period', 'from', 'to', 'gran', ...Object.keys(LIST_KEYS), ...LEGACY_KEYS];
 
-/** Today's date in Africa/Accra (UTC+0 all year) as YYYY-MM-DD. */
+/** Today's date in Ghana (UTC+0 all year) as YYYY-MM-DD. */
 export function accraToday(now: Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Accra' }).format(now);
 }
@@ -168,8 +155,6 @@ export function resolvePeriod(
   const mi = m - 1;
   const q = Math.floor(mi / 3) * 3;
   switch (state.preset) {
-    case 'today':
-      return { from: today, to: today };
     case 'last7':
       return { from: shift(today, -6), to: today };
     case 'month':
@@ -199,15 +184,14 @@ export function toRpcFilters(state: FilterState, today: string = accraToday()): 
     const values = state.lists[key];
     if (values && values.length > 0) out[LIST_KEYS[key]] = values;
   }
-  if (state.includeUnverified) out.include_unverified = true;
   return out;
 }
 
-/** Number of active filters other than the period (for the phone "Filters (n)" button). */
-export function activeFilterCount(state: FilterState): number {
-  return (
-    Object.values(state.lists).filter((v) => v && v.length > 0).length + (state.includeUnverified ? 1 : 0)
-  );
+/** Number of active filters other than the period (optionally only among `keys`). */
+export function activeFilterCount(state: FilterState, keys?: ListKey[]): number {
+  return (Object.entries(state.lists) as [ListKey, string[] | undefined][]).filter(
+    ([k, v]) => v && v.length > 0 && (!keys || keys.includes(k)),
+  ).length;
 }
 
 /** DD/MM/YYYY (en-GH) for a YYYY-MM-DD date. */
@@ -216,8 +200,20 @@ export function formatDay(iso: string): string {
   return `${d}/${m}/${y}`;
 }
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+/** "6 Oct" for a YYYY-MM-DD date (chart axes). */
+export function formatShortDay(iso: string): string {
+  const [, m, d] = iso.split('-').map(Number) as [number, number, number];
+  return `${d} ${MONTHS[m - 1] ?? ''}`;
+}
+
+/** "1 Oct – 31 Oct 2026", "15 Dec 2025 – 14 Jan 2026" or "1 Oct 2026". */
 export function periodLabel(period: { from: string; to: string }): string {
-  return period.from === period.to
-    ? formatDay(period.from)
-    : `${formatDay(period.from)} – ${formatDay(period.to)}`;
+  const year = (iso: string) => iso.slice(0, 4);
+  if (period.from === period.to) return `${formatShortDay(period.from)} ${year(period.from)}`;
+  const start =
+    year(period.from) === year(period.to)
+      ? formatShortDay(period.from)
+      : `${formatShortDay(period.from)} ${year(period.from)}`;
+  return `${start} – ${formatShortDay(period.to)} ${year(period.to)}`;
 }

@@ -1,56 +1,317 @@
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import logoUrl from '@serene/ui/assets/serene-logo.svg';
-import { analyticsNav } from '../features/analytics/routes';
 import { NotificationBell } from '../features/cases/notification-bell';
-import { casesNav } from '../features/cases/routes';
-import { configNav } from '../features/config/routes';
-import { reportsNav } from '../features/reports/routes';
-import type { NavItem } from '../lib/nav';
 import { useSession } from '../lib/session';
 import { Button, EmptyState } from '../ui/controls';
 import { Dialog } from '../ui/dialog';
 import {
   IconBell,
-  IconBoard,
   IconBuilding,
   IconChart,
   IconCheckCircle,
   IconChevronRight,
-  IconDownload,
   IconFile,
   IconFlag,
   IconFolder,
   IconHome,
   IconLayers,
-  IconList,
   IconLock,
   IconMenu,
   IconMessage,
-  IconQr,
   IconSettings,
   IconShield,
   IconSignOut,
-  IconSliders,
   IconTable,
-  IconTarget,
   IconTrend,
   IconUsers,
   type IconProps,
 } from '../ui/icons';
 
-/** Permission-aware navigation (REQ §19): items the user can't use are not shown. */
-export const NAV: NavItem[] = [
-  ...analyticsNav,
-  // Feedback form (config) leads the Operations group (user direction).
-  ...configNav.filter((i) => i.group === 'operations'),
-  ...casesNav,
-  ...reportsNav,
-  ...configNav.filter((i) => i.group !== 'operations'),
-  { to: '/users', label: 'Users & roles', permission: 'users.manage', group: 'admin' },
-  { to: '/approvals', label: 'Approvals', permission: 'survey.publish.approve', group: 'admin' },
-  { to: '/audit', label: 'Audit log', permission: 'audit.view', group: 'admin' },
+/** A sidebar link. `also` lists sub-pages (tabs) that keep this link highlighted. */
+interface NavLinkItem {
+  to: string;
+  label: string;
+  icon: (p: IconProps) => ReactNode;
+  permission?: string[];
+  also?: string[];
+}
+/** A collapsible sidebar section. */
+interface NavSection {
+  title: string;
+  icon: (p: IconProps) => ReactNode;
+  items: NavLinkItem[];
+}
+type NavEntry = NavLinkItem | NavSection;
+
+const ANALYTICS = ['analytics.view'];
+
+/**
+ * The sidebar (user direction 2026-11-05): two direct links and four collapsible sections; related
+ * screens are tabs inside one page (e.g. Cases / My cases, Alerts / Alert rules / Targets), so each
+ * appears here once. Items the user has no permission for are not shown (REQ §19).
+ */
+export const NAV: NavEntry[] = [
+  { to: '/', label: 'Overview', icon: IconHome },
+  {
+    to: '/config/feedback-form',
+    label: 'Feedback form',
+    icon: IconMessage,
+    permission: ['config.qr_points', 'survey.edit', 'analytics.view'],
+  },
+  {
+    title: 'Insights',
+    icon: IconChart,
+    items: [
+      { to: '/branches', label: 'Branches', icon: IconBuilding, permission: ANALYTICS },
+      { to: '/channels', label: 'Channels', icon: IconChart, permission: ANALYTICS },
+      { to: '/products', label: 'Products', icon: IconLayers, permission: ANALYTICS },
+      { to: '/trends', label: 'Trends', icon: IconTrend, permission: ANALYTICS },
+      { to: '/factors', label: 'Areas to improve', icon: IconFlag, permission: ANALYTICS },
+      { to: '/completion', label: 'Survey completion', icon: IconCheckCircle, permission: ANALYTICS },
+      { to: '/cases/performance', label: 'Case performance', icon: IconFolder, permission: ['cases.view'] },
+    ],
+  },
+  {
+    title: 'Feedback',
+    icon: IconTable,
+    items: [
+      { to: '/records', label: 'Responses', icon: IconTable, permission: ['responses.view'] },
+      {
+        to: '/flags',
+        label: 'Flagged feedback',
+        icon: IconFlag,
+        permission: ['flags.view'],
+        also: ['/flags/rules'],
+      },
+      { to: '/cases', label: 'Cases', icon: IconFolder, permission: ['cases.view'], also: ['/cases/mine'] },
+      {
+        to: '/alerts',
+        label: 'Alerts',
+        icon: IconBell,
+        permission: ['alerts.manage', 'analytics.view'],
+        also: ['/alerts/rules', '/targets'],
+      },
+    ],
+  },
+  {
+    to: '/reports/exports',
+    label: 'Reports',
+    icon: IconFile,
+    permission: ['exports.create', 'reports.schedule', 'analytics.view'],
+    also: ['/reports/schedules', '/reports/files'],
+  },
+  {
+    title: 'Administration',
+    icon: IconSettings,
+    items: [
+      { to: '/users', label: 'Users & roles', icon: IconUsers, permission: ['users.manage'] },
+      {
+        to: '/config/survey',
+        label: 'Survey questions',
+        icon: IconMessage,
+        permission: ['survey.edit', 'survey.publish.approve'],
+      },
+      {
+        to: '/config/directory',
+        label: 'Branches & regions',
+        icon: IconBuilding,
+        permission: ['config.directory'],
+      },
+      {
+        to: '/config/catalogues',
+        label: 'Lists & options',
+        icon: IconLayers,
+        permission: ['config.catalogues'],
+      },
+      {
+        to: '/reports/corrections',
+        label: 'Branch corrections',
+        icon: IconCheckCircle,
+        permission: ['responses.attribution.propose', 'responses.attribution.approve'],
+      },
+      {
+        to: '/reports/privacy',
+        label: 'Data protection',
+        icon: IconLock,
+        permission: ['responses.attribution.approve', 'settings.manage'],
+      },
+      {
+        to: '/audit',
+        label: 'Audit log',
+        icon: IconShield,
+        permission: ['audit.view'],
+        also: ['/reports/audit-export'],
+      },
+      {
+        to: '/reports/ops',
+        label: 'System status',
+        icon: IconSettings,
+        permission: ['settings.manage', 'audit.view_all'],
+      },
+      { to: '/config/settings', label: 'Settings', icon: IconSettings, permission: ['settings.manage'] },
+    ],
+  },
 ];
+
+const isSection = (e: NavEntry): e is NavSection => 'items' in e;
+
+function matches(to: string, path: string) {
+  return to === '/' ? path === '/' : path === to || path.startsWith(`${to}/`);
+}
+
+/** Every visible link, flattened (for matching and the breadcrumb). */
+function flatten(entries: NavEntry[]): { item: NavLinkItem; section?: string }[] {
+  return entries.flatMap((e) =>
+    isSection(e) ? e.items.map((item) => ({ item, section: e.title })) : [{ item: e }],
+  );
+}
+
+/** The most specific link for the current path: its own route or one of its sub-pages (tabs). */
+function activeLink(entries: NavEntry[], path: string) {
+  let best: { item: NavLinkItem; section?: string; len: number } | undefined;
+  for (const f of flatten(entries)) {
+    for (const to of [f.item.to, ...(f.item.also ?? [])]) {
+      if (matches(to, path) && (!best || to.length > best.len)) best = { ...f, len: to.length };
+    }
+  }
+  return best;
+}
+
+function useVisibleNav(): NavEntry[] {
+  const { can } = useSession();
+  const allowed = (i: NavLinkItem) => !i.permission || i.permission.some((p) => can(p));
+  return NAV.flatMap((e): NavEntry[] => {
+    if (!isSection(e)) return allowed(e) ? [e] : [];
+    const items = e.items.filter(allowed);
+    return items.length ? [{ ...e, items }] : [];
+  });
+}
+
+const OPEN_KEY = 'serene.nav.open';
+function readOpen(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(OPEN_KEY) ?? '[]') as string[];
+  } catch {
+    return [];
+  }
+}
+
+function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const visible = useVisibleNav();
+  const current = activeLink(visible, path);
+  const [open, setOpen] = useState<string[]>(readOpen);
+  // The section holding the current page is always expanded.
+  const isOpen = (title: string) => open.includes(title) || current?.section === title;
+  const toggle = (title: string) => {
+    const next = open.includes(title) ? open.filter((t) => t !== title) : [...open, title];
+    setOpen(next);
+    try {
+      localStorage.setItem(OPEN_KEY, JSON.stringify(next));
+    } catch {
+      // Private browsing: the open sections just aren't remembered.
+    }
+  };
+
+  const link = (item: NavLinkItem, nested: boolean) => {
+    const active = current?.item.to === item.to;
+    const Icon = item.icon;
+    return (
+      <Link
+        key={item.to}
+        to={item.to}
+        // Keep the analytics filters in the URL when moving between views (REQ §17.1.6).
+        search={(prev: Record<string, unknown>) => prev}
+        onClick={onNavigate}
+        aria-current={active ? 'page' : undefined}
+        className={`group relative flex items-center gap-3 rounded-sm text-[15px] leading-5 transition-colors duration-200 ${
+          nested ? 'h-10 pl-11 pr-3 lg:h-9' : 'h-11 px-3 lg:h-10'
+        } ${active ? 'bg-brand-50 font-medium text-brand' : 'text-secondary hover:bg-surface-muted hover:text-ink'}`}
+      >
+        <span
+          aria-hidden
+          className={`absolute inset-y-2 left-0 w-1 rounded-r-full bg-brand transition-opacity duration-200 ${
+            active ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+        {!nested && (
+          <span className={active ? 'text-brand' : 'text-muted group-hover:text-ink'}>
+            <Icon size={18} />
+          </span>
+        )}
+        <span className="truncate">{item.label}</span>
+      </Link>
+    );
+  };
+
+  return (
+    <nav aria-label="Main" className="flex flex-col gap-0.5">
+      {visible.map((e) => {
+        if (!isSection(e)) return link(e, false);
+        const expanded = isOpen(e.title);
+        const holdsCurrent = current?.section === e.title;
+        const Icon = e.icon;
+        const id = `nav-${e.title.toLowerCase()}`;
+        return (
+          <div key={e.title} className="flex flex-col gap-0.5">
+            <button
+              type="button"
+              aria-expanded={expanded}
+              aria-controls={id}
+              onClick={() => toggle(e.title)}
+              className={`group flex h-11 items-center gap-3 rounded-sm px-3 text-left text-[15px] leading-5 transition-colors duration-200 hover:bg-surface-muted lg:h-10 ${
+                holdsCurrent ? 'font-medium text-ink' : 'text-secondary hover:text-ink'
+              }`}
+            >
+              <span className={holdsCurrent ? 'text-brand' : 'text-muted group-hover:text-ink'}>
+                <Icon size={18} />
+              </span>
+              <span className="flex-1 truncate">{e.title}</span>
+              <span
+                aria-hidden
+                className={`text-muted transition-transform duration-200 motion-reduce:transition-none ${
+                  expanded ? 'rotate-90' : ''
+                }`}
+              >
+                <IconChevronRight size={16} />
+              </span>
+            </button>
+            {expanded && (
+              <div id={id} className="flex flex-col gap-0.5">
+                {e.items.map((item) => link(item, true))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </nav>
+  );
+}
+
+/** Header title area: "Section › Page" for the current route, derived from the nav. */
+function Breadcrumb() {
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  const current = activeLink(useVisibleNav(), path);
+  if (!current) return null;
+  return (
+    <nav aria-label="Breadcrumb" className="hidden min-w-0 md:block">
+      <ol className="flex items-center gap-1.5 text-[14px] leading-5">
+        {current.section && (
+          <>
+            <li className="text-muted">{current.section}</li>
+            <li aria-hidden className="text-border-strong">
+              <IconChevronRight size={14} />
+            </li>
+          </>
+        )}
+        <li className="truncate font-medium text-ink" aria-current="page">
+          {current.item.label}
+        </li>
+      </ol>
+    </nav>
+  );
+}
 
 const IDLE_LIMIT_MS = 30 * 60 * 1000;
 const IDLE_WARNING_MS = 2 * 60 * 1000;
@@ -106,143 +367,6 @@ function IdleTimeout() {
         </>
       }
     />
-  );
-}
-
-/**
- * Presentation only: picks a nav icon from the route path, so feature streams don't need to supply one.
- * The first matching rule wins; unknown routes get a neutral list icon.
- */
-const NAV_ICONS: [RegExp, (p: IconProps) => ReactNode][] = [
-  [/^\/$/, IconHome],
-  [/record|response/, IconTable],
-  [/trend/, IconTrend],
-  [/analytic|insight|compare|breakdown|nps|csat/, IconChart],
-  [/flag-rule|rules/, IconSliders],
-  [/flag/, IconFlag],
-  [/board/, IconBoard],
-  [/case/, IconFolder],
-  [/target/, IconTarget],
-  [/alert|notification/, IconBell],
-  [/export|download/, IconDownload],
-  [/report/, IconFile],
-  [/privacy|retention|dsr/, IconLock],
-  [/correction|approval/, IconCheckCircle],
-  [/qr/, IconQr],
-  [/sms|feedback-form|survey/, IconMessage],
-  [/directory|branch|region/, IconBuilding],
-  [/catalogue/, IconLayers],
-  [/setting|config|ops/, IconSettings],
-  [/user|role/, IconUsers],
-  [/audit/, IconShield],
-];
-function NavIcon({ to }: { to: string }) {
-  const Icon = NAV_ICONS.find(([re]) => re.test(to))?.[1] ?? IconList;
-  return <Icon size={18} />;
-}
-
-const GROUPS: { key: NavItem['group']; title: string }[] = [
-  { key: undefined, title: '' },
-  { key: 'insights', title: 'Insights' },
-  { key: 'operations', title: 'Operations' },
-  { key: 'admin', title: 'Administration' },
-];
-
-function matches(to: string, path: string) {
-  return to === '/' ? path === '/' : path === to || path.startsWith(`${to}/`);
-}
-
-/** Only the most specific matching item is active (e.g. "My cases" rather than "Cases" too). */
-function isActive(item: NavItem, path: string, all: NavItem[]) {
-  if (!matches(item.to, path)) return false;
-  return !all.some((o) => o.to.length > item.to.length && matches(o.to, path));
-}
-
-function useVisibleNav() {
-  const { can } = useSession();
-  return NAV.filter(
-    (i) => !i.permission || (Array.isArray(i.permission) ? i.permission : [i.permission]).some((p) => can(p)),
-  );
-}
-
-function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
-  const path = useRouterState({ select: (s) => s.location.pathname });
-  const visible = useVisibleNav();
-  const render = (items: NavItem[]) =>
-    items.map((item) => {
-      const active = isActive(item, path, visible);
-      return (
-        <Link
-          key={item.to}
-          to={item.to}
-          // Keep the analytics filters in the URL when moving between views (REQ §17.1.6).
-          search={(prev: Record<string, unknown>) => prev}
-          onClick={onNavigate}
-          aria-current={active ? 'page' : undefined}
-          className={`group relative flex h-11 items-center gap-3 rounded-sm px-3 text-[15px] leading-5 transition-colors duration-200 lg:h-10 ${
-            active
-              ? 'bg-brand-50 font-medium text-brand'
-              : 'text-secondary hover:bg-surface-muted hover:text-ink'
-          }`}
-        >
-          <span
-            aria-hidden
-            className={`absolute inset-y-2 left-0 w-1 rounded-r-full bg-brand transition-opacity duration-200 ${
-              active ? 'opacity-100' : 'opacity-0'
-            }`}
-          />
-          <span className={active ? 'text-brand' : 'text-muted group-hover:text-ink'}>
-            <NavIcon to={item.to} />
-          </span>
-          <span className="truncate">{item.label}</span>
-        </Link>
-      );
-    });
-  return (
-    <nav aria-label="Main" className="flex flex-col gap-0.5">
-      {GROUPS.map(({ key, title }) => {
-        const items = visible.filter((i) => i.group === key);
-        if (items.length === 0) return null;
-        return (
-          <div key={title || 'main'} className="flex flex-col gap-0.5">
-            {title && (
-              <p className="mb-1 mt-6 px-3 text-[11px] font-semibold uppercase leading-4 tracking-[0.08em] text-muted">
-                {title}
-              </p>
-            )}
-            {render(items)}
-          </div>
-        );
-      })}
-    </nav>
-  );
-}
-
-/** Header title area: "Section › Page" for the current route, derived from the nav. */
-function Breadcrumb() {
-  const path = useRouterState({ select: (s) => s.location.pathname });
-  const visible = useVisibleNav();
-  const current = [...visible]
-    .filter((i) => isActive(i, path, visible))
-    .sort((a, b) => b.to.length - a.to.length)[0];
-  const group = GROUPS.find((g) => g.key === current?.group)?.title;
-  if (!current) return null;
-  return (
-    <nav aria-label="Breadcrumb" className="hidden min-w-0 md:block">
-      <ol className="flex items-center gap-1.5 text-[14px] leading-5">
-        {group && (
-          <>
-            <li className="text-muted">{group}</li>
-            <li aria-hidden className="text-border-strong">
-              <IconChevronRight size={14} />
-            </li>
-          </>
-        )}
-        <li className="truncate font-medium text-ink" aria-current="page">
-          {current.label}
-        </li>
-      </ol>
-    </nav>
   );
 }
 

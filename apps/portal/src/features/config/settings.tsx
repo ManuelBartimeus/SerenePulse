@@ -35,12 +35,13 @@ const GROUPS: { key: SettingSpec['group']; title: string; description: string }[
   {
     key: 'survey',
     title: 'Survey access',
-    description: 'Abuse controls and session lifetime for the public survey.',
+    description:
+      'Protection against repeat or automated submissions, and how long an unfinished survey stays open.',
   },
   {
     key: 'analytics',
-    title: 'Analytics and flags',
-    description: 'How dashboards treat small groups and unverified responses.',
+    title: 'Dashboards and flagged feedback',
+    description: 'How dashboards treat small groups, and which comments are flagged for review.',
   },
   { key: 'company', title: 'Company', description: 'Names used in customer-facing copy and reports.' },
   {

@@ -1,7 +1,9 @@
-import { createRoute, type AnyRoute } from '@tanstack/react-router';
+import { createRoute, Navigate, type AnyRoute } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 import type { NavItem } from '../../lib/nav';
 import { RequirePerm } from '../../lib/require-perm';
+import { useSession } from '../../lib/session';
+import { REPORT_TABS } from '../cases/page-tabs';
 import { CorrectionsPage } from './corrections';
 import { AuditExportPage, ExportsPage } from './exports';
 import { OpsPage } from './ops';
@@ -19,11 +21,21 @@ const guarded = (permission: string | string[], page: () => ReactNode) => () => 
   <RequirePerm permission={permission}>{page()}</RequirePerm>
 );
 
+/** /reports opens the first Reports tab this user may see. */
+function ReportsLanding() {
+  const { can } = useSession();
+  const first = REPORT_TABS.find((t) =>
+    (Array.isArray(t.permission) ? t.permission : [t.permission ?? '']).some((p) => !p || can(p)),
+  );
+  return <Navigate to={first?.to ?? '/reports/exports'} replace />;
+}
+
 /** Routes for exports, scheduled reports, privacy requests, corrections and operations (router basepath /admin). */
 export function reportsRoutes(parent: AnyRoute): AnyRoute[] {
   const r = (path: string, permission: string | string[], page: () => ReactNode) =>
     createRoute({ getParentRoute: () => parent, path, component: guarded(permission, page) });
   return [
+    createRoute({ getParentRoute: () => parent, path: '/reports', component: ReportsLanding }),
     r('/reports/exports', 'exports.create', () => <ExportsPage />),
     r('/reports/schedules', SCHEDULE_PERMS, () => <SchedulesPage />),
     r('/reports/files', 'analytics.view', () => <ReportFilesPage />),
@@ -35,12 +47,16 @@ export function reportsRoutes(parent: AnyRoute): AnyRoute[] {
 }
 
 export const reportsNav: NavItem[] = [
-  { to: '/reports/exports', label: 'Exports', permission: 'exports.create', group: 'insights' },
-  { to: '/reports/schedules', label: 'Scheduled reports', permission: SCHEDULE_PERMS, group: 'insights' },
-  { to: '/reports/files', label: 'Report files', permission: 'analytics.view', group: 'insights' },
+  // One entry for the tabbed Reports page (Download data / Scheduled reports / Report files).
+  {
+    to: '/reports',
+    label: 'Reports',
+    permission: ['exports.create', ...SCHEDULE_PERMS],
+    group: 'insights',
+  },
   {
     to: '/reports/corrections',
-    label: 'Attribution corrections',
+    label: 'Branch corrections',
     permission: CORRECTION_PERMS,
     group: 'admin',
   },
@@ -50,6 +66,5 @@ export const reportsNav: NavItem[] = [
     permission: PRIVACY_NAV_PERMS,
     group: 'admin',
   },
-  { to: '/reports/audit-export', label: 'Audit log export', permission: 'audit.view', group: 'admin' },
   { to: '/reports/ops', label: 'Operations & usage', permission: OPS_PERMS, group: 'admin' },
 ];

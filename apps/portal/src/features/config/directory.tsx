@@ -178,7 +178,9 @@ function BranchDialog({
       onOpenChange={(o) => !o && onClose()}
       title={isNew ? 'Add a branch' : `Edit ${branch.name}`}
       description={
-        isNew ? 'New branches are offered to customers once the next survey version is published.' : undefined
+        isNew
+          ? 'New branches are offered to customers the next time the survey questions are published.'
+          : undefined
       }
     >
       <form onSubmit={submit} noValidate className="flex flex-col gap-5">
@@ -391,14 +393,7 @@ function BranchesTab() {
                       {summary.isPending || !s ? (
                         <span className="text-muted">—</span>
                       ) : (
-                        <>
-                          {s.responses_30d.toLocaleString('en-GH')}
-                          {s.unverified_30d > 0 && (
-                            <span className="block text-[12px] text-muted">
-                              incl. {s.unverified_30d} unverified
-                            </span>
-                          )}
-                        </>
+                        <>{s.responses_30d.toLocaleString('en-GH')}</>
                       )}
                     </td>
                     {canEdit && (
@@ -991,7 +986,7 @@ function HolidaysTab() {
   return (
     <Section
       title="Holiday calendar"
-      description="Public holidays are excluded from case SLA clocks (working days are Monday to Friday, 08:00–17:00 Accra time)."
+      description="Public holidays don’t count towards case response deadlines (working days are Monday to Friday, 08:00–17:00 Accra time)."
       actions={
         <>
           <div className="flex items-center gap-1" role="group" aria-label="Year">
@@ -1043,7 +1038,7 @@ function HolidaysTab() {
           title={`No holidays recorded for ${year}`}
           action={canEdit && <Button onClick={() => setAdding(true)}>Add holiday</Button>}
         >
-          SLA clocks will count every weekday in {year} until holidays are added.
+          Response deadlines will count every weekday in {year} until holidays are added.
         </EmptyState>
       ) : (
         <ul className="divide-y divide-border">
@@ -1134,7 +1129,7 @@ function HolidaysTab() {
         onConfirm={() => removing && remove.mutate(removing)}
       >
         <p className="text-secondary">
-          {removing && formatDay(removing.holiday_date)} will count as a working day for SLA clocks.
+          {removing && formatDay(removing.holiday_date)} will count as a working day for response deadlines.
         </p>
       </ConfirmDialog>
     </Section>

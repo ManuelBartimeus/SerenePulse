@@ -99,18 +99,52 @@ describe('survey entry (T-M05-001, T-M05-020, FR-01′)', () => {
     expect(cookies.every((c) => c.startsWith('__Host-sv') && c.endsWith('; Secure'))).toBe(true);
   });
 
-  it('reuses valid cookie values and passes the QR code (T-M05-021: no branch inferred)', async () => {
+  it('reuses valid cookie values (T-M05-021: no branch inferred)', async () => {
     const calls = stub({ survey_start_session: () => json(activeSession({ new: false })) });
-    const res = await app.request('/customerfeedback/q/K7P2', { headers: { cookie: COOKIE } }, bindings);
+    const res = await app.request('/customerfeedback', { headers: { cookie: COOKIE } }, bindings);
     expect(res.status).toBe(200);
-    expect(calls[0]!.body).toMatchObject({
-      p_session: SESSION,
-      p_device: DEVICE,
-      p_src: 'qr',
-      p_qr_code: 'K7P2',
-    });
+    expect(calls[0]!.body).toMatchObject({ p_session: SESSION, p_device: DEVICE, p_qr_code: null });
     // the branch question is hidden until the customer picks Walk-in or Other
     expect(await res.text()).toMatch(/data-q="branch"\s+data-off/);
+  });
+
+  it('old QR-point links redirect to the form without recording anything (revision Q)', async () => {
+    const calls = stub({ survey_start_session: () => json(activeSession()) });
+    const res = await app.request('/customerfeedback/q/K7P2', { headers: { cookie: COOKIE } }, bindings);
+    expect(res.status).toBe(302);
+    expect(res.headers.get('location')).toBe('/customerfeedback');
+    expect(res.headers.getSetCookie()).toHaveLength(0);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('"Share more feedback" issues a fresh session and starts a blank survey', async () => {
+    const calls = stub({ survey_start_session: () => json(activeSession()) });
+    const res = await app.request('/customerfeedback/new', { headers: { cookie: COOKIE } }, bindings);
+    expect(res.status).toBe(303);
+    expect(res.headers.get('location')).toBe('/customerfeedback');
+    expect(res.headers.get('cache-control')).toContain('no-store');
+    const cookies = res.headers.getSetCookie();
+    expect(cookies).toHaveLength(1);
+    const fresh = /^dev-svs=([A-Za-z0-9_-]{22}); Max-Age=86400; Path=\/; HttpOnly; SameSite=Lax$/.exec(
+      cookies[0]!,
+    );
+    expect(fresh).not.toBeNull();
+    expect(fresh![1]).not.toBe(SESSION);
+    expect(calls).toHaveLength(0);
+
+    // Following the redirect with the new cookie starts a new session on the same device.
+    await app.request(
+      '/customerfeedback',
+      { headers: { cookie: `dev-svs=${fresh![1]}; dev-svd=${DEVICE}` } },
+      bindings,
+    );
+    expect(calls[0]!.body).toMatchObject({ p_session: fresh![1], p_device: DEVICE });
+  });
+
+  it('uses a __Host- session cookie for "Share more feedback" over https', async () => {
+    const res = await app.request('https://feedback.example/customerfeedback/new', {}, bindings);
+    expect(res.status).toBe(303);
+    expect(res.headers.getSetCookie()[0]).toMatch(/^__Host-svs=.*; Secure$/);
   });
 
   it('shows the already-shared page inside the cooldown (T-M06-021, FR-34)', async () => {
@@ -133,6 +167,9 @@ describe('survey entry (T-M05-001, T-M05-020, FR-01′)', () => {
     expect(body).toContain('FB-2026-000123');
     expect(body).toContain('Our customer experience team may call you on 024 ••• 4567.');
     expect(body).toContain('/customerfeedback/privacy');
+    expect(body).toMatch(
+      /<a class="btn btn-secondary" href="\/customerfeedback\/new"[^>]*>\s*Share more feedback/,
+    );
     expect(body).not.toContain('<form');
   });
 

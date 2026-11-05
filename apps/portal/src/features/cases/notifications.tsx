@@ -9,6 +9,19 @@ import { Alert, Button, EmptyState } from '../../ui/controls';
 import { formatDateTime, timeAgo } from './format';
 import { Card, ErrorAlert, Loading } from './ui';
 
+/** Plain wording for notification types whose stored names use jargon. */
+const PLAIN_TYPES: Record<string, { label: string; description: string }> = {
+  'case.created': {
+    label: 'New case in the team queue',
+    description: 'A case was opened automatically, from flagged feedback, or by a staff member.',
+  },
+  'case.sla_warning': {
+    label: 'Case deadline approaching',
+    description: 'A case has used three-quarters of the time allowed to resolve it.',
+  },
+  'case.sla_breached': { label: 'Case past its deadline', description: 'A case was not resolved in time.' },
+};
+
 interface NotificationRow {
   id: string;
   type: string;
@@ -58,7 +71,7 @@ export function NotificationsPage() {
     <>
       <PageHeader
         title="Notifications"
-        subtitle="Assignments, SLA warnings, alerts and reports. Read notices are kept for 180 days."
+        subtitle="Assignments, approaching deadlines, alerts and reports. Read notices are kept for 180 days."
         actions={
           <>
             <Link
@@ -210,10 +223,10 @@ export function NotificationPreferencesPage() {
                 <li key={t.key} className="flex items-center justify-between gap-4 py-4">
                   <div>
                     <p className="font-medium" id={`pref-${t.key}`}>
-                      {t.label}
+                      {PLAIN_TYPES[t.key]?.label ?? t.label}
                     </p>
                     <p className="text-[14px] text-secondary">
-                      {t.description}
+                      {PLAIN_TYPES[t.key]?.description ?? t.description}
                       {t.email_locked && ' Security emails can’t be turned off.'}
                       {!t.email_supported && ' Shown in the portal only.'}
                     </p>

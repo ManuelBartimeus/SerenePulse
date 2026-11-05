@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from '@tanstack/react-router';
 import { useState, type ReactNode } from 'react';
 import { toUserError } from '../../lib/errors';
+import { MEASURES, RECOMMEND_GROUPS, WORDS } from '../../lib/terms';
 import { useSession } from '../../lib/session';
 import { PageHeader } from '../../pages/shell';
 import { Alert, Badge, Button } from '../../ui/controls';
@@ -15,6 +16,7 @@ import {
   formatDateTime,
   isConflict,
   mentionQuery,
+  plainReason,
   PRIORITIES,
   slaSummary,
   slaTone,
@@ -53,7 +55,7 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** S-B5 case detail: summary, linked response, SLA countdown, actions by permission, timeline, notes. */
+/** S-B5 case detail: summary, linked response, response-deadline countdown, actions by permission, timeline, notes. */
 export function CaseDetailPage() {
   const { caseId } = useParams({ strict: false }) as { caseId: string };
   const rpc = useRpc();
@@ -145,18 +147,18 @@ export function CaseDetailPage() {
         )}
       </div>
 
-      <section className="mb-6 rounded-lg bg-white p-4 md:p-6" aria-label="SLA">
+      <section className="mb-6 rounded-lg bg-white p-4 md:p-6" aria-label="Response deadline">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="font-medium">{s.text}</p>
           <p className="text-[14px] text-secondary">
-            Target {formatDateTime(c.target_resolution_at)} · {sla.target_working_days} working day
-            {sla.target_working_days === 1 ? '' : 's'} (Mon–Fri 08:00–17:00, Accra)
+            Due {formatDateTime(c.target_resolution_at)} · {sla.target_working_days} working day
+            {sla.target_working_days === 1 ? '' : 's'} (Mon–Fri, 8 am–5 pm)
           </p>
         </div>
         <div
           className="mt-3 h-2 overflow-hidden rounded-full bg-surface-muted"
           role="progressbar"
-          aria-label="SLA time used"
+          aria-label="Time used before the deadline"
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={s.pct}
@@ -189,19 +191,19 @@ export function CaseDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <div className="flex flex-col gap-6">
           <Card title="Summary">
-            <p className="whitespace-pre-wrap">{c.description}</p>
+            <p className="whitespace-pre-wrap">{plainReason(c.description)}</p>
             <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-              <Field label="Assigned to">{c.officer_name ?? 'Not assigned (CX queue)'}</Field>
+              <Field label="Assigned to">{c.officer_name ?? 'Not yet assigned'}</Field>
               <Field label="Department">{c.department_name ?? '—'}</Field>
               <Field label="Branch">{c.branch_name ?? 'No branch'}</Field>
               <Field label="Category">{c.category_label ?? '—'}</Field>
-              <Field label="Created">{formatDateTime(c.created_at)}</Field>
-              <Field label="Source">
+              <Field label="Opened on">{formatDateTime(c.created_at)}</Field>
+              <Field label="Opened">
                 {c.source === 'auto'
-                  ? 'Automatic (flag rule)'
+                  ? 'Automatically, by a flagging rule'
                   : c.source === 'flag'
-                    ? 'From a flag'
-                    : 'Manual'}
+                    ? 'From flagged feedback'
+                    : 'By a staff member'}
               </Field>
               {c.resolved_at && <Field label="Resolved">{formatDateTime(c.resolved_at)}</Field>}
               {c.closed_at && <Field label="Closed">{formatDateTime(c.closed_at)}</Field>}
@@ -236,12 +238,15 @@ export function CaseDetailPage() {
                   {response.branch_name ?? response.branch_status.replace(/_/g, ' ')}
                 </Field>
                 <Field label="Product">{response.product_label}</Field>
-                <Field label="Satisfaction (CSAT)">{response.csat_score} / 5</Field>
-                <Field label="Ease (CES)">{response.ces_score} / 5</Field>
-                <Field label="Recommend (NPS)">
-                  {response.nps_score} / 10 · {response.nps_class}
+                <Field label="Overall satisfaction">{response.csat_score} out of 5</Field>
+                <Field label={MEASURES.ces_avg.label}>{response.ces_score} out of 5</Field>
+                <Field label="Likelihood to recommend">
+                  {response.nps_score} out of 10
+                  {response.nps_class in RECOMMEND_GROUPS
+                    ? ` · ${RECOMMEND_GROUPS[response.nps_class as keyof typeof RECOMMEND_GROUPS]}`
+                    : ''}
                 </Field>
-                <Field label="To improve">{response.factor_label ?? '—'}</Field>
+                <Field label={WORDS.factor}>{response.factor_label ?? '—'}</Field>
               </dl>
               <div className="mt-4">
                 <h3 className="text-[14px] font-medium">Comment</h3>
@@ -268,7 +273,7 @@ export function CaseDetailPage() {
                 <div className="mt-4 flex flex-wrap gap-2">
                   {flags.map((f) => (
                     <Badge key={f.id} tone={f.status === 'open' ? 'warning' : 'neutral'}>
-                      {f.reason}
+                      {plainReason(f.reason)}
                     </Badge>
                   ))}
                 </div>
@@ -286,7 +291,7 @@ export function CaseDetailPage() {
               />
             ) : (
               <p className="text-[14px] text-secondary">
-                The customer didn’t ask to be contacted, so no contact details exist (D-15).
+                The customer didn’t ask to be contacted, so no contact details were collected.
               </p>
             )}
           </Card>
@@ -334,7 +339,7 @@ export function CaseDetailPage() {
         open={action === 'escalate'}
         onOpenChange={(o) => !o && setAction(null)}
         title="Escalate the case"
-        description={`It moves from ${c.escalation_label} to the next level: officer → department head → CX Administrator → Executive (D-20).`}
+        description={`It moves from ${c.escalation_label} to the next level: officer → department head → customer experience administrator → Executive.`}
         label="Reason"
         confirmLabel="Escalate"
         onConfirm={(t) => act('case_escalate', { p_reason: t })}
@@ -496,7 +501,7 @@ function PriorityDialog({ current, onClose, act }: { current: string; onClose: (
   return (
     <FormDialog
       title="Change priority"
-      description="The SLA target is recalculated from when the case was created."
+      description="The response deadline is recalculated from when the case was opened."
       confirm="Save priority"
       onClose={onClose}
       onSubmit={() => act('case_set_priority', { p_priority: priority, p_reason: reason || null })}
@@ -526,7 +531,7 @@ function ResolveDialog({ onClose, act }: { onClose: () => void; act: Act }) {
   return (
     <FormDialog
       title="Resolve the case"
-      description="A CX Administrator or Executive closes it afterwards (Rule 21)."
+      description="A customer experience administrator or an Executive closes it afterwards."
       confirm="Resolve"
       onClose={onClose}
       onSubmit={() =>

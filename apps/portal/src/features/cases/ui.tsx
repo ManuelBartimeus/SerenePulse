@@ -8,7 +8,7 @@ import {
 import { toUserError } from '../../lib/errors';
 import { Alert, Badge, Button, Spinner } from '../../ui/controls';
 import { Dialog } from '../../ui/dialog';
-import { priorityTone, slaLabel, slaTone, statusLabel, statusTone } from './format';
+import { priorityLabel, priorityTone, slaLabel, slaTone, statusLabel, statusTone } from './format';
 
 export const controlClass =
   'h-11 w-full rounded-sm border border-border-strong bg-white px-3 text-[16px] outline-none hover:border-ink focus-visible:border-brand md:text-[14px]';
@@ -85,7 +85,7 @@ export const StatusBadge = ({ status }: { status: string }) => (
   <Badge tone={statusTone(status)}>{statusLabel(status)}</Badge>
 );
 export const PriorityBadge = ({ priority }: { priority: string }) => (
-  <Badge tone={priorityTone(priority)}>{priority}</Badge>
+  <Badge tone={priorityTone(priority)}>{priorityLabel(priority)}</Badge>
 );
 export const SlaBadge = ({ state }: { state: string }) => (
   <Badge tone={slaTone(state)}>{slaLabel(state)}</Badge>

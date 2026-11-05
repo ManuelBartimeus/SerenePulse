@@ -8,6 +8,7 @@ import { PageHeader } from '../../pages/shell';
 import { Alert, Badge, Button, EmptyState, Spinner, TextField } from '../../ui/controls';
 import { Dialog } from '../../ui/dialog';
 import { useCatalogues } from '../analytics/catalogues';
+import { PageTabs, REPORT_TABS } from '../cases/page-tabs';
 import { functionErrorMessage, useFunctions, type ReportFile } from './api';
 import { formatDateTime, nextRunAt, reportInfo, REPORTS, reportLabel, type ReportKey } from './schedule';
 import { Check, ErrorBox, FileRow, SelectField } from './ui';
@@ -244,14 +245,15 @@ export function SchedulesPage() {
   return (
     <>
       <PageHeader
-        title="Scheduled reports"
-        subtitle="Daily, weekly, monthly and quarterly reports in PDF and Excel, sent to portal users. Times are Africa/Accra."
+        title="Reports"
+        subtitle="Daily, weekly, monthly and quarterly reports in PDF and Excel, sent to colleagues at 07:00."
         actions={
           can('reports.schedule') ? (
-            <Button onClick={() => setEditing('new')}>New schedule</Button>
+            <Button onClick={() => setEditing('new')}>New scheduled report</Button>
           ) : undefined
         }
       />
+      <PageTabs tabs={REPORT_TABS} label="Reports" />
       <div aria-live="polite" className="mb-4 grid gap-2">
         {pause.isError && <Alert tone="danger">{toUserError(pause.error).message}</Alert>}
         {runNow.isPending && <Alert tone="info">Generating the report. This can take a few seconds…</Alert>}
@@ -298,7 +300,7 @@ export function SchedulesPage() {
                   <p className="text-[14px] text-secondary">
                     {reportLabel(s.report_key)} ·{' '}
                     {s.filters.branch_ids?.length
-                      ? `${s.filters.branch_ids.length} branch(es)`
+                      ? `${s.filters.branch_ids.length} ${s.filters.branch_ids.length === 1 ? 'branch' : 'branches'}`
                       : 'Whole organisation'}{' '}
                     · owner {s.owner_name || 'unknown'}
                   </p>
@@ -373,9 +375,10 @@ export function ReportFilesPage() {
   return (
     <>
       <PageHeader
-        title="Report files"
-        subtitle="Reports sent to you or that you own. Files are kept for 30 days; each download is recorded."
+        title="Reports"
+        subtitle="Reports sent to you or that you own. Files are kept for 30 days."
       />
+      <PageTabs tabs={REPORT_TABS} label="Reports" />
       <section className="rounded-lg bg-white">
         {search.run && (
           <p className="border-b border-border p-4 text-[14px] text-secondary">Showing one report run.</p>

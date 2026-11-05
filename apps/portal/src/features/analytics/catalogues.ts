@@ -14,8 +14,6 @@ export interface Catalogues {
   channels: Option[];
   products: Option[];
   factors: (Option & { isNone: boolean })[];
-  qrPoints: Option[];
-  versions: (Option & { publishedAt: string | null; status: string })[];
 }
 
 /** Filter options from the catalogue tables (Data API, RLS: readable by signed-in staff). */
@@ -25,7 +23,7 @@ export function useCatalogues() {
     queryKey: ['analytics', 'catalogues'],
     staleTime: 5 * 60_000,
     queryFn: async (): Promise<Catalogues> => {
-      const [b, r, c, p, f, q, v] = await Promise.all([
+      const [b, r, c, p, f] = await Promise.all([
         supabase
           .from('branches')
           .select('id, code, name, region_id, is_active')
@@ -38,14 +36,8 @@ export function useCatalogues() {
           .from('improvement_factors')
           .select('id, code, label, is_active, is_none')
           .order('sort_order'),
-        supabase.from('qr_points').select('id, code, label, is_active').order('label'),
-        supabase
-          .from('survey_versions')
-          .select('id, version_no, status, published_at')
-          .in('status', ['published', 'retired'])
-          .order('version_no'),
       ]);
-      const failed = [b, r, c, p, f, q, v].find((x) => x.error);
+      const failed = [b, r, c, p, f].find((x) => x.error);
       if (failed?.error) throw failed.error;
       type Row = Record<string, unknown>;
       const rows = (x: { data: unknown }) => (x.data ?? []) as Row[];
@@ -61,13 +53,6 @@ export function useCatalogues() {
         channels: rows(c).map((row) => base(row, String(row.label))),
         products: rows(p).map((row) => base(row, String(row.label))),
         factors: rows(f).map((row) => ({ ...base(row, String(row.label)), isNone: row.is_none === true })),
-        qrPoints: rows(q).map((row) => base(row, `${String(row.label)} (${String(row.code)})`)),
-        versions: rows(v).map((row) => ({
-          id: String(row.id),
-          label: `Version ${String(row.version_no)}`,
-          status: String(row.status),
-          publishedAt: (row.published_at as string | null) ?? null,
-        })),
       };
     },
   });

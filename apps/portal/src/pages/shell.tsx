@@ -1,20 +1,21 @@
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import logoUrl from '@serene/ui/assets/serene-logo.svg';
+import { analyticsNav } from '../features/analytics/routes';
+import { casesNav } from '../features/cases/routes';
+import { configNav } from '../features/config/routes';
+import { reportsNav } from '../features/reports/routes';
+import type { NavItem } from '../lib/nav';
 import { useSession } from '../lib/session';
 import { Button, EmptyState } from '../ui/controls';
 import { Dialog } from '../ui/dialog';
 
-interface NavItem {
-  to: string;
-  label: string;
-  permission?: string;
-  group?: 'admin';
-}
-
 /** Permission-aware navigation (REQ §19): items the user can't use are not shown. */
 export const NAV: NavItem[] = [
-  { to: '/', label: 'Overview' },
+  ...analyticsNav,
+  ...casesNav,
+  ...reportsNav,
+  ...configNav,
   { to: '/admin/users', label: 'Users & roles', permission: 'users.manage', group: 'admin' },
   { to: '/admin/approvals', label: 'Approvals', permission: 'survey.publish.approve', group: 'admin' },
   { to: '/admin/audit', label: 'Audit log', permission: 'audit.view', group: 'admin' },
@@ -80,7 +81,9 @@ function IdleTimeout() {
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
   const { can } = useSession();
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const visible = NAV.filter((i) => !i.permission || can(i.permission));
+  const visible = NAV.filter(
+    (i) => !i.permission || (Array.isArray(i.permission) ? i.permission : [i.permission]).some((p) => can(p)),
+  );
   const render = (items: NavItem[]) =>
     items.map((item) => {
       const active = item.to === '/' ? path === '/' : path.startsWith(item.to);
@@ -100,19 +103,28 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
         </Link>
       );
     });
-  const main = visible.filter((i) => !i.group);
-  const admin = visible.filter((i) => i.group === 'admin');
+  const groups: { key: NavItem['group']; title: string }[] = [
+    { key: undefined, title: '' },
+    { key: 'insights', title: 'Insights' },
+    { key: 'operations', title: 'Operations' },
+    { key: 'admin', title: 'Administration' },
+  ];
   return (
     <nav aria-label="Main" className="flex flex-col gap-1">
-      {render(main)}
-      {admin.length > 0 && (
-        <>
-          <p className="mt-6 px-3 text-[12px] font-medium uppercase leading-4 tracking-[1px] text-muted">
-            Administration
-          </p>
-          {render(admin)}
-        </>
-      )}
+      {groups.map(({ key, title }) => {
+        const items = visible.filter((i) => i.group === key);
+        if (items.length === 0) return null;
+        return (
+          <div key={title || 'main'} className="flex flex-col gap-1">
+            {title && (
+              <p className="mt-6 px-3 text-[12px] font-medium uppercase leading-4 tracking-[1px] text-muted">
+                {title}
+              </p>
+            )}
+            {render(items)}
+          </div>
+        );
+      })}
     </nav>
   );
 }
@@ -212,24 +224,6 @@ export function PageHeader({
       </div>
       {actions && <div className="flex gap-3">{actions}</div>}
     </div>
-  );
-}
-
-export function HomePage() {
-  const { claims } = useSession();
-  return (
-    <>
-      <PageHeader
-        title="Overview"
-        subtitle="Customer feedback dashboards arrive with the analytics milestones."
-      />
-      <section className="rounded-lg bg-white">
-        <EmptyState title="No feedback data yet">
-          The customer survey goes live in a later milestone. Until then this page stays empty rather than
-          showing sample figures. Your roles: {claims?.app_roles.join(', ') || 'none'}.
-        </EmptyState>
-      </section>
-    </>
   );
 }
 

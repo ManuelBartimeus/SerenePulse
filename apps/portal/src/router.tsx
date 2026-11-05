@@ -11,7 +11,11 @@ import { useSession } from './lib/session';
 import { ForgotPasswordPage, SetPasswordPage, SignInPage } from './pages/auth';
 import { AuditPage } from './pages/audit';
 import { ProfilePage } from './pages/profile';
-import { AccessDeniedPage, HomePage, NotFoundPage, Shell } from './pages/shell';
+import { analyticsRoutes } from './features/analytics/routes';
+import { casesRoutes } from './features/cases/routes';
+import { configRoutes } from './features/config/routes';
+import { reportsRoutes } from './features/reports/routes';
+import { AccessDeniedPage, NotFoundPage, Shell } from './pages/shell';
 import { ApprovalsPage, UsersPage } from './pages/users';
 import { Spinner } from './ui/controls';
 
@@ -34,9 +38,16 @@ function AuthGate() {
 }
 
 /** Direct URL access without the permission shows the access-denied page (STEP 7). */
-function RequirePerm({ permission, children }: { permission: string; children: ReactNode }) {
+export function RequirePerm({
+  permission,
+  children,
+}: {
+  permission: string | string[];
+  children: ReactNode;
+}) {
   const { can } = useSession();
-  return can(permission) ? <>{children}</> : <AccessDeniedPage />;
+  const allowed = (Array.isArray(permission) ? permission : [permission]).some((p) => can(p));
+  return allowed ? <>{children}</> : <AccessDeniedPage />;
 }
 
 const rootRoute = createRootRoute({ component: Outlet, notFoundComponent: NotFoundPage });
@@ -54,7 +65,6 @@ const forgot = createRoute({
 });
 
 const app = createRoute({ getParentRoute: () => rootRoute, id: 'app', component: AuthGate });
-const home = createRoute({ getParentRoute: () => app, path: '/', component: HomePage });
 const users = createRoute({
   getParentRoute: () => app,
   path: '/admin/users',
@@ -88,7 +98,16 @@ const routeTree = rootRoute.addChildren([
   signIn,
   setPassword,
   forgot,
-  app.addChildren([home, users, approvals, audit, profile]),
+  app.addChildren([
+    ...analyticsRoutes(app),
+    ...casesRoutes(app),
+    ...configRoutes(app),
+    ...reportsRoutes(app),
+    users,
+    approvals,
+    audit,
+    profile,
+  ]),
 ]);
 
 export const router = createRouter({ routeTree, defaultPreload: 'intent' });

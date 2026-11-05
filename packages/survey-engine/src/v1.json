@@ -1,0 +1,141 @@
+{
+  "schema": 1,
+  "intro": "Thanks for choosing Serene Insurance. 5 quick questions, under a minute.",
+  "pages": [
+    {
+      "id": "transaction",
+      "title": "About your policy",
+      "questions": [
+        {
+          "id": "channel",
+          "type": "single_choice",
+          "label": "How did you obtain your insurance policy?",
+          "options_source": "service_channels",
+          "required": true
+        },
+        {
+          "id": "channel_other",
+          "type": "text_short",
+          "label": "Please tell us how (optional)",
+          "visible_when": { "var": "channel.is_other" },
+          "max_length": 80
+        },
+        {
+          "id": "branch",
+          "type": "single_choice",
+          "label": "Which branch issued your policy?",
+          "help": "The branch that issued your policy, which may differ from one you visited.",
+          "options_source": "branches",
+          "visible_when": { "in": [{ "var": "channel.branch_requirement" }, ["required", "optional"]] },
+          "required": { "eq": [{ "var": "channel.branch_requirement" }, "required"] }
+        },
+        {
+          "id": "branch_other",
+          "type": "text_short",
+          "label": "Branch name (optional)",
+          "visible_when": { "var": "branch.is_other" },
+          "max_length": 80
+        },
+        {
+          "id": "product",
+          "type": "single_choice",
+          "label": "What type of insurance policy did you get?",
+          "options_source": "insurance_products",
+          "required": true
+        },
+        {
+          "id": "product_other",
+          "type": "text_short",
+          "label": "Please tell us which (optional)",
+          "visible_when": { "var": "product.is_other" },
+          "max_length": 80
+        }
+      ]
+    },
+    {
+      "id": "csat",
+      "title": "Overall satisfaction",
+      "questions": [
+        {
+          "id": "csat",
+          "type": "rating_5",
+          "label": "How satisfied are you with the insurance service you received?",
+          "anchors": ["Very dissatisfied", "Dissatisfied", "Neutral", "Satisfied", "Very satisfied"],
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "ces",
+      "title": "Ease of service",
+      "questions": [
+        {
+          "id": "ces",
+          "type": "rating_5",
+          "label": "How easy was it to obtain your insurance policy?",
+          "anchors": ["Very difficult", "Difficult", "Neither easy nor difficult", "Easy", "Very easy"],
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "nps",
+      "title": "Recommendation",
+      "questions": [
+        {
+          "id": "nps",
+          "type": "rating_0_10",
+          "label": "How likely are you to recommend Serene Insurance to someone you know?",
+          "anchors": ["Not at all likely", "Extremely likely"],
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": "feedback",
+      "title": "Additional feedback",
+      "title_when_low_csat": "We're sorry we fell short. What should we improve?",
+      "questions": [
+        {
+          "id": "factor",
+          "type": "single_choice",
+          "label": "What is the main thing we could improve? (optional)",
+          "options_source": "improvement_factors"
+        },
+        {
+          "id": "factor_other",
+          "type": "text_short",
+          "label": "Please tell us what (optional)",
+          "visible_when": { "var": "factor.is_other" },
+          "max_length": 200
+        },
+        {
+          "id": "comment",
+          "type": "text_long",
+          "label": "Anything else you'd like to tell us? (optional)",
+          "max_length": 1000
+        },
+        {
+          "id": "contact_consent",
+          "type": "toggle",
+          "label": "You may contact me about my feedback",
+          "help": "We'll only use your number to follow up on this feedback."
+        },
+        {
+          "id": "phone",
+          "type": "phone",
+          "label": "Your mobile number",
+          "visible_when": { "var": "contact_consent" },
+          "required": { "var": "contact_consent" }
+        },
+        {
+          "id": "first_name",
+          "type": "text_short",
+          "label": "Your first name (optional)",
+          "visible_when": { "var": "contact_consent" },
+          "max_length": 40
+        }
+      ]
+    }
+  ]
+}

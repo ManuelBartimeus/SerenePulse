@@ -10,9 +10,15 @@ export default tseslint.config(
   {
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       // Free text from customers is rendered as text only (threat model A, XSS).
       'no-restricted-properties': ['error', { property: 'innerHTML', message: 'Render text, never HTML.' }],
     },
+  },
+  {
+    // Tests assert on fixtures they just built.
+    files: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: { '@typescript-eslint/no-non-null-assertion': 'off' },
   },
   {
     files: ['scripts/**/*.mjs', 'tests/**/*.mjs'],

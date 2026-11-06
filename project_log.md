@@ -598,3 +598,15 @@ on staging.
 * Survey browser tests 40/40 with the new font.
 * Screens reviewed by eye: the landing page at desktop and at every phone width, the public pages
   at 360 and 1440, and the customer app's sign-in, wizard, documents, sign and success screens.
+
+**Deployed (commit `f269b67`, 2026-11-06):** CI passed, then the automatic deploy ran on staging and
+production. Both `/healthz` report version `f269b6791f15`. Every area returns 200 (`/`, product
+pages, `/claims/`, `/verify/`, `/about/`, `/downloads/`, `/account/`, `/admin/`,
+`/customerfeedback`), and the cedi font is served from `/fonts/`. A real-browser check of live
+production at 390 px and 1440 px found:
+
+* no horizontal overflow and no broken images;
+* DM Sans loaded, with the 4:5 hero crop on phones and the 16:9 crop on desktop;
+* no CSP errors. The only console entry is the customer app's expected 401 from `/api/account/me`
+  when signed out, which sends the visitor to sign-in;
+* live pricing correct (taxi third party GH₵ 744).

@@ -62,7 +62,7 @@ const INTROS: Record<string, string> = {
 /** Renders any queued template. Every template uses the same safe fields: subject, summary, link. */
 export function render(job: EmailJob, portalUrl: string, companyName = 'Serene Insurance'): RenderedEmail {
   const p = job.payload ?? {};
-  const subject = headerSafe(String(p.subject ?? 'Notification from Serene CX')).slice(0, 200);
+  const subject = headerSafe(String(p.subject ?? 'Notification from the Serene Staff Portal')).slice(0, 200);
   const summary = String(p.summary ?? '').slice(0, 2000);
   const url = portalLink(portalUrl, p.link);
   const label = INTROS[job.template] ?? (job.template.startsWith('case_') ? 'Case update' : 'Notification');

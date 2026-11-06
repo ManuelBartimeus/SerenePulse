@@ -1,16 +1,12 @@
 import { createRoute, type AnyRoute } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
-import type { NavItem } from '../../lib/nav';
 import { RequirePerm } from '../../lib/require-perm';
+import { PERMS } from '../../pages/shell';
 import { FeedbackFormPage } from './access';
 import { CataloguesPage } from './catalogues';
 import { DirectoryPage } from './directory';
-import { SettingsPage } from './settings';
 import { SurveyVersionPage } from './survey/editor';
 import { SurveyVersionsPage } from './survey/versions';
-
-const FEEDBACK_FORM_PERMS = ['config.qr_points', 'survey.edit', 'analytics.view'];
-const SURVEY_PERMS = ['survey.edit', 'survey.publish.approve'];
 
 const guarded = (permission: string | string[], page: () => ReactNode) => () => (
   <RequirePerm permission={permission}>{page()}</RequirePerm>
@@ -21,24 +17,10 @@ export function configRoutes(parent: AnyRoute): AnyRoute[] {
   const r = (path: string, permission: string | string[], page: () => ReactNode) =>
     createRoute({ getParentRoute: () => parent, path, component: guarded(permission, page) });
   return [
-    r('/config/feedback-form', FEEDBACK_FORM_PERMS, () => <FeedbackFormPage />),
-    r('/config/survey', SURVEY_PERMS, () => <SurveyVersionsPage />),
-    r('/config/survey/$versionId', SURVEY_PERMS, () => <SurveyVersionPage />),
-    r('/config/directory', 'config.directory', () => <DirectoryPage />),
-    r('/config/catalogues', 'config.catalogues', () => <CataloguesPage />),
-    r('/config/settings', 'settings.manage', () => <SettingsPage />),
+    r('/config/feedback-form', PERMS.feedbackForm, () => <FeedbackFormPage />),
+    r('/config/survey', PERMS.survey, () => <SurveyVersionsPage />),
+    r('/config/survey/$versionId', PERMS.survey, () => <SurveyVersionPage />),
+    r('/config/directory', PERMS.directory, () => <DirectoryPage />),
+    r('/config/catalogues', PERMS.catalogues, () => <CataloguesPage />),
   ];
 }
-
-export const configNav: NavItem[] = [
-  {
-    to: '/config/feedback-form',
-    label: 'Feedback form',
-    permission: FEEDBACK_FORM_PERMS,
-    group: 'operations',
-  },
-  { to: '/config/survey', label: 'Survey questions', permission: SURVEY_PERMS, group: 'admin' },
-  { to: '/config/directory', label: 'Branches & regions', permission: 'config.directory', group: 'admin' },
-  { to: '/config/catalogues', label: 'Lists & options', permission: 'config.catalogues', group: 'admin' },
-  { to: '/config/settings', label: 'Settings', permission: 'settings.manage', group: 'admin' },
-];

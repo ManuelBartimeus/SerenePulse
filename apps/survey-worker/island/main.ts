@@ -15,6 +15,7 @@ import {
 } from '@serene/survey-engine';
 import { API, LOCAL_ONLY, STORAGE_KEY, type BootData, type SubmitBody } from '../shared/boot';
 import { BASE, COPY, fieldMessage } from '../shared/copy';
+import { FRESH_PARAM, RESUME_PARAM, firstOpenPage, hasDraftAnswers } from '../shared/resume';
 import { DraftSync, Telemetry } from './net';
 import { Turnstile } from './turnstile';
 
@@ -25,6 +26,10 @@ declare global {
 }
 
 const HOLD_MS = 250;
+/** How long the drawn tick stays on screen before the thank-you page (shorter without motion). */
+const CHECK_MS = 750;
+const CHECK_MS_REDUCED = 300;
+const SVG_NS = 'http://www.w3.org/2000/svg';
 const LOCAL = new Set<string>(LOCAL_ONLY);
 
 interface Stored {
@@ -64,6 +69,7 @@ function start(): void {
   const bootEl = document.getElementById('sv-boot');
   const form = document.getElementById('sv-form') as HTMLFormElement | null;
   if (!bootEl || !form) return;
+  const formEl: HTMLFormElement = form;
   window.__sv = true;
   document.documentElement.className = 'js';
 
@@ -81,8 +87,16 @@ function start(): void {
   const continueBtn = form.querySelector<HTMLButtonElement>('[data-continue]');
   const submitBtn = form.querySelector<HTMLButtonElement>('[data-submit]');
 
-  // ---- state: the server draft is the source of truth; sessionStorage covers unsynced changes
-  const stored = readStore();
+  // ---- state: the server draft is the source of truth; sessionStorage covers unsynced changes.
+  // "Start a new feedback form" (boot.fresh) must not bring anything back from this device.
+  if (boot.fresh) {
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  }
+  const stored = boot.fresh ? null : readStore();
   let answers: Answers = { ...boot.answers };
   let page = boot.page;
   let idem = uuid();
@@ -115,6 +129,9 @@ function start(): void {
 
   const tel = new Telemetry(API.events);
   const sync = new DraftSync(API.answers, seq, (status) => {
+    // A draft still in flight when Submit was pressed is answered 409 once the response is stored:
+    // the submit path owns the outcome then, so it must not reload the page under the overlay.
+    if (busy || done) return;
     if (status === 410 || status === 409) {
       persist(true);
       location.reload();
@@ -270,6 +287,15 @@ function start(): void {
     if (Object.keys(remote).length) sync.queue(remote);
     persist();
     refresh(true);
+    if (hasDraftAnswers(answers)) markInProgress();
+  }
+
+  let marked = false;
+  /** Once there is something to lose, the address carries ?resume=1 (see resumableUrl). */
+  function markInProgress(): void {
+    if (marked) return;
+    marked = true;
+    history.replaceState(history.state, '', resumableUrl());
   }
 
   function header(n: number): void {
@@ -315,7 +341,13 @@ function start(): void {
     }
     sync.queue({}, n);
     persist();
-    if (n === total) void ts.load();
+    warmTurnstile(n);
+  }
+
+  /** Turnstile loads one page early and fetches its token on the last page, never at Submit. */
+  function warmTurnstile(n: number): void {
+    if (n >= total - 1) void ts.load();
+    if (n === total) void ts.prepare();
   }
 
   // ---- events
@@ -389,6 +421,10 @@ function start(): void {
 
   window.addEventListener('popstate', (e) => {
     if (done) return;
+    if (busy) {
+      history.pushState({ sv: page }, ''); // the form is locked while it is being sent
+      return;
+    }
     const n = (e.state as { sv?: number } | null)?.sv;
     if (typeof n !== 'number') return;
     if (n < page) pushed = Math.max(0, pushed - 1);
@@ -432,9 +468,94 @@ function start(): void {
   function fail(text: string, code: string): void {
     tel.add('submit_error', page, { code });
     tel.flush();
+    unlock();
     setBusy(false);
     sync.resume();
+    void ts.prepare(); // the token was used (or may have been): have a new one ready for the retry
     if (msg) msg.textContent = text;
+  }
+
+  // ---- submit overlay: blurs and locks the form, spinner → tick, then the thank-you page
+  let overlay: HTMLElement | null = null;
+  let locked: (HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement)[] = [];
+  const shell = () =>
+    [document.getElementById('main'), document.querySelector<HTMLElement>('header.top'), bar].filter(
+      (n): n is HTMLElement => !!n,
+    );
+
+  function svgEl(tag: string, attrs: Record<string, string>): SVGElement {
+    const n = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    return n;
+  }
+
+  function trap(e: KeyboardEvent): void {
+    if (!overlay) return;
+    if (e.key === 'Tab' || e.key === 'Escape') {
+      e.preventDefault();
+      overlay.querySelector<HTMLElement>('.sv-card')?.focus();
+    }
+  }
+
+  function lock(): void {
+    if (overlay) return;
+    for (const n of shell()) n.setAttribute('inert', '');
+    locked = Array.from(
+      formEl.querySelectorAll<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement | HTMLButtonElement>(
+        'input, select, textarea, button',
+      ),
+    ).filter((x) => !x.disabled);
+    for (const x of locked) x.disabled = true;
+    document.documentElement.classList.add('sv-locked');
+
+    overlay = el('div', undefined, 'sv-ov');
+    overlay.setAttribute('data-submit-overlay', '');
+    const card = el('div', undefined, 'sv-card');
+    card.setAttribute('role', 'dialog');
+    card.setAttribute('aria-modal', 'true');
+    card.setAttribute('aria-labelledby', 'sv-ov-text');
+    card.tabIndex = -1;
+    const icon = el('div', undefined, 'sv-icon');
+    icon.setAttribute('aria-hidden', 'true');
+    const ring = svgEl('svg', { viewBox: '0 0 52 52', class: 'sv-spin', focusable: 'false' });
+    ring.append(svgEl('circle', { class: 'sv-ring', cx: '26', cy: '26', r: '23' }));
+    const tick = svgEl('svg', { viewBox: '0 0 52 52', focusable: 'false' });
+    tick.append(svgEl('path', { class: 'sv-check', d: 'M16 27l7 7 13-14' }));
+    icon.append(ring, tick);
+    const text = el('p', COPY.submitting);
+    text.id = 'sv-ov-text';
+    text.setAttribute('role', 'status');
+    text.setAttribute('aria-live', 'polite');
+    card.append(icon, text);
+    overlay.append(card);
+    document.body.append(overlay);
+    document.addEventListener('keydown', trap, true);
+    card.focus({ preventScroll: true });
+  }
+
+  function unlock(opts: { fade?: boolean } = {}): void {
+    document.removeEventListener('keydown', trap, true);
+    for (const n of shell()) n.removeAttribute('inert');
+    for (const x of locked) x.disabled = false;
+    locked = [];
+    document.documentElement.classList.remove('sv-locked');
+    const ov = overlay;
+    overlay = null;
+    if (!ov) return;
+    if (opts.fade && !reducedMotion()) {
+      ov.setAttribute('data-leaving', '');
+      setTimeout(() => ov.remove(), 220);
+    } else ov.remove();
+    if (!done) submitBtn?.focus({ preventScroll: true });
+  }
+
+  /** The server confirmed: the spinner closes into a filled circle and the tick draws itself. */
+  function received(): Promise<void> {
+    if (!overlay) return Promise.resolve();
+    overlay.setAttribute('data-done', '');
+    const text = overlay.querySelector('#sv-ov-text');
+    if (text) text.textContent = COPY.received;
+    return new Promise((r) => setTimeout(r, reducedMotion() ? CHECK_MS_REDUCED : CHECK_MS));
   }
 
   async function submit(): Promise<void> {
@@ -450,8 +571,10 @@ function start(): void {
     }
     if (msg) msg.textContent = '';
     setBusy(true);
+    lock(); // nothing can change from here on, whatever the network does
     tel.add('submit_attempt', page);
     sync.stop();
+    // Normally instant: the token was fetched when the customer reached this page.
     const token = await ts.token();
     const body: SubmitBody = { answers: clean(def, snap, answers) };
     if (token) body.turnstileToken = token;
@@ -475,7 +598,13 @@ function start(): void {
       // empty or non-JSON body
     }
     if (res.ok && typeof data.reference === 'string') {
-      confirm(data.reference, typeof data.contactMasked === 'string' ? data.contactMasked : null);
+      const reference = data.reference;
+      const masked = typeof data.contactMasked === 'string' ? data.contactMasked : null;
+      done = true; // the response is stored: nothing (Back, a late draft reply) may reopen the form
+      await received();
+      for (const n of shell()) n.removeAttribute('inert');
+      confirm(reference, masked);
+      unlock({ fade: true });
       return;
     }
     switch (res.status) {
@@ -564,6 +693,8 @@ function start(): void {
   }
 
   function alreadyShared(): void {
+    done = true;
+    unlock();
     const h = el('h1', COPY.alreadyShared);
     h.tabIndex = -1;
     finish([h, privacy()]);
@@ -571,10 +702,14 @@ function start(): void {
 
   // ---- hydrate
   for (const q of all) setDom(q, answers[q.id]);
-  page = firstInvalidPageBefore(Math.min(Math.max(page, 1), total));
+  // "Pick up where you left off" opens the first page that still needs an answer.
+  page = boot.resumed
+    ? firstOpenPage(def, snap, answers)
+    : firstInvalidPageBefore(Math.min(Math.max(page, 1), total));
   show(page, 'none');
   refresh(false);
   history.replaceState({ sv: page }, '');
+  if (hasDraftAnswers(answers)) markInProgress();
   tel.add('interactive', page);
   tel.add('page_view', page);
   tel.flush(); // interactive_at drives completion time (Rule 18), so it goes now
@@ -584,7 +719,19 @@ function start(): void {
     sync.queue(diff, page);
   }
   persist();
-  if (page === total) void ts.load();
+  warmTurnstile(page);
+}
+
+/**
+ * The address of this form once it is in progress: with ?resume=1, so a reload (or coming Back from
+ * the privacy notice) carries on instead of asking "pick up or start again" in the middle of it. A
+ * customer who comes back later through their SMS link (no ?resume) is asked.
+ */
+function resumableUrl(): string {
+  const u = new URL(location.href);
+  u.searchParams.set(RESUME_PARAM, '1');
+  u.searchParams.delete(FRESH_PARAM);
+  return u.pathname + u.search + u.hash;
 }
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

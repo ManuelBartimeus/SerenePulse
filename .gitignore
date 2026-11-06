@@ -35,3 +35,6 @@ Thumbs.db
 # Assembled by scripts/assemble-site.mjs (landing + portal builds)
 apps/survey-worker/public/*
 !apps/survey-worker/public/.gitkeep
+
+# Source archive of Serene's paper proposal forms (the site serves copies from apps/landing/src/downloads).
+PROPOSAL FORMS*.zip

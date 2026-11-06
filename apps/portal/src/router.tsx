@@ -13,7 +13,9 @@ import { ProfilePage } from './pages/profile';
 import { analyticsRoutes } from './features/analytics/routes';
 import { casesRoutes } from './features/cases/routes';
 import { configRoutes } from './features/config/routes';
-import { reportsRoutes } from './features/reports/routes';
+import { settingsRoutes } from './features/reports/routes';
+import { salesRoutes } from './features/sales/routes';
+import { REDIRECTS, redirectRoutes } from './lib/redirect';
 import { RequirePerm } from './lib/require-perm';
 import { NotFoundPage, Shell } from './pages/shell';
 import { UsersPage } from './pages/users';
@@ -77,10 +79,12 @@ const routeTree = rootRoute.addChildren([
   setPassword,
   forgot,
   app.addChildren([
+    ...salesRoutes(app),
     ...analyticsRoutes(app),
     ...casesRoutes(app),
     ...configRoutes(app),
-    ...reportsRoutes(app),
+    ...settingsRoutes(app),
+    ...redirectRoutes(app, REDIRECTS),
     users,
     audit,
     profile,

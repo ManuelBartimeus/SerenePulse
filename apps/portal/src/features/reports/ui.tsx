@@ -3,7 +3,7 @@ import { useId, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttr
 import { toUserError } from '../../lib/errors';
 import { Alert, Badge, Button } from '../../ui/controls';
 import { FORMAT_LABEL, type ReportFile } from './api';
-import { formatBytes, formatDate, formatDateTime } from './schedule';
+import { formatBytes, formatDate, formatDateTime } from './format';
 
 export const fieldClass =
   'h-12 w-full rounded-sm border border-border-strong bg-white px-4 text-[16px] outline-none hover:border-ink focus-visible:border-brand';

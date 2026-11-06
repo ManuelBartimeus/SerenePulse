@@ -2,8 +2,9 @@
 // Assembles the single-origin site for the site Worker (D-37, user direction 2026-11-06):
 //   /                  landing site      (apps/landing/dist)
 //   /admin             staff portal      (apps/portal/dist, Vite base /admin/)
+//   /account           customer app      (apps/account/dist, Vite base /account/)
 //   /customerfeedback  survey            (served by the Worker itself)
-// Builds landing and portal, copies them into apps/survey-worker/public/, and pins the landing
+// Builds landing, portal and the customer app, copies them into apps/survey-worker/public/, and pins the landing
 // page's inline script/style hashes into the Worker's CSP (src/landing-csp.gen.ts).
 // Portal build variables (VITE_*) come from the environment, as in the deploy workflow.
 //   node scripts/assemble-site.mjs [--skip-build]
@@ -15,15 +16,23 @@ import { root } from './lib/env.mjs';
 const skipBuild = process.argv.includes('--skip-build');
 const landing = path.join(root, 'apps/landing/dist');
 const portal = path.join(root, 'apps/portal/dist');
+const account = path.join(root, 'apps/account/dist');
 const out = path.join(root, 'apps/survey-worker/public');
 
 if (!skipBuild) {
   execSync('node apps/landing/build.mjs', { cwd: root, stdio: 'inherit' });
   execSync('pnpm --filter @serene/portal build', { cwd: root, stdio: 'inherit' });
+  execSync('pnpm --filter @serene/account build', { cwd: root, stdio: 'inherit' });
 }
 for (const dir of [landing, portal]) {
   if (!existsSync(path.join(dir, 'index.html'))) throw new Error(`${dir} has no index.html; build it first`);
 }
+// With --skip-build a missing customer-app build is tolerated (it is skipped, with a warning); a
+// full build always builds it above, so a missing dist there is an error.
+const hasAccount = existsSync(path.join(account, 'index.html'));
+if (!hasAccount && !skipBuild) throw new Error(`${account} has no index.html after building @serene/account`);
+if (!hasAccount)
+  console.warn(`! ${path.relative(root, account)} is missing: /account is not included (--skip-build)`);
 
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out, { recursive: true });
@@ -32,6 +41,7 @@ writeFileSync(path.join(out, '.gitkeep'), '');
 // The Worker sets every header itself; _headers/_redirects only work at the assets root anyway.
 cpSync(landing, out, { recursive: true });
 cpSync(portal, path.join(out, 'admin'), { recursive: true });
+if (hasAccount) cpSync(account, path.join(out, 'account'), { recursive: true });
 for (const f of readdirSync(out, { recursive: true, withFileTypes: true })) {
   if (f.isFile() && (/^(_headers|_redirects|csp\.json)$/.test(f.name) || f.name.endsWith('.map'))) {
     rmSync(path.join(f.parentPath, f.name));
@@ -48,4 +58,6 @@ writeFileSync(
     `export const LANDING_SCRIPT_HASHES: readonly string[] = ${JSON.stringify(csp['script-src'])};\n` +
     `export const LANDING_STYLE_HASHES: readonly string[] = ${JSON.stringify(csp['style-src'])};\n`,
 );
-console.log(`✓ site assembled in ${path.relative(root, out)} (landing at /, portal at /admin)`);
+console.log(
+  `✓ site assembled in ${path.relative(root, out)} (landing at /, portal at /admin${hasAccount ? ', customer app at /account' : ''})`,
+);

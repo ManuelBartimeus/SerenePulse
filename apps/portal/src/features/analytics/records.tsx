@@ -7,7 +7,7 @@ import { useSession } from '../../lib/session';
 import { PageHeader } from '../../pages/shell';
 import { Alert, Badge, Button, EmptyState, Spinner } from '../../ui/controls';
 import { RecordCasePanel } from '../cases/record-panels';
-import { RecordCorrectionsPanel } from '../reports/record-corrections';
+import { DownloadResponsesButton } from '../reports/exports';
 import { RATING_BANDS, RECOMMEND_GROUPS, WORDS } from '../../lib/terms';
 import { useRpc, type RecordDetail, type RecordPage, type RecordRow } from './api';
 import { FilterBar, useAnalyticsFilters } from './filters';
@@ -155,7 +155,6 @@ function RecordDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                   )}
                 </section>
                 <RecordCasePanel responseId={d.id} hasContactConsent={d.has_contact_consent} />
-                <RecordCorrectionsPanel responseId={d.id} />
               </div>
             )}
           </QueryView>
@@ -208,7 +207,11 @@ export function RecordsPage() {
 
   return (
     <>
-      <PageHeader title={WORDS.records} subtitle="Each customer’s answers, newest first." />
+      <PageHeader
+        title={WORDS.records}
+        subtitle="Each customer’s answers, newest first."
+        actions={<DownloadResponsesButton />}
+      />
       <FilterBar caseStatus />
       <section className="rounded-lg bg-white">
         <form

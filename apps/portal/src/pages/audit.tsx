@@ -78,7 +78,7 @@ export function AuditPage() {
           <>
             {can('audit.view_all') && (
               <Link
-                to="/reports/audit-export"
+                to="/audit/export"
                 className="inline-flex h-12 items-center rounded-full border border-border-strong bg-white px-5 font-medium hover:bg-surface-muted"
               >
                 Export CSV

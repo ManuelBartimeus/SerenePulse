@@ -19,6 +19,7 @@
     "@radix-ui/react-tabs": "^1.2.1",
     "@radix-ui/react-tooltip": "^1.4.1",
     "@serene/contracts": "workspace:*",
+    "@serene/proposals": "workspace:^",
     "@serene/survey-engine": "workspace:^",
     "@serene/ui": "workspace:*",
     "@supabase/supabase-js": "^2.119.0",

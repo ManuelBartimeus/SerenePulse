@@ -60,14 +60,14 @@ const settings = {
   smtp_sender_name: senderName,
   smtp_max_frequency: 30,
   rate_limit_email_sent: 60,
-  mailer_subjects_invite: 'You’ve been invited to Serene CX',
+  mailer_subjects_invite: 'You’ve been invited to the Serene Staff Portal',
   mailer_templates_invite_content: layout(
-    'You’ve been invited to Serene CX',
+    'You’ve been invited to the Serene Staff Portal',
     `<p style="font-size:16px;line-height:24px;color:#545454">Serene’s customer-experience portal shows customer feedback and the cases that follow from it. Set your password to get started.</p>
 <p style="margin:24px 0">${button('{{ .ConfirmationURL }}', 'Set your password')}</p>
 <p style="font-size:14px;line-height:20px;color:#666666">This link works once and expires in 24 hours. If you weren’t expecting it, you can ignore this email.</p>`,
   ),
-  mailer_subjects_recovery: 'Reset your Serene CX password',
+  mailer_subjects_recovery: 'Reset your Serene Staff Portal password',
   mailer_templates_recovery_content: layout(
     'Reset your password',
     `<p style="font-size:16px;line-height:24px;color:#545454">Someone asked to reset the password for {{ .Email }}.</p>

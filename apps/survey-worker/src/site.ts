@@ -1,6 +1,6 @@
 // Static sites served from the Workers static-assets binding: the public landing site at `/`
-// and the staff portal SPA at `/admin`. `public/` is assembled by the build (landing dist at the
-// root, portal dist in `public/admin/`).
+// the staff portal SPA at `/admin` and the customer SPA at `/account`. `public/` is assembled by the build (landing dist at the
+// root, portal dist in `public/admin/`, customer app in `public/account/`).
 import type { Context } from 'hono';
 import type { Bindings } from './config';
 import type { HeaderVariables } from './headers';
@@ -23,20 +23,26 @@ async function fromAssets(c: C, pathname?: string): Promise<Response> {
 
 const isHtml = (res: Response) => (res.headers.get('content-type') ?? '').includes('text/html');
 
-/** `/admin/*`: unknown paths fall back to the SPA shell; the shell is never cached, hashed assets forever. */
-export async function servePortal(c: C): Promise<Response> {
+/** `{base}/*`: unknown paths fall back to the SPA shell; the shell is never cached, hashed assets forever. */
+async function serveSpa(c: C, base: '/admin' | '/account'): Promise<Response> {
   const path = new URL(c.req.url).pathname;
   if (HIDDEN.test(path)) return c.text('Not found', 404);
-  const isAsset = path.startsWith('/admin/assets/');
+  const isAsset = path.startsWith(`${base}/assets/`);
   let res = await fromAssets(c);
   if (res.status === 404 && !isAsset) {
-    const shell = await fromAssets(c, '/admin/');
+    const shell = await fromAssets(c, `${base}/`);
     res = new Response(shell.body, { status: shell.ok ? 200 : shell.status, headers: shell.headers });
   }
   if (isHtml(res)) res.headers.set('cache-control', 'no-store');
   else if (isAsset && res.ok) res.headers.set('cache-control', IMMUTABLE);
   return res;
 }
+
+/** Staff portal SPA (`/admin/*`). */
+export const servePortal = (c: C) => serveSpa(c, '/admin');
+
+/** Customer SPA (`/account/*`, apps/account built with base '/account/'). */
+export const serveAccount = (c: C) => serveSpa(c, '/account');
 
 /** Everything else: the landing site. A missing page gets the site's 404.html when it has one. */
 export async function serveLanding(c: C): Promise<Response> {
@@ -51,6 +57,9 @@ export async function serveLanding(c: C): Promise<Response> {
   }
   // Fonts carry a version in their name and never change in place.
   if (res.ok && path.startsWith('/fonts/')) res.headers.set('cache-control', IMMUTABLE);
+  // Paper proposal forms: stable names (not hashed), so cache for a day and then revalidate.
+  else if (res.ok && path.startsWith('/downloads/'))
+    res.headers.set('cache-control', 'public, max-age=86400, must-revalidate');
   // Landing file names are not guaranteed to be hashed, so everything revalidates (asset ETags).
   if (isHtml(res)) res.headers.set('cache-control', 'public, max-age=0, must-revalidate');
   return res;

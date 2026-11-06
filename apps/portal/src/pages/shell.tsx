@@ -1,18 +1,17 @@
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import logoUrl from '@serene/ui/assets/serene-logo.svg';
 import { NotificationBell } from '../features/cases/notification-bell';
 import { useSession } from '../lib/session';
 import { Button, EmptyState } from '../ui/controls';
 import { Dialog } from '../ui/dialog';
 import {
-  IconBell,
+  IconBriefcase,
   IconBuilding,
+  IconCertificate,
   IconChart,
-  IconCheckCircle,
   IconChevronRight,
   IconFile,
-  IconFlag,
   IconFolder,
   IconHome,
   IconLayers,
@@ -21,10 +20,12 @@ import {
   IconMessage,
   IconSettings,
   IconShield,
+  IconShieldCheck,
   IconSignOut,
+  IconSliders,
   IconTable,
-  IconTrend,
   IconUsers,
+  IconWallet,
   type IconProps,
 } from '../ui/icons';
 
@@ -44,112 +45,82 @@ interface NavSection {
 }
 type NavEntry = NavLinkItem | NavSection;
 
-const ANALYTICS = ['analytics.view'];
+/** Permission sets shared by the nav and the routes. */
+export const PERMS = {
+  customers: ['customers.view'],
+  proposals: ['proposals.view'],
+  policies: ['policies.view'],
+  claims: ['claims.view'],
+  insights: ['analytics.view'],
+  responses: ['responses.view'],
+  cases: ['cases.view', 'flags.view'],
+  feedbackForm: ['config.qr_points', 'survey.edit', 'analytics.view'],
+  users: ['users.manage'],
+  products: ['products.manage'],
+  survey: ['survey.edit', 'survey.publish.approve'],
+  directory: ['config.directory'],
+  catalogues: ['config.catalogues'],
+  // Any of: General (settings.manage), Data protection (executives: responses.attribution.approve),
+  // System status (audit.view_all). Each tab checks its own permission.
+  settings: ['settings.manage', 'responses.attribution.approve', 'audit.view_all'],
+  audit: ['audit.view'],
+};
 
 /**
- * The sidebar (user direction 2026-11-05): two direct links and four collapsible sections; related
- * screens are tabs inside one page (e.g. Cases / My cases, Alerts / Alert rules / Targets), so each
- * appears here once. Items the user has no permission for are not shown (REQ §19).
+ * The sidebar (user direction 2026-11-06): the portal covers sales as well as customer feedback.
+ * One direct link and three collapsible sections (accordion: one open at a time). Related screens
+ * are tabs inside one page, so each appears here once. Items the user has no permission for are
+ * not shown (REQ §19).
  */
 export const NAV: NavEntry[] = [
   { to: '/', label: 'Overview', icon: IconHome },
   {
-    to: '/config/feedback-form',
-    label: 'Feedback form',
+    title: 'Sales',
+    icon: IconBriefcase,
+    items: [
+      { to: '/customers', label: 'Customers', icon: IconUsers, permission: PERMS.customers },
+      { to: '/proposals', label: 'Proposals', icon: IconFile, permission: PERMS.proposals },
+      {
+        to: '/policies',
+        label: 'Policies & certificates',
+        icon: IconCertificate,
+        permission: PERMS.policies,
+      },
+      { to: '/claims', label: 'Claims', icon: IconShieldCheck, permission: PERMS.claims },
+      { to: '/payments', label: 'Payments', icon: IconWallet, permission: PERMS.policies },
+    ],
+  },
+  {
+    title: 'Customer feedback',
     icon: IconMessage,
-    permission: ['config.qr_points', 'survey.edit', 'analytics.view'],
-  },
-  {
-    title: 'Insights',
-    icon: IconChart,
     items: [
-      { to: '/branches', label: 'Branches', icon: IconBuilding, permission: ANALYTICS },
-      { to: '/channels', label: 'Channels', icon: IconChart, permission: ANALYTICS },
-      { to: '/products', label: 'Products', icon: IconLayers, permission: ANALYTICS },
-      { to: '/trends', label: 'Trends', icon: IconTrend, permission: ANALYTICS },
-      { to: '/factors', label: 'Areas to improve', icon: IconFlag, permission: ANALYTICS },
-      { to: '/completion', label: 'Survey completion', icon: IconCheckCircle, permission: ANALYTICS },
-      { to: '/cases/performance', label: 'Case performance', icon: IconFolder, permission: ['cases.view'] },
-    ],
-  },
-  {
-    title: 'Feedback',
-    icon: IconTable,
-    items: [
-      { to: '/records', label: 'Responses', icon: IconTable, permission: ['responses.view'] },
+      { to: '/insights', label: 'Feedback insights', icon: IconChart, permission: PERMS.insights },
+      { to: '/records', label: 'Responses', icon: IconTable, permission: PERMS.responses },
+      { to: '/cases', label: 'Cases', icon: IconFolder, permission: PERMS.cases, also: ['/flags'] },
       {
-        to: '/flags',
-        label: 'Flagged feedback',
-        icon: IconFlag,
-        permission: ['flags.view'],
-        also: ['/flags/rules'],
-      },
-      { to: '/cases', label: 'Cases', icon: IconFolder, permission: ['cases.view'], also: ['/cases/mine'] },
-      {
-        to: '/alerts',
-        label: 'Alerts',
-        icon: IconBell,
-        permission: ['alerts.manage', 'analytics.view'],
-        also: ['/alerts/rules', '/targets'],
+        to: '/config/feedback-form',
+        label: 'Feedback form',
+        icon: IconMessage,
+        permission: PERMS.feedbackForm,
       },
     ],
-  },
-  {
-    to: '/reports/exports',
-    label: 'Reports',
-    icon: IconFile,
-    permission: ['exports.create', 'reports.schedule', 'analytics.view'],
-    also: ['/reports/schedules', '/reports/files'],
   },
   {
     title: 'Administration',
     icon: IconSettings,
     items: [
-      { to: '/users', label: 'Users & roles', icon: IconUsers, permission: ['users.manage'] },
-      {
-        to: '/config/survey',
-        label: 'Survey questions',
-        icon: IconMessage,
-        permission: ['survey.edit', 'survey.publish.approve'],
-      },
+      { to: '/users', label: 'Users & roles', icon: IconUsers, permission: PERMS.users },
+      { to: '/config/products', label: 'Products & rates', icon: IconSliders, permission: PERMS.products },
+      { to: '/config/survey', label: 'Survey questions', icon: IconMessage, permission: PERMS.survey },
       {
         to: '/config/directory',
         label: 'Branches & regions',
         icon: IconBuilding,
-        permission: ['config.directory'],
+        permission: PERMS.directory,
       },
-      {
-        to: '/config/catalogues',
-        label: 'Lists & options',
-        icon: IconLayers,
-        permission: ['config.catalogues'],
-      },
-      {
-        to: '/reports/corrections',
-        label: 'Branch corrections',
-        icon: IconCheckCircle,
-        permission: ['responses.attribution.propose', 'responses.attribution.approve'],
-      },
-      {
-        to: '/reports/privacy',
-        label: 'Data protection',
-        icon: IconLock,
-        permission: ['responses.attribution.approve', 'settings.manage'],
-      },
-      {
-        to: '/audit',
-        label: 'Audit log',
-        icon: IconShield,
-        permission: ['audit.view'],
-        also: ['/reports/audit-export'],
-      },
-      {
-        to: '/reports/ops',
-        label: 'System status',
-        icon: IconSettings,
-        permission: ['settings.manage', 'audit.view_all'],
-      },
-      { to: '/config/settings', label: 'Settings', icon: IconSettings, permission: ['settings.manage'] },
+      { to: '/config/catalogues', label: 'Lists & options', icon: IconLayers, permission: PERMS.catalogues },
+      { to: '/settings', label: 'Settings', icon: IconSettings, permission: PERMS.settings },
+      { to: '/audit', label: 'Audit log', icon: IconShield, permission: PERMS.audit },
     ],
   },
 ];
@@ -240,7 +211,7 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
         const expanded = isOpen(e.title);
         const holdsCurrent = current?.section === e.title;
         const Icon = e.icon;
-        const id = `nav-${e.title.toLowerCase()}`;
+        const id = `nav-${e.title.toLowerCase().replace(/[^a-z]+/g, '-')}`;
         return (
           <div key={e.title} className="flex flex-col gap-0.5">
             <button
@@ -472,6 +443,12 @@ export function Shell() {
   );
 }
 
+/**
+ * Set by tabbed pages (Feedback insights, Settings): the page above already shows the h1, so a
+ * tab's own PageHeader renders as a smaller h2 section heading.
+ */
+export const SubPageContext = createContext(false);
+
 export function PageHeader({
   title,
   subtitle,
@@ -481,6 +458,18 @@ export function PageHeader({
   subtitle?: ReactNode;
   actions?: ReactNode;
 }) {
+  const sub = useContext(SubPageContext);
+  if (sub) {
+    return (
+      <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-[20px] font-semibold leading-7 tracking-[-0.01em]">{title}</h2>
+          {subtitle && <p className="mt-1 max-w-3xl text-[15px] leading-6 text-secondary">{subtitle}</p>}
+        </div>
+        {actions && <div className="flex flex-wrap gap-3">{actions}</div>}
+      </div>
+    );
+  }
   return (
     <div className="mb-6 flex flex-col gap-4 md:mb-8 md:flex-row md:items-end md:justify-between">
       <div className="min-w-0">

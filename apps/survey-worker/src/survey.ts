@@ -12,6 +12,7 @@ import type { SurveyWorkerEnv } from '@serene/contracts';
 import { ISLAND_JS, ISLAND_PATH, LOGO_PATH, LOGO_SVG } from '../dist/island/assets.gen';
 import { LOCAL_ONLY, type BootData } from '../shared/boot';
 import { BASE, COPY, fieldMessage } from '../shared/copy';
+import { FRESH_PARAM, RESUME_PARAM, firstOpenPage, hasDraftAnswers } from '../shared/resume';
 import { loadConfig, type Bindings } from './config';
 import type { HeaderVariables } from './headers';
 import {
@@ -36,6 +37,7 @@ import {
   confirmationPage,
   messagePage,
   privacyPage,
+  resumePage,
   surveyPage,
   unavailablePage,
 } from './pages';
@@ -54,6 +56,8 @@ export type StartResult =
       answers: Answers;
       seq: number;
       interactive: boolean;
+      /** When the session was opened (shown on the resume choice screen). */
+      opened_at?: string;
       version: { id: string; no: number; definition: Definition; snapshot: Snapshot };
       new?: boolean;
     }
@@ -105,13 +109,20 @@ function bootFrom(
   r: Extract<StartResult, { status: 'active' }>,
   env: SurveyWorkerEnv,
   answers?: Answers,
+  flags: { resumed?: boolean; fresh?: boolean } = {},
 ): BootData {
+  const resumed = flags.resumed === true;
+  const a = answers ?? r.answers;
   return {
     sessionId: r.session_id,
-    page: r.page,
-    answers: answers ?? r.answers,
+    // Picking up a form opens the first page that still needs an answer, not the start (or the page
+    // the customer happened to be on).
+    page: resumed ? firstOpenPage(r.version.definition, r.version.snapshot, a) : r.page,
+    answers: a,
     seq: r.seq,
     isNew: r.new === true,
+    resumed,
+    fresh: flags.fresh === true,
     versionId: r.version.id,
     definition: r.version.definition,
     snapshot: r.version.snapshot,
@@ -142,12 +153,20 @@ async function entry(c: C, src: string | null, qr: string | null): Promise<Respo
   if (r.status === 'cooldown') res = await c.html(alreadySharedPage(nonce), 200, NO_STORE);
   else if (r.status === 'submitted')
     res = await c.html(confirmationPage(nonce, r.reference, r.contact_masked), 200, NO_STORE);
-  else
-    res = await c.html(
-      surveyPage(nonce, { boot: bootFrom(r, env), idem: crypto.randomUUID() }),
-      200,
-      NO_STORE,
-    );
+  else {
+    const url = new URL(c.req.url);
+    const unfinished = r.new !== true && hasDraftAnswers(r.answers);
+    if (unfinished && url.searchParams.get(RESUME_PARAM) !== '1') {
+      // A returning customer with an unfinished form chooses first (pick up, or start again).
+      res = await c.html(resumePage(nonce, r.opened_at ?? null), 200, NO_STORE);
+    } else {
+      const boot = bootFrom(r, env, undefined, {
+        resumed: unfinished,
+        fresh: url.searchParams.get(FRESH_PARAM) === '1',
+      });
+      res = await c.html(surveyPage(nonce, { boot, idem: crypto.randomUUID() }), 200, NO_STORE);
+    }
+  }
   return withCookies(res, started.cookies);
 }
 
@@ -162,6 +181,40 @@ survey.get('/new', (c) => {
   const res = c.redirect(BASE, 303);
   res.headers.set('cache-control', 'private, no-store');
   return withCookies(res, [serializeCookie(names.session, newSecret(), SESSION_MAX_AGE, names.secure)]);
+});
+
+// The resume choice screen posts here, with or without JavaScript.
+survey.post('/resume', async (c) => {
+  const env = loadConfig(c.env);
+  const nonce = c.get('cspNonce');
+  const req = c.req.raw;
+  if (await isRateLimited(c.env.RL_API, `RL_API:${clientIp(req)}`))
+    return c.html(messagePage(nonce, COPY.rateLimited, COPY.unavailableBody), 429, NO_STORE);
+  if (!sameOrigin(req)) return c.html(messagePage(nonce, 'Request refused.', ''), 403, NO_STORE);
+  const body = await readCapped(req, API_BODY_CAP);
+  const choice = body === null ? null : new URLSearchParams(body).get('choice');
+  const names = cookieNames(env, req.url);
+  const session = readCookie(req.headers.get('cookie'), names.session);
+  const see = (location: string, cookies: string[] = []) => {
+    const res = c.redirect(location, 303);
+    res.headers.set('cache-control', 'private, no-store');
+    return withCookies(res, cookies);
+  };
+  if (choice === 'continue') return see(`${BASE}?${RESUME_PARAM}=1`);
+  if (choice !== 'new') return see(BASE);
+  // "Start a new feedback form": close the old draft server-side so it is never offered again, then
+  // start over with a fresh session cookie (the device cookie, and so any cooldown, stays).
+  if (isSecret(session)) {
+    try {
+      await callRpc(env, 'survey_abandon_session', { p_session: session });
+    } catch (err) {
+      log('abandon_session_failed', { message: (err as Error).message });
+      return c.html(unavailablePage(nonce), 503, { ...NO_STORE, 'retry-after': '60' });
+    }
+  }
+  return see(`${BASE}?${FRESH_PARAM}=1`, [
+    serializeCookie(names.session, newSecret(), SESSION_MAX_AGE, names.secure),
+  ]);
 });
 
 survey.get('/privacy', async (c) => {
@@ -363,6 +416,9 @@ survey.post('/api/v1/survey/submit', async (c) => {
       ? input.turnstileToken
       : '';
 
+  // Server-Timing lets anyone measure the two remaining hops from the browser's dev tools.
+  const timing: string[] = [];
+  const t0 = Date.now();
   let verification: 'verified' | 'unverified_turnstile_outage';
   if (token) {
     if (!g.env.TURNSTILE_SECRET_KEY) {
@@ -380,6 +436,7 @@ survey.post('/api/v1/survey/submit', async (c) => {
         return problem(url, 'verificationFailed');
       }
       verification = outcome === 'verified' ? 'verified' : 'unverified_turnstile_outage';
+      timing.push(`turnstile;dur=${Date.now() - t0}`);
     }
   } else if (input?.turnstile === 'unavailable') {
     verification = 'unverified_turnstile_outage';
@@ -388,12 +445,14 @@ survey.post('/api/v1/survey/submit', async (c) => {
     return problem(url, 'verificationFailed');
   }
 
+  const t1 = Date.now();
   try {
     const r = await callRpc<{ reference: string; contact_masked: string | null; replayed?: boolean }>(
       g.env,
       'survey_submit',
       { p_session: g.session, p_idempotency_key: idem, p_answers: answers, p_verification: verification },
     );
+    timing.push(`db;dur=${Date.now() - t1}`);
     return c.json(
       {
         reference: r.reference,
@@ -402,7 +461,7 @@ survey.post('/api/v1/survey/submit', async (c) => {
         verification,
       },
       200,
-      { 'cache-control': 'no-store' },
+      { 'cache-control': 'no-store', 'server-timing': timing.join(', ') },
     );
   } catch (err) {
     const key = rpcProblemKey(err);

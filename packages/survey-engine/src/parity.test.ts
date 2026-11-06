@@ -43,7 +43,10 @@ describe.skipIf(!enabled)('survey engine parity with SQL (T-M04-parity)', () => 
         csat: maybe(fc.oneof(fc.integer({ min: -1, max: 7 }), fc.double({ min: 1, max: 5, noNaN: true }))),
         ces: maybe(fc.integer({ min: 0, max: 6 })),
         nps: maybe(fc.integer({ min: -1, max: 11 })),
-        factor: maybe(fc.constantFrom(...codes('improvement_factors'))),
+        // EASE / PRICE were retired in v3: both validators must refuse them as invalid options.
+        factor: maybe(
+          fc.oneof(fc.constantFrom(...codes('improvement_factors')), fc.constantFrom('EASE', 'PRICE')),
+        ),
         factor_other: maybe(fc.string({ maxLength: 210 })),
         comment: maybe(fc.string({ maxLength: 1010 })),
         contact_consent: maybe(fc.boolean()),

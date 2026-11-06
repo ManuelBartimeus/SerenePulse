@@ -1,13 +1,16 @@
-// The site Worker: one origin for the landing site (/), the staff portal (/admin) and the public
-// survey (/customerfeedback). /healthz stays at the root for the keep-alive and deploy checks.
+// The site Worker: one origin for the landing site (/), the staff portal (/admin), the customer app
+// (/account; API at /api/account and /api/verify) and the public survey (/customerfeedback).
+// /healthz stays at the root for the keep-alive and deploy checks.
 import { Hono } from 'hono';
 import { BASE } from '../shared/copy';
 import { loadConfig, type Bindings } from './config';
 import { areaOf, securityHeaders, type HeaderVariables } from './headers';
 import { unavailablePage } from './pages';
-import { serveLanding, servePortal } from './site';
+import { serveAccount, serveLanding, servePortal } from './site';
 import { callRpc } from './supabase';
 import { survey } from './survey';
+import { ACCOUNT_API } from './account/http';
+import { account, verify } from './account';
 
 export const app = new Hono<{ Bindings: Bindings; Variables: HeaderVariables }>();
 
@@ -26,6 +29,18 @@ app.get('/healthz', async (c) => {
 });
 
 app.route(BASE, survey);
+app.route(ACCOUNT_API, account);
+app.route('/api/verify', verify);
+// No other /api path exists; never fall through to the landing site's HTML.
+app.all('/api/*', (c) =>
+  c.json({ title: 'Not found.', status: 404 }, 404, {
+    'content-type': 'application/problem+json',
+    'cache-control': 'no-store',
+  }),
+);
+
+app.get('/account', (c) => c.redirect('/account/', 308));
+app.on(['GET', 'HEAD'], '/account/*', serveAccount);
 
 app.get('/admin', (c) => c.redirect('/admin/', 308));
 app.on(['GET', 'HEAD'], '/admin/*', servePortal);

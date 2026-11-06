@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from '../../lib/session';
 import { PageHeader } from '../../pages/shell';
 import { Alert, Badge, Button, EmptyState, Spinner } from '../../ui/controls';
-import { formatBytes, formatDateTime } from './schedule';
+import { formatBytes, formatDateTime } from './format';
 import { ErrorBox } from './ui';
 
 interface JobRun {
@@ -106,7 +106,7 @@ export function OpsPage() {
   return (
     <>
       <PageHeader
-        title="Operations and usage"
+        title="System status"
         subtitle="Free-tier usage, background jobs and health. Refreshes every minute."
         actions={
           can('settings.manage') ? (

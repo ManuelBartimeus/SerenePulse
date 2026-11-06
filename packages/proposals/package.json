@@ -1,0 +1,23 @@
+{
+  "name": "@serene/proposals",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./render": "./src/render/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "22",
+    "@types/qrcode": "^1.5.6"
+  },
+  "dependencies": {
+    "docx": "^9",
+    "pdf-lib": "^1.17.1",
+    "qrcode": "^1.5.4"
+  }
+}

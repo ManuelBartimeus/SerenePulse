@@ -54,8 +54,9 @@ $$;
 select results_eq(
   $$select r.key, count(*)::int from public.role_permissions rp join public.roles r on r.id = rp.role_id
     group by r.key order by r.key$$,
-  $$values ('auditor', 10), ('branch_manager', 13), ('cx_admin', 23), ('executive', 27),
-           ('resolution_officer', 5), ('system_admin', 7)$$,
+  -- Online sales (202611130001, 202611130005) added customers/proposals/policies/products/claims permissions and Underwriter.
+  $$values ('auditor', 14), ('branch_manager', 13), ('cx_admin', 27), ('executive', 35),
+           ('resolution_officer', 5), ('system_admin', 12), ('underwriter', 7)$$,
   'each role has the number of permissions in the SPEC matrix');
 
 create or replace function pg_temp.role_has(p_role text, p_perm text)

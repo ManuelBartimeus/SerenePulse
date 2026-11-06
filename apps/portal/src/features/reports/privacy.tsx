@@ -6,7 +6,7 @@ import { useSession } from '../../lib/session';
 import { AccessDeniedPage, PageHeader } from '../../pages/shell';
 import { Alert, Badge, Button, EmptyState, TextField } from '../../ui/controls';
 import { Dialog } from '../../ui/dialog';
-import { formatDateTime } from './schedule';
+import { formatDateTime } from './format';
 import { ErrorBox, TextArea } from './ui';
 
 interface Contact {

@@ -1,70 +1,65 @@
 import { createRoute, Navigate, type AnyRoute } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
-import type { NavItem } from '../../lib/nav';
 import { RequirePerm } from '../../lib/require-perm';
 import { useSession } from '../../lib/session';
-import { REPORT_TABS } from '../cases/page-tabs';
-import { CorrectionsPage } from './corrections';
-import { AuditExportPage, ExportsPage } from './exports';
+import { PERMS } from '../../pages/shell';
+import { TabbedPage } from '../../pages/tabbed';
+import type { PageTab } from '../cases/page-tabs';
+import { SettingsPage } from '../config/settings';
+import { AuditExportPage } from './exports';
 import { OpsPage } from './ops';
 import { PrivacyPage } from './privacy';
-import { ReportFilesPage, SchedulesPage } from './schedules';
 
-const CORRECTION_PERMS = ['responses.attribution.propose', 'responses.attribution.approve'];
 const OPS_PERMS = ['settings.manage', 'audit.view_all'];
-// NavItem permissions are any-of; the real rule (pii.view AND settings.manage, or Executive) is enforced in the
-// page and the database. Executives hold responses.attribution.approve; System Admins hold settings.manage.
-const PRIVACY_NAV_PERMS = ['responses.attribution.approve', 'settings.manage'];
-const SCHEDULE_PERMS = ['reports.schedule', 'analytics.view'];
+// Tab permissions are any-of; the real rule for data-protection requests (pii.view AND
+// settings.manage, or Executive) is enforced in the page and the database.
+const PRIVACY_PERMS = ['responses.attribution.approve', 'settings.manage'];
+
+export const SETTINGS_TABS: PageTab[] = [
+  { to: '/settings', label: 'General', permission: 'settings.manage' },
+  { to: '/settings/data-protection', label: 'Data protection', permission: PRIVACY_PERMS },
+  { to: '/settings/system-status', label: 'System status', permission: OPS_PERMS },
+];
 
 const guarded = (permission: string | string[], page: () => ReactNode) => () => (
   <RequirePerm permission={permission}>{page()}</RequirePerm>
 );
 
-/** /reports opens the first Reports tab this user may see. */
-function ReportsLanding() {
+/** /settings opens General, or the first tab this user may see. */
+function SettingsIndex() {
   const { can } = useSession();
-  const first = REPORT_TABS.find((t) =>
-    (Array.isArray(t.permission) ? t.permission : [t.permission ?? '']).some((p) => !p || can(p)),
-  );
-  return <Navigate to={first?.to ?? '/reports/exports'} replace />;
+  if (can('settings.manage')) return <SettingsPage />;
+  const first = SETTINGS_TABS.find((t) => [t.permission ?? []].flat().some((p) => can(p)));
+  return first && first.to !== '/settings' ? <Navigate to={first.to} replace /> : <SettingsPage />;
 }
 
-/** Routes for exports, scheduled reports, privacy requests, corrections and operations (router basepath /admin). */
-export function reportsRoutes(parent: AnyRoute): AnyRoute[] {
-  const r = (path: string, permission: string | string[], page: () => ReactNode) =>
-    createRoute({ getParentRoute: () => parent, path, component: guarded(permission, page) });
+/** Settings (General · Data protection · System status) and the audit-log export (basepath /admin). */
+export function settingsRoutes(parent: AnyRoute): AnyRoute[] {
+  const settings = createRoute({
+    getParentRoute: () => parent,
+    path: '/settings',
+    component: () => (
+      <RequirePerm permission={PERMS.settings}>
+        <TabbedPage
+          title="Settings"
+          subtitle="System-wide settings, data-protection requests and the health of the system."
+          tabs={SETTINGS_TABS}
+        />
+      </RequirePerm>
+    ),
+  });
+  const tab = (path: string, permission: string | string[], page: () => ReactNode) =>
+    createRoute({ getParentRoute: () => settings, path, component: guarded(permission, page) });
   return [
-    createRoute({ getParentRoute: () => parent, path: '/reports', component: ReportsLanding }),
-    r('/reports/exports', 'exports.create', () => <ExportsPage />),
-    r('/reports/schedules', SCHEDULE_PERMS, () => <SchedulesPage />),
-    r('/reports/files', 'analytics.view', () => <ReportFilesPage />),
-    r('/reports/audit-export', 'audit.view', () => <AuditExportPage />),
-    r('/reports/corrections', CORRECTION_PERMS, () => <CorrectionsPage />),
-    r('/reports/privacy', PRIVACY_NAV_PERMS, () => <PrivacyPage />),
-    r('/reports/ops', OPS_PERMS, () => <OpsPage />),
+    settings.addChildren([
+      tab('/', PERMS.settings, () => <SettingsIndex />),
+      tab('/data-protection', PRIVACY_PERMS, () => <PrivacyPage />),
+      tab('/system-status', OPS_PERMS, () => <OpsPage />),
+    ]),
+    createRoute({
+      getParentRoute: () => parent,
+      path: '/audit/export',
+      component: guarded('audit.view', () => <AuditExportPage />),
+    }),
   ];
 }
-
-export const reportsNav: NavItem[] = [
-  // One entry for the tabbed Reports page (Download data / Scheduled reports / Report files).
-  {
-    to: '/reports',
-    label: 'Reports',
-    permission: ['exports.create', ...SCHEDULE_PERMS],
-    group: 'insights',
-  },
-  {
-    to: '/reports/corrections',
-    label: 'Branch corrections',
-    permission: CORRECTION_PERMS,
-    group: 'admin',
-  },
-  {
-    to: '/reports/privacy',
-    label: 'Data-protection requests',
-    permission: PRIVACY_NAV_PERMS,
-    group: 'admin',
-  },
-  { to: '/reports/ops', label: 'Operations & usage', permission: OPS_PERMS, group: 'admin' },
-];

@@ -85,3 +85,36 @@ export const WORDS = {
   noData: 'No responses yet',
   fewResponses: 'Too few responses to compare reliably',
 } as const;
+
+/**
+ * Online sales vocabulary (2026-11-06). Use these words across the sales pages; status names live
+ * in features/sales/format.ts and features/sales/claims-format.ts.
+ */
+export const SALES_WORDS = {
+  customer: {
+    label: 'Customer',
+    explain: 'Someone who signed in with their phone number to buy insurance online.',
+  },
+  proposal: {
+    label: 'Proposal',
+    explain: 'The proposal form a customer filled in and signed online, asking us to insure them.',
+  },
+  quote: {
+    label: 'Price',
+    explain: 'What the customer pays, including taxes, and how long the price is valid.',
+  },
+  policy: { label: 'Policy', explain: 'The insurance contract issued once the customer has paid.' },
+  certificate: {
+    label: 'Certificate',
+    explain: 'The certificate of insurance issued with the policy; anyone can check it is genuine online.',
+  },
+  underwriter: {
+    label: 'Underwriter',
+    explain: 'The staff member who reviews and prices proposals that can’t be priced automatically.',
+  },
+  claim: { label: 'Claim', explain: 'A customer’s request to be paid under their policy after an incident.' },
+  identity: {
+    label: 'Identity check',
+    explain: 'The customer’s face photo checked against their Ghana Card number with NIA.',
+  },
+} as const satisfies Record<string, Term>;

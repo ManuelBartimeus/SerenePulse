@@ -112,7 +112,7 @@ function Ranking() {
                       </td>
                       <th scope="row" className={`${td} text-left font-medium`}>
                         {row.is_own ? (
-                          <FilterLink to={`/branches/${row.key}`}>{row.label}</FilterLink>
+                          <FilterLink to={`/insights/branches/${row.key}`}>{row.label}</FilterLink>
                         ) : (
                           row.label
                         )}
@@ -207,7 +207,7 @@ export function BranchesPage() {
   if (claims && !claims.app_org_scope && own.length === 1) {
     return (
       <Navigate
-        to="/branches/$branchId"
+        to="/insights/branches/$branchId"
         params={{ branchId: own[0] ?? '' } as never}
         search={true as never}
         replace
@@ -257,7 +257,7 @@ export function BranchesPage() {
                         disabled={!compare.includes(r.key) && compare.length >= 6}
                         onChange={() => toggle(r.key)}
                       />
-                      <FilterLink to={`/branches/${r.key}`}>{r.label}</FilterLink>
+                      <FilterLink to={`/insights/branches/${r.key}`}>{r.label}</FilterLink>
                     </span>
                   )}
                 />
@@ -372,7 +372,7 @@ export function BranchDetailPage() {
             {region && <Badge tone="neutral">{region.label}</Badge>} {BRANCH_SUBTITLE}
           </>
         }
-        actions={<FilterLink to="/branches">All branches</FilterLink>}
+        actions={<FilterLink to="/insights/branches">All branches</FilterLink>}
       />
       <FilterBar hide={['branch', 'region']} />
       <QueryView query={summary} skeleton="h-44">

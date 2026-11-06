@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "test:e2e": "playwright test -c playwright.config.mjs",
+    "screenshots": "node scripts/screenshots.mjs .screenshots"
   }
 }

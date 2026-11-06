@@ -8,6 +8,10 @@ export interface BootData {
   answers: Answers;
   seq: number;
   isNew: boolean;
+  /** The customer chose "Pick up where you left off": open the first page with an unanswered question. */
+  resumed: boolean;
+  /** The customer chose "Start a new feedback form": nothing saved on this device carries over. */
+  fresh: boolean;
   versionId: string;
   definition: Definition;
   snapshot: Snapshot;

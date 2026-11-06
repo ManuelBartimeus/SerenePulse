@@ -62,8 +62,33 @@ export function landingCsp(): string {
   ].join('; ');
 }
 
-export type Area = 'survey' | 'portal' | 'landing';
+/**
+ * Customer app (/account) and its API (/api/account, /api/verify). Bundled scripts and styles only;
+ * the signature pad draws on a canvas and exports PNG data URLs (img data: / blob:).
+ */
+export function accountCsp(): string {
+  return [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self'",
+    "img-src 'self' data: blob:",
+    "font-src 'self'",
+    "connect-src 'self'",
+    "object-src 'none'",
+    ...COMMON,
+  ].join('; ');
+}
+
+export type Area = 'survey' | 'portal' | 'account' | 'landing';
 export function areaOf(pathname: string): Area {
+  if (
+    pathname === '/account' ||
+    pathname.startsWith('/account/') ||
+    pathname === '/api/account' ||
+    pathname.startsWith('/api/account/') ||
+    pathname === '/api/verify'
+  )
+    return 'account';
   if (
     pathname === '/healthz' ||
     pathname === '/customerfeedback' ||
@@ -87,7 +112,13 @@ export const securityHeaders: MiddlewareHandler<{ Bindings: Bindings; Variables:
   const supabaseUrl = typeof c.env?.SUPABASE_URL === 'string' ? c.env.SUPABASE_URL : undefined;
   h.set(
     'Content-Security-Policy',
-    area === 'survey' ? surveyCsp(nonce) : area === 'portal' ? portalCsp(supabaseUrl) : landingCsp(),
+    area === 'survey'
+      ? surveyCsp(nonce)
+      : area === 'portal'
+        ? portalCsp(supabaseUrl)
+        : area === 'account'
+          ? accountCsp()
+          : landingCsp(),
   );
   h.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   h.set('X-Content-Type-Options', 'nosniff');

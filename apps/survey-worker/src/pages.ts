@@ -14,6 +14,7 @@ import {
 import { ISLAND_PATH, LOGO_PATH } from '../dist/island/assets.gen';
 import type { BootData } from '../shared/boot';
 import { BASE, COPY } from '../shared/copy';
+import { formatStarted } from '../shared/resume';
 import { CSS } from './styles';
 import type { PrivacySettings } from './supabase';
 
@@ -51,6 +52,7 @@ function doc(nonce: string, title: string, body: H, opts: { island?: boolean } =
         <style nonce="${nonce}">
           ${raw(CSS)}
         </style>
+        ${opts.island ? html`<link rel="preconnect" href="https://challenges.cloudflare.com" />` : ''}
         ${
           opts.island
             ? html`<script nonce="${nonce}">
@@ -383,6 +385,33 @@ export function confirmationPage(nonce: string, reference: string, contactMasked
           ${contactMasked ? html`<p>${COPY.thanksContact(contactMasked)}</p>` : ''}
         </div>
         <a class="btn btn-secondary" href="${BASE}/new" data-share-more>${COPY.shareMore}</a>
+        <p class="foot">${privacyLink}</p>
+      </main>
+    </div>`,
+  );
+}
+
+/**
+ * A returning customer with an unfinished form chooses before anything is shown (no silent resume).
+ * A plain form post, so it works the same with or without JavaScript.
+ */
+export function resumePage(nonce: string, openedAt: string | null) {
+  return doc(
+    nonce,
+    COPY.siteTitle,
+    html`<div class="wrap">
+      ${header()}
+      <main id="main">
+        <form class="resume" method="post" action="${BASE}/resume" data-resume>
+          <h1 tabindex="-1">${COPY.resumeHeading}</h1>
+          <p class="lead">${COPY.resumeStarted(formatStarted(openedAt))} ${COPY.resumeBody}</p>
+          <div class="choices">
+            <button type="submit" class="btn" name="choice" value="continue">${COPY.resumeContinue}</button>
+            <button type="submit" class="btn btn-secondary" name="choice" value="new">
+              ${COPY.resumeNew}
+            </button>
+          </div>
+        </form>
         <p class="foot">${privacyLink}</p>
       </main>
     </div>`,

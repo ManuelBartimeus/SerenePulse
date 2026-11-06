@@ -1,5 +1,13 @@
 // Inline critical CSS for every Worker-rendered page. Values are the packages/ui tokens (E1–E10);
 // the survey uses self-hosted Plus Jakarta Sans with font-display:swap, so first paint never waits for it.
+//
+// Recommendation scale (0–10): each digit sits dead centre. The number span used to inherit the
+// generic `.num{min-width:20px}` with left-aligned text, so single digits sat ~5px left of centre in
+// their box; only "10" filled the 20px and looked right. The NPS box is now a centring grid cell, the
+// number has no minimum width, no letter-spacing and tabular figures, and the selected state swaps a
+// 1px border for 2px on every side, so it stays centred.
+// Submit overlay (.sv-ov): blurs and locks the form while the feedback is sent, then the spinner
+// morphs into a drawn tick (stroke-dashoffset) when the server confirms.
 export const CSS = `
 @font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:200 800;font-display:swap;src:url('/fonts/plus-jakarta-sans-latin-wght-v5.woff2') format('woff2')}
 :root{--brand:#1108bf;--brand-700:#0d0699;--brand-50:#ecebfb;--accent:#fbde04;--ink:#111;--text2:#545454;
@@ -61,11 +69,13 @@ border-radius:12px;background:#fff;transition:border-color var(--sel),background
 .scale5 .box{flex-direction:column;justify-content:center;text-align:center;min-height:112px;padding:12px 8px}
 .scale5 .opt input:checked+.box{padding:11px 7px}
 .scale5 .tick{top:10px;right:10px;margin:0}}
-.nps{grid-template-columns:repeat(6,1fr);gap:6px}
-.nps .box{justify-content:center;padding:0;min-height:48px;font-weight:600}
+.nps{grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.nps .box{display:grid;place-items:center;gap:0;padding:0;min-height:48px;font-weight:600;line-height:1;text-align:center}
+.nps .num{min-width:0;font-variant-numeric:tabular-nums;letter-spacing:0}
 .nps .opt input:checked+.box{padding:0}
 .nps .tick{display:none}
-@media (min-width:600px){.nps{grid-template-columns:repeat(11,1fr);gap:3px}}
+@media (max-width:359px){.nps{gap:4px}.nps .box{min-height:44px}}
+@media (min-width:600px){.nps{grid-template-columns:repeat(11,minmax(0,1fr));gap:4px}}
 .anchors{display:flex;justify-content:space-between;gap:16px;margin:8px 0 0;font-size:14px;color:var(--text2)}
 input[type=text],input[type=tel],select,textarea{display:block;width:100%;min-height:48px;padding:11px 12px;font:inherit;color:var(--ink);
 background:#fff;border:1px solid var(--border-strong);border-radius:12px}
@@ -112,6 +122,31 @@ background:none;color:var(--brand);font:inherit;font-weight:600;cursor:pointer}
 .prose p,.prose li{color:#2b2b2b}
 .prose ul{padding-left:20px}
 #sv-ts:empty{display:none}
+.resume .choices{display:grid;gap:12px;margin:8px 0 0}
+.resume .lead{margin-bottom:24px}
+.sv-ov{position:fixed;inset:0;z-index:50;display:grid;place-items:center;padding:16px;background:rgb(255 255 255 / .62);
+-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);animation:ov-in var(--fast) var(--ease)}
+@supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){.sv-ov{background:rgb(255 255 255 / .94)}}
+.sv-ov[data-leaving]{opacity:0;transition:opacity var(--fast) var(--ease)}
+@keyframes ov-in{from{opacity:0}}
+html.sv-locked,html.sv-locked body{overflow:hidden}
+.sv-card{display:flex;flex-direction:column;align-items:center;gap:16px;width:100%;max-width:320px;padding:32px 24px;border-radius:24px;
+background:#fff;box-shadow:0 0 0 1px var(--border),0 16px 48px rgb(17 8 191 / .14);text-align:center;animation:card-in var(--page) var(--ease)}
+.sv-card:focus{outline:none}
+@keyframes card-in{from{opacity:0;transform:translateY(8px) scale(.98)}}
+.sv-card p{margin:0;font-size:18px;line-height:24px;font-weight:600}
+.sv-icon{position:relative;width:64px;height:64px}
+.sv-icon svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.sv-spin{animation:spin .9s linear infinite}
+.sv-ring{fill:transparent;stroke:var(--brand);stroke-width:4;stroke-linecap:round;stroke-dasharray:144.5;stroke-dashoffset:104;
+transition:stroke-dashoffset .3s var(--ease),fill .25s var(--ease) .25s}
+.sv-check{fill:none;stroke:#fff;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:30;stroke-dashoffset:30;
+transition:stroke-dashoffset .35s var(--ease) .4s}
+.sv-ov[data-done] .sv-ring{stroke-dashoffset:0;fill:var(--brand)}
+.sv-ov[data-done] .sv-check{stroke-dashoffset:0}
+@media (prefers-reduced-motion:reduce){.sv-ov,.sv-card{animation:none}.sv-spin{animation:pulse 1.6s ease-in-out infinite}
+.sv-ring,.sv-check{transition:none}.sv-ov[data-done] .sv-spin{animation:none}}
+@keyframes pulse{50%{opacity:.45}}
 #sv-ts{margin:0 0 12px}
 `
   .replace(/\n/g, '')

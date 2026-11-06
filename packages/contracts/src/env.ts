@@ -38,6 +38,8 @@ export const surveyWorkerEnvSchema = z.object({
   TURNSTILE_SITE_KEY: z.string().default(''),
   TURNSTILE_SECRET_KEY: z.string().default(''),
   CF_WEB_ANALYTICS_TOKEN: z.string().default(''),
+  /** Arkesel SMS API key for sign-in codes. Used only when setting sales_sms_mode = 'arkesel'. */
+  ARKESEL_API_KEY: z.string().default(''),
   GIT_SHA: z.string().default('dev'),
 });
 export type SurveyWorkerEnv = z.infer<typeof surveyWorkerEnvSchema>;

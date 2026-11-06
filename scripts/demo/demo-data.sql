@@ -170,7 +170,8 @@ update gen set factor = case
     when r_factor < 0.12 then null
     when csat >= 4 and r_factor < 0.70 then 'NONE'
     when channel in ('MOBILE_APP', 'WEBSITE', 'WHATSAPP') and r_factor < 0.78 then 'TECH'
-    else (array['SPEED','SPEED','SPEED','COMMS','COMMS','EASE','EASE','STAFF','PRICE','PRICE','OTHER'])[1 + floor(random() * 11)::int] end;
+    -- EASE and PRICE were retired in survey v3 (2026-11-06); they stay only in historical data.
+    else (array['SPEED','SPEED','SPEED','COMMS','COMMS','COMMS','STAFF','STAFF','OTHER'])[1 + floor(random() * 9)::int] end;
 update gen set comment = case when r_comment < (case when csat <= 2 then 0.62 else 0.28 end)
                               then pg_temp.comment_for(csat, factor, channel) end,
                consent = r_consent < (case when csat <= 2 then 0.32 else 0.06 end),

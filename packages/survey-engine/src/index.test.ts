@@ -13,6 +13,7 @@ import {
 import type { Definition, Snapshot } from './index';
 import v1json from './v1.json';
 import v2json from './v2.json';
+import v3json from './v3.json';
 
 const v1 = v1json as unknown as Definition;
 const snapshot: Snapshot = {
@@ -80,6 +81,45 @@ describe('v2 definition (live from 2026-11-05)', () => {
     expect(isRequired(v2, snapshot, base, factor)).toBe(true);
     expect(validate(v2, snapshot, base).errors).toContainEqual({ field: 'factor', code: 'required' });
     expect(validate(v2, snapshot, { ...base, factor: 'NONE' }).errors).toEqual([]);
+  });
+});
+
+describe('v3 definition (live from 2026-11-06)', () => {
+  const v2 = v2json as unknown as Definition;
+  const v3 = v3json as unknown as Definition;
+  const sql = readFileSync(
+    new URL('../../../supabase/migrations/202611130010_survey_v3.sql', import.meta.url),
+    'utf8',
+  );
+  it('is the definition the v3 migration publishes', () => {
+    const embedded = sql.split('-- V3-BEGIN\n$v3$')[1]?.split('$v3$\n-- V3-END')[0] ?? '';
+    expect(JSON.parse(embedded)).toEqual(v3);
+  });
+  it('keeps the v2 questions and rating scales, so trends continue', () => {
+    expect(guardrails(v3)).toEqual([]);
+    expect(v3).toEqual(v2);
+    expect(scaleSignature(v3)).toEqual(scaleSignature(v1));
+  });
+  it('retires "Ease of the process" and "Pricing and charges" in the catalogue without deleting them', () => {
+    expect(sql).toContain(
+      "update public.improvement_factors set is_active = false where code in ('EASE', 'PRICE')",
+    );
+    expect(sql).not.toMatch(/delete\s+from\s+public\.improvement_factors/i);
+    // the v2 rule for an open draft is kept: an untouched draft is taken over, real edits stop the migration
+    expect(sql).toContain(
+      "where status = 'draft' and definition = (select definition from public.survey_versions where status = 'published')",
+    );
+    expect(sql).toContain('A survey draft with changes is open');
+  });
+  it('rejects a retired option once it has left the snapshot', () => {
+    const snap: Snapshot = {
+      ...snapshot,
+      improvement_factors: snapshot.improvement_factors.filter((o) => o.code !== 'SPEED'),
+    };
+    expect(validate(v3, snap, { ...base, factor: 'SPEED' }).errors).toEqual([
+      { field: 'factor', code: 'invalid_option' },
+    ]);
+    expect(validate(v3, snap, { ...base, factor: 'NONE' }).errors).toEqual([]);
   });
 });
 

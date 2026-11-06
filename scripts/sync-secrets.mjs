@@ -141,6 +141,8 @@ function worker() {
     SURVEY_HMAC_KEY: forEnv(env, 'SURVEY_HMAC_KEY', e),
     TURNSTILE_SECRET_KEY: forEnv(env, 'TURNSTILE_SECRET_KEY', e),
     SENTRY_DSN: env.SENTRY_DSN_SURVEY,
+    // Optional: SMS one-time codes for customer sign-in (used only when sales_sms_mode = 'arkesel').
+    ARKESEL_API_KEY: env.ARKESEL_API_KEY,
   };
   for (const [k, v] of Object.entries(secrets)) {
     if (!v) {

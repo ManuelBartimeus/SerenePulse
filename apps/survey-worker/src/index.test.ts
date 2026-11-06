@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ISLAND_GZ_BYTES, ISLAND_PATH, LOGO_PATH } from '../dist/island/assets.gen';
 import { app } from './index';
 import { parseForm, pickAnswers } from './survey';
+import { CSS } from './styles';
 import { resetSettingsCache } from './supabase';
 import { DEVICE, SESSION, activeSession, bindings, json, pgError, routeFetch } from './test-fixtures';
 
@@ -217,6 +218,159 @@ describe('survey entry (T-M05-001, T-M05-020, FR-01′)', () => {
   });
 });
 
+describe('resume choice for a returning customer', () => {
+  const draft = { channel: 'MOBILE_APP', product: 'MOTOR', csat: 4 };
+  const returning = (overrides: Record<string, unknown> = {}) =>
+    json(
+      activeSession({
+        new: false,
+        page: 2,
+        answers: draft,
+        opened_at: '2026-11-05T14:05:00.000Z',
+        ...overrides,
+      }),
+    );
+  const open = (path = '/customerfeedback') => app.request(path, { headers: { cookie: COOKIE } }, bindings);
+  const bootOf = (body: string) =>
+    JSON.parse(/<script type="application\/json" id="sv-boot">([\s\S]*?)<\/script>/.exec(body)![1]!) as {
+      page: number;
+      resumed: boolean;
+      fresh: boolean;
+    };
+
+  it('asks first instead of silently reopening the unfinished form', async () => {
+    stub({ survey_start_session: () => returning() });
+    const res = await open();
+    expect(res.status).toBe(200);
+    expect(res.headers.get('cache-control')).toBe('private, no-store');
+    const body = await res.text();
+    expect(body).toContain('Welcome back');
+    expect(body).toContain('You started this form on 5 November 2026 at 2:05 pm.');
+    expect(body).toMatch(/<form class="resume" method="post" action="\/customerfeedback\/resume"/);
+    expect(body).toMatch(
+      /<button type="submit" class="btn" name="choice" value="continue">\s*Pick up where you left off\s*<\/button>/,
+    );
+    expect(body).toMatch(
+      /<button type="submit" class="btn btn-secondary" name="choice" value="new">\s*Start a new feedback form\s*<\/button>/,
+    );
+    expect(body).not.toContain('id="sv-form"');
+    expect(body).not.toContain(ISLAND_PATH); // a plain form: the same with or without JavaScript
+  });
+
+  it('does not ask for a brand-new session or an empty draft', async () => {
+    stub({ survey_start_session: () => returning({ answers: { contact_consent: false } }) });
+    expect(await (await open()).text()).toContain('id="sv-form"');
+    stub({ survey_start_session: () => json(activeSession({ answers: draft })) });
+    expect(await (await open()).text()).toContain('id="sv-form"');
+  });
+
+  it('"Pick up" restores the answers and opens the first page with an unanswered required question', async () => {
+    stub({ survey_start_session: () => returning({ page: 1 }) });
+    const body = await (await open('/customerfeedback?resume=1')).text();
+    expect(body).toContain('id="sv-form"');
+    const boot = bootOf(body);
+    expect(boot).toMatchObject({ page: 3, resumed: true, fresh: false, answers: draft });
+    expect(body).toMatch(/data-page="3"\s+data-current/);
+    expect(body).toMatch(/value="MOBILE_APP"\s+checked/);
+  });
+
+  it('a draft with every required answer opens on the last page, where Submit is', async () => {
+    stub({
+      survey_start_session: () =>
+        returning({ page: 2, answers: { ...draft, ces: 5, nps: 9, factor: 'NOTHING' } }),
+    });
+    expect(bootOf(await (await open('/customerfeedback?resume=1')).text()).page).toBe(5);
+  });
+
+  const choose = (choice: string, headers: Record<string, string> = {}) =>
+    app.request(
+      '/customerfeedback/resume',
+      {
+        method: 'POST',
+        body: new URLSearchParams({ choice }).toString(),
+        headers: {
+          origin: ORIGIN,
+          cookie: COOKIE,
+          'content-type': 'application/x-www-form-urlencoded',
+          ...headers,
+        },
+      },
+      bindings,
+    );
+
+  it('POST "continue" goes back to the form with ?resume=1 and changes nothing', async () => {
+    const calls = stub({});
+    const res = await choose('continue');
+    expect(res.status).toBe(303);
+    expect(res.headers.get('location')).toBe('/customerfeedback?resume=1');
+    expect(res.headers.getSetCookie()).toHaveLength(0);
+    expect(calls).toHaveLength(0);
+  });
+
+  it('POST "new" abandons the old draft server-side and starts a blank form with a fresh session', async () => {
+    const calls = stub({ survey_abandon_session: () => json({ status: 'abandoned' }) });
+    const res = await choose('new');
+    expect(res.status).toBe(303);
+    expect(res.headers.get('location')).toBe('/customerfeedback?fresh=1');
+    expect(calls).toEqual([
+      expect.objectContaining({ target: 'survey_abandon_session', body: { p_session: SESSION } }),
+    ]);
+    const cookie = res.headers.getSetCookie();
+    expect(cookie).toHaveLength(1);
+    const fresh = /^dev-svs=([A-Za-z0-9_-]{22});/.exec(cookie[0]!)![1];
+    expect(fresh).not.toBe(SESSION);
+
+    stub({ survey_start_session: () => json(activeSession()) });
+    const body = await (
+      await app.request(
+        '/customerfeedback?fresh=1',
+        { headers: { cookie: `dev-svs=${fresh}; dev-svd=${DEVICE}` } },
+        bindings,
+      )
+    ).text();
+    expect(bootOf(body)).toMatchObject({ page: 1, fresh: true, resumed: false, answers: {} });
+  });
+
+  it('POST "new" shows the unavailable page when the database is down, and refuses cross-site posts', async () => {
+    stub({ survey_abandon_session: () => new Response('', { status: 503 }) });
+    const res = await choose('new');
+    expect(res.status).toBe(503);
+    expect(res.headers.getSetCookie()).toHaveLength(0);
+    stub({});
+    expect((await choose('new', { origin: 'https://evil.example' })).status).toBe(403);
+    expect((await choose('nonsense')).headers.get('location')).toBe('/customerfeedback');
+  });
+
+  it('the thank-you page still wins over the choice for a submitted session', async () => {
+    stub({
+      survey_start_session: () =>
+        json({ status: 'submitted', reference: 'FB-2026-000009', contact_masked: null }),
+    });
+    const body = await (await open()).text();
+    expect(body).toContain('FB-2026-000009');
+    expect(body).not.toContain('Welcome back');
+  });
+});
+
+describe('recommendation scale and improvement options', () => {
+  it('renders 0–10 as centred number boxes (no min-width on the digit, tabular figures)', async () => {
+    stub({ survey_start_session: () => json(activeSession()) });
+    const body = await (await app.request('/customerfeedback', {}, bindings)).text();
+    for (let v = 0; v <= 10; v++) expect(body).toContain(`<span class="num">${v}</span>`);
+    expect(CSS).toContain('.nps .box{display:grid;place-items:center;gap:0;padding:0;');
+    expect(CSS).toContain('.nps .num{min-width:0;font-variant-numeric:tabular-nums;letter-spacing:0}');
+    expect(CSS).toContain('.nps{grid-template-columns:repeat(6,minmax(0,1fr))');
+  });
+
+  it('offers only the improvement options in the published snapshot', async () => {
+    stub({ survey_start_session: () => json(activeSession()) });
+    const body = await (await app.request('/customerfeedback', {}, bindings)).text();
+    expect(body).toContain('Speed of service');
+    expect(body).not.toContain('Ease of the process');
+    expect(body).not.toContain('Pricing and charges');
+  });
+});
+
 describe('privacy notice (M16, T-M06-050)', () => {
   it('shows only the settings that are set', async () => {
     stub({
@@ -341,6 +495,9 @@ describe('POST /submit (M07, FR-14′, T-M05-011)', () => {
     const calls = stub({ [SITEVERIFY]: () => json({ success: true }), survey_submit: ok });
     const res = await submit({ answers, turnstileToken: 'tok' });
     expect(res.status).toBe(200);
+    // exactly two hops on the critical path, and their durations are exposed for measuring
+    expect(calls.map((c) => c.target)).toEqual([SITEVERIFY, 'survey_submit']);
+    expect(res.headers.get('server-timing')).toMatch(/^turnstile;dur=\d+, db;dur=\d+$/);
     expect(await res.json()).toMatchObject({
       reference: 'FB-2026-000001',
       contactMasked: null,

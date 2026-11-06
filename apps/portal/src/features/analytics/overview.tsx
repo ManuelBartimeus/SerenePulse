@@ -164,16 +164,12 @@ function MiniComparison({ rows, title }: { rows: BreakdownRow[]; title: string }
 
 /** "Needs attention" (public.needs_attention). Hidden only while that RPC does not exist yet. */
 function NeedsAttention() {
-  const q = useRpc<{ open_flags: number; overdue_cases: number; fired_alerts: number }>(
-    'needs_attention',
-    {},
-  );
+  const q = useRpc<{ open_flags: number; overdue_cases: number }>('needs_attention', {});
   if (q.isError && isMissingRpc(q.error)) return null;
   const items = q.data
     ? [
         { label: WORDS.flags, value: q.data.open_flags },
         { label: `Cases ${WORDS.slaBreached.toLowerCase()}`, value: q.data.overdue_cases },
-        { label: 'Alerts raised', value: q.data.fired_alerts },
       ]
     : [];
   return (
@@ -195,7 +191,7 @@ function NeedsAttention() {
   );
 }
 
-/** Executive overview (REQ §6.1). */
+/** Feedback insights › Summary: the former executive overview (REQ §6.1). */
 export function HomePage() {
   const { rpcFilters, filters } = useAnalyticsFilters();
   const summary = useSummary(rpcFilters);
@@ -207,10 +203,7 @@ export function HomePage() {
 
   return (
     <>
-      <PageHeader
-        title="Overview"
-        subtitle="How customers feel about their experience with Serene Insurance."
-      />
+      <PageHeader title="Summary" subtitle="The headline measures for the period and filters you choose." />
       <FilterBar />
       <QueryView query={summary} skeleton="h-44">
         {(s) => (
@@ -274,7 +267,7 @@ export function HomePage() {
         title="Branch performance"
         subtitle={BRANCH_SUBTITLE}
         className="mb-8"
-        actions={<FilterLink to="/branches">All branches</FilterLink>}
+        actions={<FilterLink to="/insights/branches">All branches</FilterLink>}
       >
         <QueryView query={branches}>
           {(b) => (
@@ -283,7 +276,7 @@ export function HomePage() {
               caption="Branch performance"
               nameHeader="Branch"
               showFactor={false}
-              linkTo={(r) => <FilterLink to={`/branches/${r.key}`}>{r.label}</FilterLink>}
+              linkTo={(r) => <FilterLink to={`/insights/branches/${r.key}`}>{r.label}</FilterLink>}
             />
           )}
         </QueryView>

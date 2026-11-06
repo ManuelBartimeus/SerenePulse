@@ -1,21 +1,19 @@
 import { createRoute, type AnyRoute } from '@tanstack/react-router';
 import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
-import type { NavItem } from '../../lib/nav';
 import { WORDS } from '../../lib/terms';
 import { RequirePerm } from '../../lib/require-perm';
-import { useSession } from '../../lib/session';
-import { EmptyState, Spinner } from '../../ui/controls';
-import { PageHeader } from '../../pages/shell';
+import { Spinner } from '../../ui/controls';
+import { TabbedPage } from '../../pages/tabbed';
+import type { PageTab } from '../cases/page-tabs';
 
 // Route-level code splitting (A-26): each dashboard is its own chunk.
 const named = <K extends string>(load: () => Promise<Record<K, ComponentType>>, key: K) =>
   lazy(() => load().then((m) => ({ default: m[key] })));
-const HomePage = named(() => import('./overview'), 'HomePage');
+const SummaryPage = named(() => import('./overview'), 'HomePage');
 const BranchesPage = named(() => import('./branches'), 'BranchesPage');
 const BranchDetailPage = named(() => import('./branches'), 'BranchDetailPage');
 const TrendsPage = named(() => import('./trends'), 'TrendsPage');
 const FactorsPage = named(() => import('./factors'), 'FactorsPage');
-const CompletionPage = named(() => import('./completion'), 'CompletionPage');
 const RecordsPage = named(() => import('./records'), 'RecordsPage');
 const ChannelsPage = lazy(() =>
   import('./dimension').then((m) => ({
@@ -23,7 +21,7 @@ const ChannelsPage = lazy(() =>
       <m.DimensionPage
         dimension="channel"
         noun="channel"
-        title="Channel performance"
+        title="Channels"
         subtitle="How customers rate their experience, by the channel they used to get their policy."
       />
     ),
@@ -35,14 +33,14 @@ const ProductsPage = lazy(() =>
       <m.DimensionPage
         dimension="product"
         noun="product"
-        title="Product performance"
+        title="Products"
         subtitle="How customers rate their experience, by type of policy."
       />
     ),
   })),
 );
 
-function Loading() {
+export function Loading() {
   return (
     <div className="grid min-h-[40vh] place-items-center">
       <Spinner label="Loading" />
@@ -58,61 +56,59 @@ function Guard({ permission, children }: { permission: string; children: ReactNo
   );
 }
 
-/** "/" is the overview for analytics users; other signed-in users get a plain welcome. */
-function Home() {
-  const { can, claims } = useSession();
-  if (can('analytics.view')) {
-    return (
-      <Suspense fallback={<Loading />}>
-        <HomePage />
-      </Suspense>
-    );
-  }
-  return (
-    <>
-      <PageHeader title="Welcome" />
-      <section className="rounded-lg bg-white">
-        <EmptyState title="No dashboards for your role">
-          Your roles ({claims?.app_roles.join(', ') || 'none'}) don’t include the dashboards. Use the menu for
-          the areas you work in.
-        </EmptyState>
-      </section>
-    </>
-  );
-}
+/** Feedback insights: one page, one tab per view (user direction 2026-11-06). */
+export const INSIGHT_TABS: PageTab[] = [
+  { to: '/insights', label: 'Summary' },
+  { to: '/insights/branches', label: 'Branches', match: (p) => p.startsWith('/insights/branches') },
+  { to: '/insights/channels', label: 'Channels' },
+  { to: '/insights/products', label: 'Products' },
+  { to: '/insights/trends', label: 'Trends' },
+  { to: '/insights/areas-to-improve', label: WORDS.factors },
+];
 
-/** Routes for dashboards and customer responses. This area owns "/" (the overview). Paths are relative to the router basepath. */
+/** Routes for the feedback dashboards and customer responses (paths relative to the /admin basepath). */
 export function analyticsRoutes(parent: AnyRoute): AnyRoute[] {
-  const route = (path: string, permission: string, Page: ComponentType) =>
+  const insights = createRoute({
+    getParentRoute: () => parent,
+    path: '/insights',
+    component: () => (
+      <RequirePerm permission="analytics.view">
+        <TabbedPage
+          title="Feedback insights"
+          subtitle="How customers feel about their experience with Serene Insurance."
+          tabs={INSIGHT_TABS}
+        />
+      </RequirePerm>
+    ),
+  });
+  const tab = (path: string, Page: ComponentType) =>
     createRoute({
-      getParentRoute: () => parent,
+      getParentRoute: () => insights,
       path,
       component: () => (
-        <Guard permission={permission}>
+        <Guard permission="analytics.view">
           <Page />
         </Guard>
       ),
     });
   return [
-    createRoute({ getParentRoute: () => parent, path: '/', component: Home }),
-    route('/branches', 'analytics.view', BranchesPage),
-    route('/branches/$branchId', 'analytics.view', BranchDetailPage),
-    route('/channels', 'analytics.view', ChannelsPage),
-    route('/products', 'analytics.view', ProductsPage),
-    route('/trends', 'analytics.view', TrendsPage),
-    route('/factors', 'analytics.view', FactorsPage),
-    route('/completion', 'analytics.view', CompletionPage),
-    route('/records', 'responses.view', RecordsPage),
+    insights.addChildren([
+      tab('/', SummaryPage),
+      tab('/branches', BranchesPage),
+      tab('/branches/$branchId', BranchDetailPage),
+      tab('/channels', ChannelsPage),
+      tab('/products', ProductsPage),
+      tab('/trends', TrendsPage),
+      tab('/areas-to-improve', FactorsPage),
+    ]),
+    createRoute({
+      getParentRoute: () => parent,
+      path: '/records',
+      component: () => (
+        <Guard permission="responses.view">
+          <RecordsPage />
+        </Guard>
+      ),
+    }),
   ];
 }
-
-export const analyticsNav: NavItem[] = [
-  { to: '/', label: 'Overview' },
-  { to: '/branches', label: 'Branches', permission: 'analytics.view', group: 'insights' },
-  { to: '/channels', label: 'Channels', permission: 'analytics.view', group: 'insights' },
-  { to: '/products', label: 'Products', permission: 'analytics.view', group: 'insights' },
-  { to: '/trends', label: 'Trends', permission: 'analytics.view', group: 'insights' },
-  { to: '/factors', label: WORDS.factors, permission: 'analytics.view', group: 'insights' },
-  { to: '/completion', label: 'Survey completion', permission: 'analytics.view', group: 'insights' },
-  { to: '/records', label: WORDS.records, permission: 'responses.view', group: 'insights' },
-];

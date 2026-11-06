@@ -24,7 +24,12 @@ export const FOLLOW_UP_OUTCOMES = [
   { key: 'unreachable', label: 'Could not reach the customer' },
   { key: 'declined', label: 'Customer declined contact' },
 ] as const;
-export const ESCALATION_LABELS = ['Officer', 'Department head', 'CX Administrator', 'Executive'];
+export const ESCALATION_LABELS = [
+  'Officer',
+  'Department head',
+  'Customer experience administrator',
+  'Executive',
+];
 
 export function statusLabel(s: string): string {
   return CASE_STATUSES.find((x) => x.key === s)?.label ?? s.replace(/_/g, ' ');

@@ -70,7 +70,7 @@ export function SignInPage() {
   }
 
   return (
-    <AuthCard title="Sign in to Serene CX">
+    <AuthCard title="Sign in to the staff portal">
       <form onSubmit={submit} noValidate className="flex flex-col gap-5">
         {search.reason === 'idle' && (
           <Alert tone="info">You were signed out after 30 minutes without activity.</Alert>

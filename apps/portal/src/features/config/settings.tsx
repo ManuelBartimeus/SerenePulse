@@ -288,10 +288,7 @@ export function SettingsPage() {
   const byKey = useMemo(() => new Map((settings.data ?? []).map((s) => [s.key, s])), [settings.data]);
   return (
     <>
-      <PageHeader
-        title="Settings"
-        subtitle="System-wide settings. Changes apply immediately and are recorded."
-      />
+      <PageHeader title="General" subtitle="Changes apply immediately and are recorded." />
       {settings.isPending ? (
         <div className="rounded-lg bg-white">
           <ListSkeleton rows={8} label="Loading settings" />

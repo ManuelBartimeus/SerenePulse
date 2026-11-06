@@ -285,3 +285,34 @@ export const IconHelp = make(
   </>,
 );
 export const IconSparkline = make('IconSparkline', <path d="M3.5 15.5 7.5 11l3 3 4.5-6 5.5 5.5" />);
+export const IconWallet = make(
+  'IconWallet',
+  <>
+    <path d="M4.75 7.25v10.5a2 2 0 0 0 2 2h12.5v-4M4.75 7.25a2 2 0 0 1 2-2h10.5v2M4.75 7.25h14.5v4" />
+    <path d="M19.25 11.25h-3a2 2 0 0 0 0 4h3v-4Z" />
+  </>,
+);
+export const IconBriefcase = make(
+  'IconBriefcase',
+  <>
+    <rect x="3.75" y="7.25" width="16.5" height="12.5" rx="2" />
+    <path d="M9 7.25V5.5A1.75 1.75 0 0 1 10.75 3.75h2.5A1.75 1.75 0 0 1 15 5.5v1.75M3.75 12.5h16.5" />
+  </>,
+);
+export const IconImage = make(
+  'IconImage',
+  <>
+    <rect x="3.75" y="4.75" width="16.5" height="14.5" rx="2" />
+    <circle cx="9" cy="10" r="1.75" />
+    <path d="m20.25 16-4.5-4.5L6.5 19.25" />
+  </>,
+);
+export const IconCertificate = make(
+  'IconCertificate',
+  <>
+    <path d="M13.5 18.25H5.75a2 2 0 0 1-2-2v-9.5a2 2 0 0 1 2-2h12.5a2 2 0 0 1 2 2v3.5" />
+    <path d="M7.5 9.25h9M7.5 12.75h4" />
+    <circle cx="17" cy="15" r="2.75" />
+    <path d="m15.5 17.25-.75 3.5 2.25-1.25 2.25 1.25-.75-3.5" />
+  </>,
+);

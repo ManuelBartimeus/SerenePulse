@@ -1,6 +1,6 @@
 // Shared page-level tab bar (links styled as tabs, so each tab keeps its own URL) and the
-// "More filters" popover used to keep filter rows short. Used by cases, flagged feedback, alerts
-// and reports (revision Q: fewer sidebar entries, calmer filter rows).
+// "More filters" popover used to keep filter rows short. Used by cases, flagged feedback, insights
+// and settings (revision Q: fewer sidebar entries, calmer filter rows).
 import * as Popover from '@radix-ui/react-popover';
 import { Link, useRouterState } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
@@ -97,32 +97,12 @@ export function MoreFilters({
   );
 }
 
+/** Cases and flagged feedback share one set of tabs (one sidebar entry, "Cases"). */
 export const CASE_TABS: PageTab[] = [
-  {
-    to: '/cases',
-    label: 'All cases',
-    permission: 'cases.view',
-  },
+  { to: '/cases', label: 'All cases', permission: 'cases.view' },
   { to: '/cases/mine', label: 'My cases', permission: 'cases.work' },
-];
-
-export const FLAG_TABS: PageTab[] = [
-  { to: '/flags', label: 'Feedback to review', permission: 'flags.view' },
+  { to: '/flags', label: 'Flagged feedback', permission: 'flags.view' },
   { to: '/flags/rules', label: 'Flagging rules', permission: 'flags.configure' },
 ];
 
-export const ALERT_TABS: PageTab[] = [
-  { to: '/alerts', label: 'Alerts' },
-  { to: '/alerts/rules', label: 'Alert rules', permission: 'alerts.manage' },
-  { to: '/targets', label: 'Targets', permission: ['targets.manage', 'analytics.view'] },
-];
-
-export const REPORT_TABS: PageTab[] = [
-  { to: '/reports/exports', label: 'Download data', permission: 'exports.create' },
-  {
-    to: '/reports/schedules',
-    label: 'Scheduled reports',
-    permission: ['reports.schedule', 'analytics.view'],
-  },
-  { to: '/reports/files', label: 'Report files', permission: 'analytics.view' },
-];
+export const FLAG_TABS = CASE_TABS;

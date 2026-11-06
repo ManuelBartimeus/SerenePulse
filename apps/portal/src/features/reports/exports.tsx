@@ -1,11 +1,12 @@
-// S-B10 Exports (FR-25, M13) and the auditors' audit-log CSV export (M15).
+// Responses download (FR-25, M13) and the auditors' audit-log CSV export (M15).
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useSession } from '../../lib/session';
 import { PageHeader } from '../../pages/shell';
 import { Alert, Button, EmptyState, Spinner, TextField } from '../../ui/controls';
-import { FilterBar, useAnalyticsFilters } from '../analytics/filters';
-import { PageTabs, REPORT_TABS } from '../cases/page-tabs';
+import { useAnalyticsFilters } from '../analytics/filters';
+import { Dialog } from '../../ui/dialog';
+import { IconDownload } from '../../ui/icons';
 import { functionErrorMessage, useFunctions, type ReportFile } from './api';
 import { Check, ErrorBox, FileRow, SelectField, TextArea } from './ui';
 
@@ -85,11 +86,16 @@ function RecentExports({
   );
 }
 
-export function ExportsPage() {
+/**
+ * "Download" on Responses (replaces the old Reports › Download data page): the responses that
+ * match the page's filters, as Excel or CSV. Contact details only with pii.export and a reason.
+ */
+export function DownloadResponsesButton() {
   const { can } = useSession();
   const { rpcFilters, periodText } = useAnalyticsFilters();
   const fns = useFunctions();
   const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
   const [format, setFormat] = useState<'csv' | 'xlsx'>('xlsx');
   const [includePii, setIncludePii] = useState(false);
   const [reason, setReason] = useState('');
@@ -109,10 +115,11 @@ export function ExportsPage() {
       qc.invalidateQueries({ queryKey: ['reports', 'exports'] });
     },
   });
+  if (!can('exports.create')) return null;
 
   const submit = () => {
     if (includePii && reason.trim().length < 10) {
-      setReasonError('Say why this export needs contact details (at least 10 characters).');
+      setReasonError('Say why this download needs contact details (at least 10 characters).');
       return;
     }
     setReasonError(undefined);
@@ -121,23 +128,33 @@ export function ExportsPage() {
 
   return (
     <>
-      <PageHeader
-        title="Reports"
-        subtitle="Download customer feedback, schedule regular reports and find the files sent to you."
-      />
-      <PageTabs tabs={REPORT_TABS} label="Reports" />
-      <div className="mb-4">
-        <FilterBar />
-      </div>
-      <section className="rounded-lg bg-white p-4 md:p-6" aria-labelledby="export-settings">
-        <h2 id="export-settings" className="text-[18px] font-medium">
-          Download customer responses
-        </h2>
-        <p className="mt-1 text-secondary">
-          {periodText}, using the filters above. Customers’ comments are included if you may view them;
-          contact details are left out unless you ask for them.
-        </p>
-        <div className="mt-4 grid gap-4 md:max-w-md">
+      <Button
+        variant="secondary"
+        onClick={() => {
+          create.reset();
+          setOpen(true);
+        }}
+      >
+        <IconDownload size={18} />
+        Download
+      </Button>
+      <Dialog
+        open={open}
+        onOpenChange={setOpen}
+        title="Download responses"
+        description={`${periodText}, using the filters on this page. Customers’ comments are included if you may view them; contact details are left out unless you ask for them.`}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setOpen(false)}>
+              Close
+            </Button>
+            <Button busy={create.isPending} onClick={submit}>
+              Download responses
+            </Button>
+          </>
+        }
+      >
+        <div className="grid gap-4">
           <SelectField
             label="Format"
             value={format}
@@ -165,25 +182,15 @@ export function ExportsPage() {
               )}
             </>
           )}
+          <div aria-live="polite">
+            {create.isPending && (
+              <p className="text-secondary">Preparing your file. Large downloads can take up to a minute…</p>
+            )}
+            {create.isSuccess && <Alert tone="success">Your file is downloading.</Alert>}
+            {create.isError && <Alert tone="danger">{functionErrorMessage(create.error)}</Alert>}
+          </div>
         </div>
-        <div className="mt-6 flex flex-wrap items-center gap-3">
-          <Button busy={create.isPending} onClick={submit}>
-            Download responses
-          </Button>
-        </div>
-        <div aria-live="polite" className="mt-4">
-          {create.isPending && (
-            <p className="text-secondary">Preparing your file. Large downloads can take up to a minute…</p>
-          )}
-          {create.isSuccess && (
-            <Alert tone="success">
-              Your file is downloading. You can download it again below for 7 days.
-            </Alert>
-          )}
-          {create.isError && <Alert tone="danger">{functionErrorMessage(create.error)}</Alert>}
-        </div>
-      </section>
-      <RecentExports reportKey="responses_export" title="Customer responses" />
+      </Dialog>
     </>
   );
 }
@@ -194,7 +201,6 @@ const ACTION_FILTERS = [
   { value: 'export.', label: 'Exports and downloads' },
   { value: 'privacy.', label: 'Data-protection requests' },
   { value: 'pii.', label: 'Contact reveals' },
-  { value: 'response.correction', label: 'Branch corrections' },
   { value: 'retention.', label: 'Retention runs' },
   { value: 'public.settings', label: 'Settings changes' },
 ];

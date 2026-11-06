@@ -1,9 +1,10 @@
-# Serene Pulse — project log
+# Serene Insurance platform — project log
 
-The running record of what has been built, decided and changed in the Serene Insurance
-customer-feedback system, newest work at the bottom. Detailed design lives in `docs/`
-(blueprint, architecture, ADRs, checkpoints); this log is the chronological story and the place
-to look first.
+The running record of what has been built, decided and changed in Serene Insurance's online
+platform: the public website, online buying (quotes, proposal forms, payment, certificates,
+claims), the staff portal and the customer-feedback system (originally "Serene Pulse"). Newest work
+is at the bottom. Detailed design lives in `docs/` (blueprint, architecture, ADRs, checkpoints,
+`docs/sales/`); this log is the chronological story and the place to look first.
 
 **Live site (one address per environment)**
 
@@ -12,12 +13,15 @@ to look first.
 | Production | https://serene.eliteservicesagency3.workers.dev |
 | Staging | https://serene-staging.eliteservicesagency3.workers.dev |
 
-On each: `/` landing site · `/admin` staff portal · `/customerfeedback` customer survey.
+On each: `/` public website · `/account` customer app (buy, policies, claims) · `/admin` staff
+portal · `/customerfeedback` customer survey.
 
-**Stack.** pnpm workspace, TypeScript (strict). Cloudflare Workers (Hono) serve the whole site;
-the portal is React 19 + Vite + TanStack Router/Query + Tailwind; Supabase (PostgreSQL 17, Auth,
-Edge Functions, pg_cron, pgmq, Vault) in London (eu-west-2); GitHub Actions for CI and continuous
-deploys (staging → production). Repository: `ManuelBartimeus/SerenePulse`.
+**Stack.** pnpm workspace, TypeScript (strict). One Cloudflare Worker (Hono) serves the whole site
+and the customer API; the public website is static HTML/CSS/vanilla JS from a dependency-free
+builder; the customer app and staff portal are React 19 + Vite + TanStack Router/Query + Tailwind;
+proposal forms, pricing and documents live in `packages/proposals` (pdf-lib, docx); Supabase
+(PostgreSQL 17, Auth, Storage, Edge Functions, pg_cron, pgmq, Vault) in London (eu-west-2); GitHub
+Actions for CI and continuous deploys (staging → production). Repository: `ManuelBartimeus/SerenePulse`.
 
 ---
 
@@ -221,3 +225,254 @@ row, with the same result.
 password for email; XLSX exports of ~100k rows exceed the free Edge Function CPU limit; load test
 at 600k responses; privacy-notice contact details in Settings; official logo vector;
 Kumasi North/Techiman phone number to confirm.
+
+---
+
+## 2026-11-06 — Online sales, full public website, streamlined staff portal, survey fixes
+
+The user asked for nine changes in one round, plus four more during the work:
+
+1. remove anything on the site that reads as AI-generated;
+2. study nine competitors and grow the landing page into a full website, fully mobile-responsive;
+3. phone-number sign-in (as Phoenix has) so customers can get a quote **and** fill the proposal form
+   for any product, with a staged progress bar, digital signature and terms checkbox; the completed
+   form must come out like Serene's paper form, viewable and downloadable by staff as PDF or Word;
+   a certificate matching the sample, delivered to the customer and kept on both profiles; a
+   simulated payment gateway;
+4. remodel the admin portal: remove what is redundant, add the client database, proposals,
+   certificates and so on;
+5. make the feedback form submit fast, with a locking overlay and a loading-to-tick animation;
+6. remove "Ease of the process" and "Pricing and charges" from the improvement question;
+7. centre the 0–10 numbers on the recommendation page;
+8. in proposal forms, show the parts people must read in the flow before they continue;
+9. returning feedback visitors choose "Pick up where you left off" or "New feedback form", and
+   pick-up lands on the first unanswered page.
+
+Mid-task: research the proposal forms and quotes thoroughly, using Serene's legacy portal
+(serene.sibapps.com); provide for identity capture and attachments such as vehicle photos;
+re-word the staff sign-in page now that the portal is more than feedback; explain the "Serene CX" name.
+
+### Research (written up in `docs/sales/`)
+
+* **`research-ghana-insurance.md`**:
+  * NIC motor third-party tariff effective 16 Feb 2026, by class of use, not engine size: private
+    GH₵ 557, taxi/hiring GH₵ 744 … motorcycle GH₵ 331; extra seats GH₵ 15/25;
+  * TPPD limit GH₵ 8,000 (the sample certificate's 6,000 is out of date);
+  * 20% VAT/NHIL/GETFund on non-motor premiums, motor exempt;
+  * travel zones and the Schengen EUR 30,000 minimum;
+  * indicative non-motor rates (marked unverified);
+  * Act 42 of 1958 still governs motor certificates;
+  * Acts 772 (e-signatures) and 843 (data protection);
+  * Ghana Card, GhanaPost GPS, plate formats (including the 2026 DVLA zone format), mobile prefixes;
+  * legacy-portal product codes and fields.
+* **Identity law change found during research:** the National Identity Register (Amendment)
+  Regulations 2026, **L.I. 2523, enforced from 2 Nov 2026**, forbid insurers to request or keep
+  photos or scans of the Ghana Card; identity must be checked biometrically with NIA. The NIC also
+  made the Ghana Card mandatory for motor from 1 Jan 2026. So no form asks for card images. Every
+  proposal takes the Ghana Card **number** and a **live face photo**, and staff record the NIA check
+  on the customer. Foreign nationals give a passport page. Shared section: `packages/proposals/src/kyc.ts`.
+* **Legacy portal** (public pages only): SibaDigital/SIBAGEN white-label by BIC Technologies. Its
+  public JavaScript contains hard-coded NIC MID credentials and a payment merchant key, passwords
+  are MD5-hashed in the browser, and a renewal lookup appears to return policyholder details by
+  registration number without signing in. **Reported to the user for Serene to act on** (rotate
+  those credentials). None of it is carried over.
+* **`competitor-assessment.md`** (Star, SIC, Glico, Enterprise, Hollard, GUA, Vanguard, Phoenix /
+  snap.insure, Sanlam Allianz):
+  * **Adopted** (with where each is seen best):
+    * phone + one-time-code sign-in;
+    * price before personal details;
+    * a plain vehicle-class picker mapped to the NIC tariff;
+    * cover comparison;
+    * certificate on payment;
+    * MoMo-first checkout;
+    * short-period motor cover;
+    * one-tap renewal;
+    * online claims with per-type checklists and visible status;
+    * full claims guidance;
+    * Get a quote · Cover details · Make a claim on every product;
+    * a public certificate check with NIC `*920*57#`;
+    * downloadable paper forms;
+    * a branch finder.
+  * **Rejected, with reasons:** a Gallery (only one competitor keeps one current; Phoenix's is
+    empty), News (no content source), chatbot personas, pop-ups, counters, testimonials, promo sliders.
+
+### Online sales (new)
+
+* **`packages/proposals`**: the typed definition of every proposal form, shared by the customer
+  app, the Worker and the staff portal.
+  * Schema, validation (per step and whole form), product catalogue (28 products: motor, travel,
+    personal accident and home sold instantly; the rest priced by an underwriter, as the market does).
+  * **All 28 paper forms digitised** from `PROPOSAL FORMS (2).zip`, in paper wording and numbering.
+    Notices the proposer must read are `read` blocks shown in the flow, with an "I have read this"
+    tick where the paper requires it (requirement 8).
+  * Pricing (`rating.ts`):
+    * the 2026 tariff, extra seats, bus classes;
+    * comprehensive 5% and fire & theft 1.25% of value, never below third party;
+    * age loadings and referral rules;
+    * short-period scale and higher-TPPD pricing;
+    * travel by zone, length and age;
+    * personal accident by occupation class;
+    * home buildings and contents.
+    All rates are editable by staff.
+  * Claim types and document checklists; certificate content for motor (by class of use) and
+    other lines; the HTTP contract.
+* **Documents** (`@serene/proposals/render`, rendered in the browser so customer and staff get the
+  same bytes):
+  * the **completed proposal** as PDF and Word, laid out like the paper form: letterhead, paper
+    title, numbered questions with answers on the dotted lines, ticked boxes, ringed YES/NO, the
+    paper's tables, the signature over "Proposer's Signature";
+  * an electronic-signature record page (verified phone, time, IP, answers SHA-256, confirmations,
+    attached documents);
+  * the **certificate of insurance** as a copy of the sample: yellow rule and "SERENE INSURANCE"
+    down the margin, navy box, numbered items, clauses, facts, certify text, signatory, plus a QR
+    code to `/verify`.
+  * Wording fixes against the sample, to confirm with Serene: the Act's real name, "STATUTE(S)",
+    "carriage of passengers".
+  * We never draw a signature: an administrator uploads the signatory's image, and each issued
+    certificate keeps the image in force when it was issued.
+* **Database** (`202611130001…0006`, schema `sales`):
+  * customers (with identity-check status), sign-in codes (HMAC only), sessions (hashed);
+  * proposals with answers frozen after submission, events, files;
+  * payments, policies (certificate snapshot), claims;
+  * staff views and audited staff functions;
+  * a new **Underwriter** role and permissions (customers, proposals, policies, products, claims);
+  * a private Storage bucket; cron purges.
+  * Numbers follow Serene's documents: `USR10001…`, `SE26MTP10001-E`, `C01-26-10001`,
+    `PRP-26-000001`, `CLM-26-000001`.
+* **Worker API** (`/api/account/*`, `/api/verify`) and the `/account` app:
+  * phone + 6-digit code sign-in (30-day session cookie, CSRF header + origin checks, rate limits);
+  * every lookup owner-scoped;
+  * uploads type-checked by file content;
+  * the submit flow re-validates everything on the server;
+  * simulated MoMo and card payment;
+  * idempotent policy issue;
+  * a public certificate check that needs the certificate number **and** the registration or policy
+    number, and shows initials only.
+* **Customer app** (`apps/account`, React):
+  * sign-in;
+  * dashboard;
+  * product picker for individuals and businesses;
+  * the proposal wizard: numbered stepper (mobile: a "Step 3 of 9" bar and steps sheet), autosave
+    and resume, a live price panel, camera capture with image compression, a face-photo screen with
+    a guide, review, and a sign step (draw / type / upload);
+  * payment;
+  * policy page with certificate and proposal downloads;
+  * renewals;
+  * claims with document checklists and a status timeline;
+  * profile.
+* **Test modes (decision D-47):** no SMS or payment provider account exists yet, so both run in
+  clearly labelled test mode.
+  * **Sign-in:** the code is shown on screen instead of being texted.
+  * **Payments:** no money is taken. Test values: MoMo numbers ending 0000 and card
+    4000 0000 0000 0002 are declined.
+  * The Arkesel SMS adapter is built and switches on with the `ARKESEL_API_KEY` Worker secret and
+    setting `sales_sms_mode = 'arkesel'`. A Hubtel or Paystack gateway is the next integration.
+  * **Until SMS is live, a phone number is not proven to belong to the person signing in, so real
+    customers must not use the site before then.**
+
+### Public website (rebuilt, requirements 1 and 2)
+
+* 40 pages from a dependency-free static builder (`apps/landing`):
+  * home with a working quick quote (motor and travel), the cover comparison, products for people
+    and for businesses, how buying works, claims, certificate check, branches and about;
+  * `/insurance/` and a page for each of the 28 products: cover, exclusions, who it's for, pricing
+    basis, documents needed (from the form definitions), FAQs. The motor page has the full 2026
+    tariff table, TPPD, the Brown Card and the short-period scale;
+  * `/claims`, `/branches`, `/about`, `/verify`, `/help`, `/downloads` (the 28 paper forms),
+    `/contact`, `/privacy`, `/terms`, a 404 page, `sitemap.xml` and structured data.
+* **AI tells removed:** eyebrow labels, slogan headlines, icon-tile grids, floating badges, mock UI
+  cards, decorative leaf/blob art, filler words and em-dash copy. The site now uses specific facts
+  (GH₵ 557, GH₵ 8,000, 13 branches, one-week claim principle), tables and lists, and real photos.
+* **Mobile:** tested at 320–1440 px: no horizontal scroll, 16 px text, 44 px targets, a full-height
+  menu, zoom never disabled.
+* **Correction during review:** the motor copy said injury cover "has no limit". Under the
+  Insurance Act 2021 (s.255) a motor policy must have a stated maximum, so it now says claims are
+  paid up to the NIC's limits.
+* `/privacy` and `/terms` are written plainly and **need Serene's legal review**. The DPC
+  registration number is a marked placeholder.
+* `packages/proposals/src/landing-sync.test.ts` fails if the site's product, claim or document
+  content drifts from the form definitions.
+
+### Staff portal (requirement 4, renamed)
+
+* **"Serene CX" → "Serene Staff Portal".** CX meant *customer experience*: right while the portal
+  only handled feedback, but too narrow and too jargon-like now.
+  * New sign-in panel: "Customers, proposals, policies and feedback in one place."
+  * Decorative art removed.
+  * Invite and password-reset email subjects renamed (applied to hosted Auth by
+    `scripts/configure-auth.mjs`).
+* **New sidebar:**
+  * Overview: sales figures plus a satisfaction strip.
+  * **Sales:**
+    * Customers, with the identity check: Ghana Card number, face photo, "Mark verified" with the
+      NIA reference;
+    * Proposals: status queue; the form shown like the paper; Download PDF/Word; documents;
+      underwriter pricing with automatic taxes; request information; decline; history;
+    * Policies & certificates: preview, download, cancel;
+    * Claims: status queue, working-day age, "decision overdue" after the one-week principle, actions;
+    * Payments.
+  * **Customer feedback:** Feedback insights (one page with tabs), Responses (with Download), Cases
+    (tabs incl. flagged feedback), Feedback form.
+  * **Administration:** Users & roles, Products & rates (sales settings, signature image upload,
+    rate tables), Survey questions, Branches & regions, Lists & options, Settings (General, Data
+    protection, System status), Audit log.
+* **Removed:** Alerts, alert rules and targets; Survey completion; Case performance; Branch
+  corrections; the separate Reports area (scheduled reports, report files). Old addresses redirect
+  to the nearest page; database objects are untouched.
+
+### Feedback form (requirements 5, 6, 7, 9)
+
+* **Speed:** the delay was the bot check (Turnstile) starting only when Submit was pressed (about
+  2 s). It now runs in the background before the last page, so click to request is about 56 ms. A
+  `Server-Timing` header shows the two server calls.
+* **Lock:** Submit shows a blurred full-screen overlay, makes the form inert and disables every
+  input; the spinner draws into a tick ("Feedback received"). On failure everything is restored.
+* **Options:** survey **v3** (`202611130010`) retires "Ease of the process" and "Pricing and
+  charges"; old responses keep their labels. The sample-data generator is updated too.
+* **Centring:** single digits sat about 5 px left of centre (a min-width span with left-aligned
+  text). They now use a centring grid, 6 columns under 600 px and 11 above.
+* **Resume choice** (`202611130011`): "Welcome back. You started this form on …" with two buttons:
+  * **Pick up where you left off** restores the answers and opens the first page with an
+    unanswered required question;
+  * **Start a new feedback form** closes the old draft on the server.
+  It works without JavaScript.
+
+### Verification (local, before deploy)
+
+* pgTAP **653/653** on a fresh database (18 files; 210 new sales tests, 20 survey v3/resume tests).
+  Database lint at warning level is clean, and both JS↔SQL parity tests pass against the database
+  (survey 26, metrics 31).
+* **Unit tests 678:** proposals 311, survey Worker 149, portal 82, customer app 34, metrics 30,
+  survey engine 25, contracts 7, Edge Functions 40. Root lint, prettier and typecheck are clean;
+  `pnpm build` and the site assembly succeed; the bundle scan is clean (222 files).
+* **Browser tests:**
+  * survey 40/40 on phone and desktop (overlay, failure, resume with and without JS, start new,
+    options gone, centring from 320 px);
+  * public site 90/90 (every page at 360 and 1440: overflow, console/CSP errors, headings, text
+    size, targets, axe; links; quick quote; menu; verify);
+  * customer app 5/5 against the mock, and the **full purchase against the real Worker and
+    database on phone and desktop**: sign-in, motor proposal with face photo, DVLA document and
+    vehicle photos, live price, sign, MoMo payment, certificate download, policy page, claim.
+* Visual checks of the motor certificate against the sample, and of the motor, fire and cyber
+  proposal PDFs and Word files.
+
+### Still open after this round
+
+* **Before real customers:**
+  * connect an SMS provider (with an NCA-registered sender ID) and a payment gateway;
+  * underwriting to confirm the NIC 2026 circular, the TPPD limit, the indicative non-motor rates
+    and the commercial-class certificate wording;
+  * finance to confirm the VAT Act 2025 treatment;
+  * legal review of `/privacy` and `/terms`;
+  * supply the DPC registration number and the NIC licence number;
+  * upload the signatory's signature image in Products & rates;
+  * run `node scripts/seed-demo.mjs production --clear`.
+* **Serene:** rotate the credentials exposed by the legacy portal.
+* **NIA:** identity checks are recorded manually by staff from the face photo and card number; an
+  NIA biometric API needs direct onboarding with NIA.
+* **Carried over:**
+  * Gmail app password;
+  * XLSX export CPU limit at ~100k rows;
+  * 600k-response load test;
+  * official logo vector;
+  * Kumasi North/Techiman phone number.

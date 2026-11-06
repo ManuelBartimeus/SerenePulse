@@ -17,10 +17,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # One site Worker per environment (D-37, single origin since 2026-11-05):
+        # /healthz checks the database too; the others check each area is served.
         url:
-          - https://serene-pulse-survey.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/healthz
-          - https://serene-pulse-portal.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/
-          - https://serene-pulse-survey-staging.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/healthz
+          - https://serene.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/healthz
+          - https://serene.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/
+          - https://serene.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/account/
+          - https://serene.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/admin/
+          - https://serene.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/customerfeedback
+          - https://serene-staging.${{ vars.WORKERS_SUBDOMAIN }}.workers.dev/healthz
     steps:
       - name: Check ${{ matrix.url }}
         run: |

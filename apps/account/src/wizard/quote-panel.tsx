@@ -33,13 +33,15 @@ export function QuoteBreakdown({ quote }: { quote: Quote }) {
             ))}
           </>
         )}
-        <div className="mt-1 flex items-baseline justify-between gap-4 border-t border-border pt-3">
-          <dt className="font-bold">Total to pay</dt>
-          <dd className="tnum m-0 text-[22px] font-bold tracking-tight">{formatMoney(quote.total)}</dd>
+        <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-border pt-3">
+          <dt className="font-semibold">Total to pay</dt>
+          <dd className="tnum m-0 text-right text-[24px] leading-8 font-bold tracking-[-0.025em] break-all">
+            {formatMoney(quote.total)}
+          </dd>
         </div>
       </dl>
       {quote.indicative && (
-        <p className="mt-3 flex gap-2 rounded-xl bg-warning-bg px-3 py-2 text-[14px] leading-5 text-[#5e3d00]">
+        <p className="mt-3 flex gap-2 rounded-[8px] bg-warning-bg px-3 py-2 text-[14px] leading-5 text-[#5e3d00]">
           <Icon name="info" size={18} className="mt-px flex-none" />
           Indicative price, confirmed when you submit.
         </p>
@@ -60,11 +62,12 @@ export function QuoteBreakdown({ quote }: { quote: Quote }) {
 
 export function QuoteSidebar({ state, productName }: { state: QuoteState; productName: string }) {
   return (
-    <aside className="card sticky top-24 p-6" aria-labelledby="price-h">
-      <p className="eyebrow">{productName}</p>
+    <aside className="card p-5 xl:p-6" aria-labelledby="price-h">
+      <p className="kicker break-words">{productName}</p>
       <h2 id="price-h" className="h-section mt-1">
         Your price
       </h2>
+      <span className="accent-bar mt-3" aria-hidden="true" />
       <div className="mt-4" aria-live="polite" aria-busy={state.kind === 'loading'}>
         <QuoteBody state={state} />
       </div>
@@ -103,12 +106,12 @@ export function QuoteBarButton({ state, onOpen }: { state: QuoteState; onOpen: (
       type="button"
       onClick={onOpen}
       className={cx(
-        'mb-2 flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-xl border-0 bg-brand-50 px-3.5 py-2 text-left',
+        'mb-2 flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-[8px] border-0 bg-accent-surface px-3 py-1.5 text-left ring-1 ring-brand-100',
         !q && 'opacity-90',
       )}
       aria-haspopup="dialog"
     >
-      <span className="min-w-0 text-[14px]">
+      <span className="flex min-w-0 flex-wrap items-baseline gap-x-1.5 text-[14px] leading-5">
         {q ? (
           <>
             <span className="font-semibold text-secondary">

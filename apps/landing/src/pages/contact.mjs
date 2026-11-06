@@ -8,10 +8,6 @@ import { BRANCHES } from '../content/branches.mjs';
 export default function contact() {
   const address = `${CONTACT.headOffice.line1}, ${CONTACT.headOffice.line2}`;
   const body = h`<div class="wrap page">
-  <header class="page-head">
-    <h1>Contact us</h1>
-    <p class="lede">Call, message or visit. For a claim, see <a href="/claims/">how to claim</a>; for a specific branch, see <a href="/branches/">all ${BRANCHES.length} branches</a>.</p>
-  </header>
 
   <div class="contact-grid">
     <section aria-labelledby="ways-title">
@@ -37,7 +33,7 @@ export default function contact() {
     <div>
       <h2 id="feedback-title">Feedback</h2>
       <p>Bought a policy, renewed, made a claim or visited a branch recently? The short survey goes straight to the branch and team that served you.</p>
-      <p><a class="btn btn-secondary" href="/customerfeedback">Share your feedback</a></p>
+      <p><a class="btn btn-outline" href="/customerfeedback">Share your feedback</a></p>
     </div>
     <div id="complaints">
       <h2 id="complaints-title">Complaints</h2>
@@ -55,6 +51,10 @@ export default function contact() {
     description:
       'Contact Serene Insurance: 030 291 7444, WhatsApp 050 051 7114, info@sereneinsurance.com. Head office at SU Tower, Ridge, Accra. Open Monday to Saturday.',
     crumbs: [['Contact', '/contact/']],
+    band: {
+      title: 'Contact us',
+      lede: h`Call, message or visit. For a claim, see <a href="/claims/">how to claim</a>; for a specific branch, see <a href="/branches/">all ${BRANCHES.length} branches</a>.`,
+    },
     body,
   };
 }

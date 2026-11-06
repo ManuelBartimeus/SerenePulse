@@ -1,5 +1,6 @@
 import {
   CLAIM_STATUS_LABELS,
+  CLAIM_TYPES,
   productByCode,
   type ClaimSummary,
   type PolicySummary,
@@ -21,10 +22,10 @@ import {
   renewalText,
   sentence,
 } from '../lib/format';
-import { Banner, Button, Skeleton, StatusChip, cx } from '../ui/components';
-import { Icon, Leaf, type IconName } from '../ui/icons';
-import { usePageTitle } from '../ui/shell';
-import { RenewButton, canClaim, isRenewable } from './renew';
+import { Banner, Button, SectionTitle, Skeleton, StatusChip, cx } from '../ui/components';
+import { Icon, type IconName } from '../ui/icons';
+import { PAGE, TitleBand, usePageTitle } from '../ui/shell';
+import { RenewButton, canClaim, isRenewable, useRenew } from './renew';
 import { claimTone } from './claims/status';
 
 export const CATEGORY_ICON: Record<string, IconName> = {
@@ -110,57 +111,115 @@ export function DashboardPage() {
     (c) => !['settled', 'declined', 'withdrawn'].includes(c.status) || daysUntil(c.updatedAt) > -30,
   );
   const renewals = activePolicies.filter((p) => isRenewable(p));
+  const claimable = activePolicies.filter((p) => canClaim(p));
+  const onlyClaimable = claimable.length === 1 ? claimable[0] : undefined;
   const empty = !loading && activePolicies.length === 0 && open.length === 0;
+  const claimText =
+    'Tell us what happened and upload photos. We aim to settle within one week of your last document.';
 
   return (
-    <div className="wrap py-6 md:py-10">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0">
-          <p className="eyebrow">{greeting()}</p>
-          <h1 className="h-display mt-1 break-words">{name ? `Hello, ${name}` : 'Your account'}</h1>
-        </div>
-        {!empty && (
-          <Link to="/buy" className="btn btn-primary hidden md:inline-flex">
-            <Icon name="plus" size={18} />
-            Buy insurance
-          </Link>
+    <>
+      <TitleBand
+        crumbs={[{ label: 'My account' }]}
+        title={name ? `Hello, ${name}` : 'Your account'}
+        intro={
+          <>
+            {greeting()}. Your policies, proposals and claims in one place.
+            {me.data?.customerNo ? (
+              <>
+                {' '}
+                Customer number <span className="tnum font-medium text-ink">{me.data.customerNo}</span>.
+              </>
+            ) : null}
+          </>
+        }
+      />
+      <div className={PAGE}>
+        {(policies.isError || proposals.isError) && (
+          <Banner tone="danger" className="mb-8" role="alert" title="Some of your account didn’t load">
+            {errorMessage(policies.error ?? proposals.error)}
+          </Banner>
         )}
-      </div>
 
-      {(policies.isError || proposals.isError) && (
-        <Banner tone="danger" className="mt-6" role="alert" title="Some of your account didn’t load">
-          {errorMessage(policies.error ?? proposals.error)}
-        </Banner>
-      )}
+        {renewals.length > 0 && (
+          <div className="mb-10 grid gap-3">
+            {renewals.map((p) => (
+              <Banner
+                key={p.id}
+                tone="warning"
+                icon="clock"
+                title={`${p.productName}${p.insuredSubject ? ` for ${p.insuredSubject}` : ''}: ${renewalText(p.expiresOn).toLowerCase()}`}
+                action={<RenewButton policy={p} size="sm" />}
+              >
+                Renew now so you stay covered. We copy your answers from last year.
+              </Banner>
+            ))}
+          </div>
+        )}
 
-      {renewals.map((p) => (
-        <Banner
-          key={p.id}
-          tone="warning"
-          icon="clock"
-          className="mt-6"
-          title={`${p.productName}${p.insuredSubject ? ` for ${p.insuredSubject}` : ''}: ${renewalText(p.expiresOn).toLowerCase()}`}
-          action={<RenewButton policy={p} size="sm" />}
-        >
-          Renew now so you stay covered. We copy your details from last year.
-        </Banner>
-      ))}
+        <section aria-labelledby="quick-h">
+          <h2 id="quick-h" className="h-content">
+            Quick links
+          </h2>
+          <ul className="m-0 mt-6 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+            <li>
+              <Link to="/buy" className="qlink">
+                <QuickLinkBody
+                  icon="plus"
+                  title="Buy insurance"
+                  text="Motor, travel and home cover are priced as you answer. Business covers by an underwriter."
+                  more="Get started"
+                />
+              </Link>
+            </li>
+            <li>
+              <RenewQuickLink renewals={renewals} hasPolicies={activePolicies.length > 0} />
+            </li>
+            <li>
+              {onlyClaimable ? (
+                <Link to="/policies/$id/claim" params={{ id: onlyClaimable.id }} className="qlink">
+                  <QuickLinkBody icon="claim" title="Make a claim" text={claimText} more="Start a claim" />
+                </Link>
+              ) : (
+                <Link to="/claims" className="qlink">
+                  <QuickLinkBody
+                    icon="claim"
+                    title="Make a claim"
+                    text={claimText}
+                    more={claimable.length ? 'Start a claim' : 'Your claims'}
+                  />
+                </Link>
+              )}
+            </li>
+            <li>
+              <a href="/verify/" className="qlink">
+                <QuickLinkBody
+                  icon="shieldCheck"
+                  title="Verify a certificate"
+                  text="Check that a Serene certificate of insurance is genuine, as the police and embassies do."
+                  more="Check a certificate"
+                />
+              </a>
+            </li>
+          </ul>
+        </section>
 
-      {loading ? (
-        <DashboardSkeleton />
-      ) : empty ? (
-        <EmptyState />
-      ) : (
-        <div className="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
-          <div className="grid min-w-0 content-start gap-10">
-            <section aria-labelledby="policies-h">
-              <SectionHead id="policies-h" title="Your policies" count={activePolicies.length} />
+        {loading ? (
+          <DashboardSkeleton />
+        ) : empty ? (
+          <EmptyState />
+        ) : (
+          <div className="mt-12 grid gap-12 lg:mt-16 lg:gap-16">
+            <section aria-labelledby="policies-h" id="policies" className="scroll-mt-24">
+              <SectionTitle id="policies-h" count={activePolicies.length}>
+                Your policies
+              </SectionTitle>
               {activePolicies.length === 0 ? (
                 <p className="card card-pad text-secondary">
                   No active policies yet. When you pay for a proposal, your policy appears here.
                 </p>
               ) : (
-                <ul className="m-0 grid list-none gap-4 p-0 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                <ul className="m-0 grid list-none gap-5 p-0 md:grid-cols-2 xl:grid-cols-3">
                   {activePolicies.map((p) => (
                     <li key={p.id}>
                       <PolicyCard policy={p} />
@@ -172,49 +231,132 @@ export function DashboardPage() {
 
             {open.length > 0 && (
               <section aria-labelledby="proposals-h">
-                <SectionHead id="proposals-h" title="Proposals in progress" count={open.length} />
-                <ul className="card m-0 list-none divide p-0">
-                  {open.map((p) => (
-                    <li key={p.id}>
-                      <ProposalRow p={p} />
-                    </li>
-                  ))}
-                </ul>
+                <SectionTitle id="proposals-h" count={open.length}>
+                  Proposals in progress
+                </SectionTitle>
+                <div className="rtable-wrap">
+                  <table className="rtable">
+                    <thead>
+                      <tr>
+                        <th scope="col">Cover</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Where it stands</th>
+                        <th scope="col">
+                          <span className="sr-only">Action</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {open.map((p) => (
+                        <ProposalRow key={p.id} p={p} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </section>
             )}
 
             {openClaims.length > 0 && (
               <section aria-labelledby="claims-h">
-                <SectionHead id="claims-h" title="Claims" count={openClaims.length} />
-                <ul className="card m-0 list-none divide p-0">
-                  {openClaims.map((c) => (
-                    <li key={c.id}>
-                      <ClaimRow c={c} />
-                    </li>
-                  ))}
-                </ul>
+                <SectionTitle
+                  id="claims-h"
+                  count={openClaims.length}
+                  action={
+                    <Link to="/claims" className="more min-h-11">
+                      All claims
+                      <Icon name="chevronRight" size={16} />
+                    </Link>
+                  }
+                >
+                  Claims
+                </SectionTitle>
+                <ClaimsTable claims={openClaims} />
               </section>
             )}
           </div>
-
-          <aside className="grid content-start gap-4">
-            <BuyCard />
-            <ClaimCard policies={activePolicies.filter((p) => canClaim(p))} />
-          </aside>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </>
   );
 }
 
-function SectionHead({ id, title, count }: { id: string; title: string; count: number }) {
+function QuickLinkBody({
+  icon,
+  title,
+  text,
+  more,
+}: {
+  icon: IconName;
+  title: string;
+  text: string;
+  more: string;
+}) {
   return (
-    <div className="mb-4 flex items-baseline gap-2">
-      <h2 id={id} className="h-section">
-        {title}
-      </h2>
-      <span className="tnum text-[15px] font-semibold text-muted">{count}</span>
-    </div>
+    <>
+      <span className="icon-tile max-sm:row-span-3" aria-hidden="true">
+        <Icon name={icon} size={24} />
+      </span>
+      <span className="mt-4 block text-[18px] leading-7 font-semibold max-sm:mt-0">{title}</span>
+      <span className="card-text mt-1.5 block max-sm:mt-0.5">{text}</span>
+      <span className="more mt-auto pt-4 max-sm:pt-2">
+        {more}
+        <Icon name="chevronRight" size={16} />
+      </span>
+    </>
+  );
+}
+
+function RenewQuickLink({ renewals, hasPolicies }: { renewals: PolicySummary[]; hasPolicies: boolean }) {
+  const { renew, busy, err } = useRenew();
+  const one = renewals.length === 1 ? renewals[0] : undefined;
+  if (one)
+    return (
+      <div className="flex h-full flex-col">
+        <button
+          type="button"
+          className="qlink flex-1"
+          onClick={() => void renew(one)}
+          disabled={busy}
+          aria-busy={busy || undefined}
+        >
+          <QuickLinkBody
+            icon="refresh"
+            title="Renew"
+            text={`${one.insuredSubject || one.productName}: ${renewalText(one.expiresOn).toLowerCase()}. We copy last year’s answers.`}
+            more={busy ? 'Starting renewal…' : 'Renew now'}
+          />
+        </button>
+        {err && (
+          <p className="error-text mt-2" role="alert">
+            {err}
+          </p>
+        )}
+      </div>
+    );
+  if (hasPolicies)
+    return (
+      <a href="#policies" className="qlink">
+        <QuickLinkBody
+          icon="refresh"
+          title="Renew"
+          text={
+            renewals.length
+              ? `${renewals.length} policies can be renewed now. We copy last year’s answers.`
+              : 'Renew from 30 days before your cover ends. We copy last year’s answers.'
+          }
+          more="Your policies"
+        />
+      </a>
+    );
+  return (
+    <Link to="/buy" search={{ product: 'MTR' }} className="qlink">
+      <QuickLinkBody
+        icon="refresh"
+        title="Renew"
+        text="Insured elsewhere? Start a motor proposal with us before your current cover ends."
+        more="Start motor cover"
+      />
+    </Link>
   );
 }
 
@@ -237,63 +379,67 @@ function PolicyCard({ policy: p }: { policy: PolicySummary }) {
     }
   }
   return (
-    <article className="card flex h-full flex-col overflow-hidden">
-      <div className="relative bg-brand px-5 pt-5 pb-5 text-white">
-        <Leaf className="pointer-events-none absolute right-4 bottom-4 text-accent" size={56} />
-        <div className="flex items-center gap-2 text-[14px] font-semibold text-white/85">
-          <Icon name={productIcon(p.productCode)} size={18} />
-          {p.productName}
-        </div>
-        <p className="mt-2 pr-14 text-[20px] leading-7 font-bold break-words">
-          {p.insuredSubject || sentence(p.coverTitle)}
+    <article className="card flex h-full flex-col p-5 md:p-6">
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+        <p className="kicker flex min-w-0 items-center gap-2 pt-0.5">
+          <Icon name={productIcon(p.productCode)} size={16} className="flex-none text-brand" />
+          <span className="min-w-0 break-words">{p.productName}</span>
         </p>
-        <p className="mt-1 text-[14px] text-white/85">{sentence(p.coverTitle)}</p>
-      </div>
-      <div className="flex flex-1 flex-col gap-4 p-5">
-        <dl className="m-0 grid grid-cols-2 gap-3 text-[14px]">
-          <div className="min-w-0">
-            <dt className="text-secondary">Policy number</dt>
-            <dd className="tnum m-0 mt-0.5 font-semibold break-all">{p.policyNo}</dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-secondary">Covered until</dt>
-            <dd className="m-0 mt-0.5 font-semibold">{formatDate(p.expiresOn)}</dd>
-          </div>
-        </dl>
-        <p
+        <span
           className={cx(
-            'flex items-center gap-2 text-[14px] font-semibold',
-            soon || p.status === 'expired' ? 'text-warning' : 'text-success',
+            'chip flex-none',
+            p.status === 'expired' ? 'chip-neutral' : soon ? 'chip-warning' : 'chip-success',
           )}
         >
-          <Icon name={soon || p.status === 'expired' ? 'clock' : 'shield'} size={18} />
-          {p.status === 'active' ? renewalText(p.expiresOn) : `Expired on ${formatDate(p.expiresOn)}`}
-        </p>
-        <div className="mt-auto flex flex-wrap gap-2">
-          {isRenewable(p) ? (
-            <RenewButton policy={p} size="sm" />
-          ) : (
-            <Button
-              variant="soft"
-              size="sm"
-              onClick={() => void download()}
-              busy={busy}
-              busyLabel="Preparing PDF"
-            >
-              <Icon name="download" size={18} />
-              Certificate
-            </Button>
-          )}
-          <Link to="/policies/$id" params={{ id: p.id }} className="btn btn-secondary btn-sm">
-            Details
-          </Link>
-        </div>
-        {err && (
-          <p className="error-text" role="alert">
-            {err}
-          </p>
-        )}
+          {p.status === 'expired' ? 'Expired' : soon ? 'Renew soon' : 'Active'}
+        </span>
       </div>
+      <h3 className="h-section mt-2 break-words">{p.insuredSubject || sentence(p.coverTitle)}</h3>
+      <span className="accent-bar mt-3" aria-hidden="true" />
+      <p className="card-text mt-3">{sentence(p.coverTitle)}</p>
+      <dl className="m-0 mt-4 grid grid-cols-2 gap-3 text-[14px] leading-5">
+        <div className="min-w-0">
+          <dt className="text-secondary">Policy number</dt>
+          <dd className="tnum m-0 mt-1 font-medium break-all">{p.policyNo}</dd>
+        </div>
+        <div className="min-w-0">
+          <dt className="text-secondary">Covered until</dt>
+          <dd className="m-0 mt-1 font-medium">{formatDate(p.expiresOn)}</dd>
+        </div>
+      </dl>
+      <p
+        className={cx(
+          'mt-4 flex items-start gap-2 text-[14px] leading-5 font-medium',
+          soon || p.status === 'expired' ? 'text-warning' : 'text-success',
+        )}
+      >
+        <Icon name={soon || p.status === 'expired' ? 'clock' : 'shield'} size={18} className="flex-none" />
+        {p.status === 'active' ? renewalText(p.expiresOn) : `Expired on ${formatDate(p.expiresOn)}`}
+      </p>
+      <div className="mt-auto flex flex-wrap gap-2 pt-5">
+        {isRenewable(p) ? (
+          <RenewButton policy={p} size="sm" />
+        ) : (
+          <Button
+            variant="soft"
+            size="sm"
+            onClick={() => void download()}
+            busy={busy}
+            busyLabel="Preparing PDF"
+          >
+            <Icon name="download" size={18} />
+            Certificate
+          </Button>
+        )}
+        <Link to="/policies/$id" params={{ id: p.id }} className="btn btn-secondary btn-sm">
+          Details
+        </Link>
+      </div>
+      {err && (
+        <p className="error-text mt-2" role="alert">
+          {err}
+        </p>
+      )}
     </article>
   );
 }
@@ -301,130 +447,131 @@ function PolicyCard({ policy: p }: { policy: PolicySummary }) {
 function ProposalRow({ p }: { p: ProposalSummary }) {
   const action = nextAction(p);
   return (
-    <div className="flex flex-col gap-3 p-4 tab:flex-row tab:items-center tab:gap-4 md:p-5">
-      <div className="flex min-w-0 flex-1 gap-3">
-        <span className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-brand-50 text-brand">
-          <Icon name={productIcon(p.productCode)} size={22} />
+    <tr>
+      <td className="cell-title" data-label="Cover">
+        <span className="flex items-start gap-3">
+          <span className="icon-tile icon-tile-sm" aria-hidden="true">
+            <Icon name={productIcon(p.productCode)} size={20} />
+          </span>
+          <span className="min-w-0">
+            <span className="block font-semibold">{p.productName}</span>
+            <span className="block text-[14px] leading-5 text-secondary">
+              <span className="tnum">{p.proposalNo}</span>
+              {p.insuredSubject ? ` · ${p.insuredSubject}` : ''}
+            </span>
+          </span>
         </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <p className="font-semibold">{p.productName}</p>
-            <StatusChip status={p.status} />
-          </div>
-          <p className="mt-0.5 text-[14px] text-secondary">
-            <span className="tnum">{p.proposalNo}</span>
-            {p.insuredSubject ? ` · ${p.insuredSubject}` : ''}
-          </p>
-          <p className="mt-1 text-[14px] text-secondary">{statusLine(p)}</p>
-        </div>
-      </div>
-      <Link
-        to={action.to}
-        params={{ id: p.id }}
-        className={cx(
-          'btn btn-sm flex-none self-stretch tab:self-auto',
-          action.primary ? 'btn-primary' : 'btn-secondary',
-        )}
-      >
-        {action.label}
-        {action.primary && <Icon name="arrowRight" size={18} />}
-      </Link>
-    </div>
+      </td>
+      <td data-label="Status">
+        <span>
+          <StatusChip status={p.status} />
+        </span>
+      </td>
+      <td data-label="Where it stands" className="text-secondary">
+        {statusLine(p)}
+      </td>
+      <td className="cell-action">
+        <Link
+          to={action.to}
+          params={{ id: p.id }}
+          className={cx('btn btn-sm', action.primary ? 'btn-primary' : 'btn-secondary')}
+        >
+          {action.label}
+          {action.primary && <Icon name="arrowRight" size={18} />}
+        </Link>
+      </td>
+    </tr>
   );
 }
 
-function ClaimRow({ c }: { c: ClaimSummary }) {
+/** Claims as a table from 640px and stacked cards below (dashboard, claims page). */
+export function ClaimsTable({ claims }: { claims: ClaimSummary[] }) {
   return (
-    <Link
-      to="/claims/$id"
-      params={{ id: c.id }}
-      className="flex items-center gap-3 p-4 text-ink no-underline hover:bg-subtle md:p-5"
-    >
-      <span className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-surface-muted text-ink">
-        <Icon name="document" size={22} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="font-semibold">
-            Claim <span className="tnum">{c.claimNo}</span>
-          </p>
-          <span className={`chip chip-${claimTone(c.status)}`}>{CLAIM_STATUS_LABELS[c.status]}</span>
-        </div>
-        <p className="mt-0.5 text-[14px] text-secondary">
-          {c.productName} · reported {formatDate(c.reportedAt)}
-        </p>
-      </div>
-      <Icon name="chevronRight" className="flex-none text-muted" />
-    </Link>
-  );
-}
-
-function BuyCard() {
-  return (
-    <div className="card card-pad">
-      <h2 className="h-section">Buy insurance</h2>
-      <p className="mt-1 text-[15px] text-secondary">
-        Motor, travel and home cover are priced instantly. Business covers are priced by an underwriter.
-      </p>
-      <div className="mt-4 grid gap-2">
-        <Link to="/buy" search={{ product: 'MTR' }} className="btn btn-secondary btn-sm justify-start">
-          <Icon name="car" size={18} /> Motor insurance
-        </Link>
-        <Link to="/buy" search={{ product: 'TRV' }} className="btn btn-secondary btn-sm justify-start">
-          <Icon name="plane" size={18} /> Travel insurance
-        </Link>
-        <Link to="/buy" className="btn btn-primary btn-sm">
-          See all 28 covers
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function ClaimCard({ policies }: { policies: PolicySummary[] }) {
-  if (policies.length === 0) return null;
-  return (
-    <div className="card card-pad">
-      <h2 className="h-section">Report a claim</h2>
-      <p className="mt-1 text-[15px] text-secondary">
-        Tell us what happened and upload your documents. We aim to settle every claim within one week of
-        receiving your last document.
-      </p>
-      <div className="mt-4 grid gap-2">
-        {policies.map((p) => (
-          <Link
-            key={p.id}
-            to="/policies/$id/claim"
-            params={{ id: p.id }}
-            className="btn btn-secondary btn-sm justify-between"
-          >
-            <span className="truncate">{p.insuredSubject || p.productName}</span>
-            <Icon name="arrowRight" size={18} />
-          </Link>
-        ))}
-      </div>
+    <div className="rtable-wrap">
+      <table className="rtable">
+        <thead>
+          <tr>
+            <th scope="col">Claim</th>
+            <th scope="col">Cover</th>
+            <th scope="col">Reported</th>
+            <th scope="col">Status</th>
+            <th scope="col">
+              <span className="sr-only">Action</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {claims.map((c) => {
+            const type = CLAIM_TYPES.find((t) => t.id === c.claimType)?.label;
+            return (
+              <tr key={c.id}>
+                <td className="cell-title" data-label="Claim">
+                  <Link
+                    to="/claims/$id"
+                    params={{ id: c.id }}
+                    className="inline-flex min-h-11 items-center font-semibold"
+                  >
+                    Claim&nbsp;<span className="tnum">{c.claimNo}</span>
+                  </Link>
+                  {type && <span className="block text-[14px] leading-5 text-secondary">{type}</span>}
+                </td>
+                <td data-label="Cover">{c.productName}</td>
+                <td data-label="Reported" className="tnum">
+                  {formatDate(c.reportedAt)}
+                </td>
+                <td data-label="Status">
+                  <span>
+                    <span className={`chip chip-${claimTone(c.status)}`}>
+                      {CLAIM_STATUS_LABELS[c.status]}
+                    </span>
+                  </span>
+                </td>
+                <td className="cell-action">
+                  <Link
+                    to="/claims/$id"
+                    params={{ id: c.id }}
+                    className="btn btn-secondary btn-sm"
+                    aria-label={`Open claim ${c.claimNo}`}
+                  >
+                    Open
+                  </Link>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
     </div>
   );
 }
 
 function EmptyState() {
   return (
-    <section className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
-      <div className="relative overflow-hidden rounded-[28px] bg-brand p-6 text-white md:p-10">
-        <Leaf className="pointer-events-none absolute right-6 bottom-6 text-accent" size={96} />
-        <h2 className="max-w-md text-[26px] leading-8 font-bold tracking-tight md:text-[32px] md:leading-10">
+    <section
+      className="mt-12 grid gap-5 lg:mt-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]"
+      aria-labelledby="empty-h"
+    >
+      <div className="relative overflow-hidden rounded-[12px] bg-brand p-6 text-white sm:p-8 lg:p-10">
+        <span className="accent-bar accent-bar-yellow" aria-hidden="true" />
+        <h2 id="empty-h" className="mt-5 max-w-md text-[30px] leading-9 font-bold tracking-[-0.025em]">
           You don’t have any policies with us yet
         </h2>
-        <p className="mt-3 max-w-md text-[16px] leading-6 text-white/90">
+        <p className="mt-3 max-w-md text-[16px] leading-[26px] text-white/90">
           Choose a cover, answer the proposal questions and sign on screen. For motor, travel and home you see
           the price as you go and get your certificate as soon as you pay.
         </p>
-        <Link to="/buy" className="btn btn-lg mt-8 bg-white text-brand no-underline hover:bg-brand-50">
-          Buy insurance
-          <Icon name="arrowRight" size={18} />
-        </Link>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <Link to="/buy" className="btn btn-lg btn-on-dark">
+            Buy insurance
+            <Icon name="arrowRight" size={18} />
+          </Link>
+          <a href="/insurance/" className="btn btn-lg btn-outline-dark">
+            Compare covers
+          </a>
+        </div>
       </div>
-      <div className="grid gap-3">
+      <div className="grid content-start gap-3">
+        <h2 className="kicker pt-1">Priced instantly</h2>
         {[
           {
             code: 'MTR',
@@ -449,16 +596,16 @@ function EmptyState() {
             key={x.code}
             to="/buy"
             search={{ product: x.code }}
-            className="card flex items-center gap-4 p-4 text-ink no-underline transition-colors hover:border-brand"
+            className="card card-link flex items-center gap-4 p-4 text-ink no-underline hover:text-ink"
           >
-            <span className="grid h-12 w-12 flex-none place-items-center rounded-2xl bg-brand-50 text-brand">
+            <span className="icon-tile" aria-hidden="true">
               <Icon name={x.icon} size={24} />
             </span>
             <span className="min-w-0 flex-1">
               <span className="block font-semibold">{x.title}</span>
-              <span className="block text-[14px] text-secondary">{x.text}</span>
+              <span className="block text-[14px] leading-5 text-secondary">{x.text}</span>
             </span>
-            <span className="chip chip-success hidden flex-none tab:inline-flex">Instant price</span>
+            <Icon name="chevronRight" size={18} className="flex-none text-brand" />
           </Link>
         ))}
       </div>
@@ -468,15 +615,18 @@ function EmptyState() {
 
 function DashboardSkeleton() {
   return (
-    <div className="mt-8 grid gap-4 md:grid-cols-2" aria-busy="true" aria-label="Loading your policies">
+    <div
+      className="mt-12 grid gap-5 md:grid-cols-2 xl:grid-cols-3"
+      aria-busy="true"
+      aria-label="Loading your policies"
+    >
       {[0, 1].map((i) => (
-        <div key={i} className="card overflow-hidden">
-          <Skeleton className="h-28 rounded-none" />
-          <div className="p-5">
-            <Skeleton className="h-4 w-1/2" />
-            <Skeleton className="mt-3 h-4 w-1/3" />
-            <Skeleton className="mt-6 h-11 w-36 rounded-full" />
-          </div>
+        <div key={i} className="card p-6">
+          <Skeleton className="h-3 w-1/3" />
+          <Skeleton className="mt-3 h-6 w-2/3" />
+          <Skeleton className="mt-3 h-1.5 w-12" />
+          <Skeleton className="mt-6 h-4 w-1/2" />
+          <Skeleton className="mt-6 h-11 w-36" />
         </div>
       ))}
     </div>

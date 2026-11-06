@@ -1,6 +1,6 @@
 import { ID_TYPES, TITLES, type CustomerProfile } from '@serene/proposals';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { useState, type FormEvent } from 'react';
 import { errorMessage } from '../api/client';
 import { accountApi, keys, meQuery } from '../api/queries';
@@ -8,7 +8,7 @@ import { formatDate, formatDigitalAddressInput, formatGhanaCardInput, formatPhon
 import { Banner, Button, PageSkeleton } from '../ui/components';
 import { Icon } from '../ui/icons';
 import { CheckboxRow, FieldShell, TextArea, TextInput } from '../ui/inputs';
-import { usePageTitle } from '../ui/shell';
+import { PAGE, TitleBand, usePageTitle } from '../ui/shell';
 import { dateBounds } from '../wizard/fields';
 
 type Editable = Pick<
@@ -111,175 +111,184 @@ function ProfileForm({ profile }: { profile: CustomerProfile }) {
   const dob = dateBounds({ minAge: 18, maxAge: 100 });
 
   return (
-    <div className="wrap wrap-narrow py-6 md:py-10">
-      <Link to="/" className="btn btn-ghost -ml-3 text-secondary">
-        <Icon name="arrowLeft" size={18} />
-        My account
-      </Link>
-      <h1 className="h-display mt-2">Your details</h1>
-      <p className="mt-2 text-secondary">
-        We fill these in on new proposals for you. Changes here don’t alter proposals you have already signed.
-      </p>
+    <>
+      <TitleBand
+        crumbs={[{ label: 'My account', to: '/' }, { label: 'Your details' }]}
+        title="Your details"
+        intro="We fill these in on new proposals for you. Changes here don’t alter proposals you have already signed."
+      />
+      <div className={PAGE}>
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,720px)_minmax(0,340px)] lg:gap-8">
+          <aside className="grid content-start gap-4 lg:order-last">
+            <div className="card card-pad">
+              <p className="text-[14px] leading-5 text-secondary">Mobile number (used to sign in)</p>
+              <p className="tnum mt-1 text-[20px] leading-7 font-semibold">
+                {formatPhoneLocal(profile.phone)}
+              </p>
+              <dl className="m-0 mt-4 grid grid-cols-2 gap-3 border-t border-border pt-4 text-[14px] leading-5">
+                <div className="min-w-0">
+                  <dt className="text-secondary">Customer number</dt>
+                  <dd className="tnum m-0 mt-1 font-medium">{profile.customerNo}</dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="text-secondary">Customer since</dt>
+                  <dd className="m-0 mt-1 font-medium">{formatDate(profile.createdAt)}</dd>
+                </div>
+              </dl>
+            </div>
+            <div className="card card-pad">
+              <p className="h-card-sm">Sign out</p>
+              <p className="card-text mt-1">You’ll need a new code to sign in again.</p>
+              <Button
+                variant="secondary"
+                className="mt-4"
+                onClick={() => void signOut()}
+                busy={signingOut}
+                busyLabel="Signing out"
+              >
+                <Icon name="logout" size={18} />
+                Sign out
+              </Button>
+            </div>
+          </aside>
 
-      <div className="card card-pad mt-6 flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-[13px] font-medium text-secondary">Mobile number (used to sign in)</p>
-          <p className="tnum mt-0.5 text-[18px] font-bold">{formatPhoneLocal(profile.phone)}</p>
-        </div>
-        <div className="text-right text-[13px] text-secondary">
-          <p>
-            Customer number <span className="tnum font-semibold text-ink">{profile.customerNo}</span>
-          </p>
-          <p>Since {formatDate(profile.createdAt)}</p>
-        </div>
-      </div>
-
-      <form onSubmit={submit} noValidate className="card card-pad mt-4 grid gap-6">
-        <div className="grid grid-cols-[110px_minmax(0,1fr)] gap-4 tab:grid-cols-[140px_minmax(0,1fr)]">
-          <FieldShell id="p-title" label="Title">
-            <select
-              id="p-title"
-              className="input"
-              value={v.title}
-              onChange={(e) => up('title', e.target.value)}
-              autoComplete="honorific-prefix"
-            >
-              <option value="">–</option>
-              {TITLES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </FieldShell>
-          <TextInput
-            id="p-fullName"
-            label="Full name"
-            value={v.fullName ?? ''}
-            onChange={(x) => up('fullName', x)}
-            autoComplete="name"
-            autoCapitalize="words"
-          />
-        </div>
-        <TextInput
-          id="p-email"
-          label="Email address"
-          type="email"
-          inputMode="email"
-          autoComplete="email"
-          value={v.email ?? ''}
-          onChange={(x) => up('email', x)}
-          error={errors.email}
-        />
-        <FieldShell id="p-dob" label="Date of birth">
-          <input
-            id="p-dob"
-            type="date"
-            className="input tnum max-w-xs"
-            min={dob.min}
-            max={dob.max}
-            value={v.dateOfBirth ?? ''}
-            onChange={(e) => up('dateOfBirth', e.target.value)}
-            autoComplete="bday"
-          />
-        </FieldShell>
-        <div className="grid gap-4 tab:grid-cols-2">
-          <FieldShell id="p-idType" label="ID type">
-            <select
-              id="p-idType"
-              className="input"
-              value={v.idType ?? ''}
-              onChange={(e) => up('idType', e.target.value)}
-            >
-              <option value="">Choose…</option>
-              {ID_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
-          </FieldShell>
-          <TextInput
-            id="p-idNumber"
-            label="ID number"
-            value={v.idNumber ?? ''}
-            onChange={(x) =>
-              up('idNumber', v.idType === 'ghana_card' ? formatGhanaCardInput(x) : x.toUpperCase())
-            }
-            placeholder={v.idType === 'ghana_card' ? 'GHA-123456789-0' : undefined}
-            autoCapitalize="characters"
-            autoComplete="off"
-            error={errors.idNumber}
-          />
-        </div>
-        <TextArea
-          label="Postal address"
-          value={v.postalAddress ?? ''}
-          onChange={(x) => up('postalAddress', x)}
-          rows={2}
-          maxLength={200}
-        />
-        <TextArea
-          label="Residential address"
-          value={v.residentialAddress ?? ''}
-          onChange={(x) => up('residentialAddress', x)}
-          rows={2}
-          maxLength={200}
-        />
-        <div className="grid gap-4 tab:grid-cols-2">
-          <TextInput
-            label="GhanaPost GPS address"
-            value={v.digitalAddress ?? ''}
-            onChange={(x) => up('digitalAddress', formatDigitalAddressInput(x))}
-            placeholder="GA-123-4567"
-            autoCapitalize="characters"
-            autoComplete="off"
-          />
-          <TextInput
-            label="Occupation"
-            value={v.occupation ?? ''}
-            onChange={(x) => up('occupation', x)}
-            autoComplete="organization-title"
-          />
-        </div>
-        <div className="border-t border-border-subtle pt-5">
-          <CheckboxRow checked={v.marketingConsent} onChange={(x) => up('marketingConsent', x)}>
-            Send me news and offers from Serene Insurance by SMS or email.
-          </CheckboxRow>
-        </div>
-        {failure && (
-          <Banner tone="danger" role="alert">
-            {failure}
-          </Banner>
-        )}
-        <div className="flex flex-wrap items-center gap-3">
-          <Button type="submit" size="lg" busy={busy} busyLabel="Saving">
-            Save changes
-          </Button>
-          <span
-            role="status"
-            aria-live="polite"
-            className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-success"
-          >
-            {saved && (
-              <>
-                <Icon name="check" size={18} /> Saved
-              </>
+          <form onSubmit={submit} noValidate className="card card-pad grid min-w-0 gap-6">
+            <div className="grid grid-cols-[96px_minmax(0,1fr)] gap-3 sm:grid-cols-[140px_minmax(0,1fr)] sm:gap-4">
+              <FieldShell id="p-title" label="Title">
+                <select
+                  id="p-title"
+                  className="input"
+                  value={v.title}
+                  onChange={(e) => up('title', e.target.value)}
+                  autoComplete="honorific-prefix"
+                >
+                  <option value="">–</option>
+                  {TITLES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </FieldShell>
+              <TextInput
+                id="p-fullName"
+                label="Full name"
+                value={v.fullName ?? ''}
+                onChange={(x) => up('fullName', x)}
+                autoComplete="name"
+                autoCapitalize="words"
+              />
+            </div>
+            <TextInput
+              id="p-email"
+              label="Email address"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={v.email ?? ''}
+              onChange={(x) => up('email', x)}
+              error={errors.email}
+            />
+            <FieldShell id="p-dob" label="Date of birth">
+              <input
+                id="p-dob"
+                type="date"
+                className="input tnum max-w-xs"
+                min={dob.min}
+                max={dob.max}
+                value={v.dateOfBirth ?? ''}
+                onChange={(e) => up('dateOfBirth', e.target.value)}
+                autoComplete="bday"
+              />
+            </FieldShell>
+            <div className="grid gap-4 tab:grid-cols-2">
+              <FieldShell id="p-idType" label="ID type">
+                <select
+                  id="p-idType"
+                  className="input"
+                  value={v.idType ?? ''}
+                  onChange={(e) => up('idType', e.target.value)}
+                >
+                  <option value="">Choose…</option>
+                  {ID_TYPES.map((t) => (
+                    <option key={t.value} value={t.value}>
+                      {t.label}
+                    </option>
+                  ))}
+                </select>
+              </FieldShell>
+              <TextInput
+                id="p-idNumber"
+                label="ID number"
+                value={v.idNumber ?? ''}
+                onChange={(x) =>
+                  up('idNumber', v.idType === 'ghana_card' ? formatGhanaCardInput(x) : x.toUpperCase())
+                }
+                placeholder={v.idType === 'ghana_card' ? 'GHA-123456789-0' : undefined}
+                autoCapitalize="characters"
+                autoComplete="off"
+                error={errors.idNumber}
+              />
+            </div>
+            <TextArea
+              label="Postal address"
+              value={v.postalAddress ?? ''}
+              onChange={(x) => up('postalAddress', x)}
+              rows={2}
+              maxLength={200}
+            />
+            <TextArea
+              label="Residential address"
+              value={v.residentialAddress ?? ''}
+              onChange={(x) => up('residentialAddress', x)}
+              rows={2}
+              maxLength={200}
+            />
+            <div className="grid gap-4 tab:grid-cols-2">
+              <TextInput
+                label="GhanaPost GPS address"
+                value={v.digitalAddress ?? ''}
+                onChange={(x) => up('digitalAddress', formatDigitalAddressInput(x))}
+                placeholder="GA-123-4567"
+                autoCapitalize="characters"
+                autoComplete="off"
+              />
+              <TextInput
+                label="Occupation"
+                value={v.occupation ?? ''}
+                onChange={(x) => up('occupation', x)}
+                autoComplete="organization-title"
+              />
+            </div>
+            <div className="border-t border-border-subtle pt-5">
+              <CheckboxRow checked={v.marketingConsent} onChange={(x) => up('marketingConsent', x)}>
+                Send me news and offers from Serene Insurance by SMS or email.
+              </CheckboxRow>
+            </div>
+            {failure && (
+              <Banner tone="danger" role="alert">
+                {failure}
+              </Banner>
             )}
-          </span>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button type="submit" size="lg" busy={busy} busyLabel="Saving">
+                Save changes
+              </Button>
+              <span
+                role="status"
+                aria-live="polite"
+                className="inline-flex items-center gap-1.5 text-[15px] font-semibold text-success"
+              >
+                {saved && (
+                  <>
+                    <Icon name="check" size={18} /> Saved
+                  </>
+                )}
+              </span>
+            </div>
+          </form>
         </div>
-      </form>
-
-      <div className="card card-pad mt-4 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="font-semibold">Sign out</p>
-          <p className="text-[14px] text-secondary">You’ll need a new code to sign in again.</p>
-        </div>
-        <Button variant="secondary" onClick={() => void signOut()} busy={signingOut} busyLabel="Signing out">
-          <Icon name="logout" size={18} />
-          Sign out
-        </Button>
       </div>
-    </div>
+    </>
   );
 }

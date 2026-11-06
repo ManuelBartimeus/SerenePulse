@@ -93,8 +93,8 @@ function FieldFrame({
   if (as === 'fieldset')
     return (
       <fieldset className="m-0 min-w-0 border-0 p-0" aria-describedby={field.help ? `${id}-hint` : undefined}>
-        <legend className="label float-left w-full p-0">{labelInner}</legend>
-        <div className="clear-both">{body}</div>
+        <legend className="label float-left mb-2 w-full p-0">{labelInner}</legend>
+        <div className="clear-both [&>*:first-child]:mt-0">{body}</div>
       </fieldset>
     );
   return (
@@ -341,10 +341,10 @@ function NumberInputField({ field, errors }: { field: NumberField; errors: reado
 
   return (
     <FieldFrame field={field} errors={errors}>
-      <div className={cx('flex gap-2', field.width !== 'full' && 'max-w-sm')}>
+      <div className={cx('flex min-w-0 gap-2', field.width !== 'full' && 'max-w-sm')}>
         {field.currency === 'select' && (
           <select
-            className="input w-28 flex-none"
+            className="input w-[96px] flex-none"
             aria-label="Currency"
             value={String(answers[`${field.id}__currency`] ?? 'GHS')}
             onChange={(e) => set(`${field.id}__currency`, e.target.value)}
@@ -522,11 +522,7 @@ function ChoiceCards({ field, errors }: { field: ChoiceField; errors: readonly F
   const twoCol = options.length > 3 && options.every((o) => !o.hint && o.label.length < 32);
   return (
     <FieldFrame field={field} errors={errors} as="fieldset">
-      <div
-        className={cx('grid gap-2.5', twoCol && 'tab:grid-cols-2')}
-        id={fieldDomId(field.id)}
-        tabIndex={-1}
-      >
+      <div className={cx('grid gap-2', twoCol && 'sm:grid-cols-2')} id={fieldDomId(field.id)} tabIndex={-1}>
         {options.map((o, i) => {
           const checked = picked.includes(o.value);
           const inputId = `${name}-${i}`;
@@ -536,7 +532,7 @@ function ChoiceCards({ field, errors }: { field: ChoiceField; errors: readonly F
                 id={inputId}
                 type={multi ? 'checkbox' : 'radio'}
                 name={name}
-                className={multi ? 'check mt-0.5' : undefined}
+                className={multi ? 'check mt-px' : undefined}
                 checked={checked}
                 aria-invalid={invalid || undefined}
                 onChange={(e) => {
@@ -547,7 +543,7 @@ function ChoiceCards({ field, errors }: { field: ChoiceField; errors: readonly F
               />
               {!multi && <span className="radio-dot mt-0.5" aria-hidden="true" />}
               <span className="min-w-0 flex-1">
-                <span className="block font-semibold leading-6">{o.label}</span>
+                <span className="block leading-[22px] font-medium break-words">{o.label}</span>
                 {o.hint && (
                   <span className="mt-0.5 block text-[14px] leading-5 text-secondary">{o.hint}</span>
                 )}
@@ -644,12 +640,12 @@ function ReadPanel({ field, errors }: { field: ReadField; errors: readonly Field
 
   return (
     <section
-      className="min-w-0 overflow-hidden rounded-2xl border border-border bg-white"
+      className="min-w-0 overflow-hidden rounded-[8px] border border-border bg-white"
       aria-labelledby={`${id}-title`}
     >
-      <div className="flex items-center gap-2 border-b border-border-subtle bg-subtle px-4 py-3 md:px-5">
+      <div className="flex items-center gap-2 border-b border-border bg-subtle px-4 py-3 md:px-5">
         <Icon name="document" size={20} className="flex-none text-brand" />
-        <h3 id={`${id}-title`} className="text-[16px] leading-6 font-bold">
+        <h3 id={`${id}-title`} className="min-w-0 text-[16px] leading-6 font-semibold break-words">
           {field.number && <span className="mr-1.5 text-secondary">{field.number}.</span>}
           {field.label}
         </h3>
@@ -660,7 +656,7 @@ function ReadPanel({ field, errors }: { field: ReadField; errors: readonly Field
         tabIndex={0}
         aria-label={`${field.label}, scrollable text`}
       >
-        <div className="grid max-w-prose gap-3 text-[16px] leading-[26px]">
+        <div className="prose-w grid gap-3 text-[16px] leading-[26px]">
           {field.paragraphs.map((p, i) => (
             <p key={i}>{p}</p>
           ))}
@@ -669,12 +665,15 @@ function ReadPanel({ field, errors }: { field: ReadField; errors: readonly Field
         {scrollable && !reachedEnd && <div className="read-fade" />}
       </div>
       {field.acknowledge && (
-        <div className="border-t border-border-subtle px-4 py-3.5 md:px-5">
-          <div className="flex items-start gap-3">
+        <div className="border-t border-border px-4 py-1.5 md:px-5">
+          <label
+            htmlFor={id}
+            className={cx('check-row !py-2.5', !reachedEnd && !acknowledged && 'cursor-not-allowed')}
+          >
             <input
               id={id}
               type="checkbox"
-              className="check mt-0.5"
+              className="check"
               checked={acknowledged}
               disabled={!reachedEnd && !acknowledged}
               onChange={(e) => set(field.id, e.target.checked ? true : undefined)}
@@ -684,15 +683,10 @@ function ReadPanel({ field, errors }: { field: ReadField; errors: readonly Field
                 undefined
               }
             />
-            <label
-              htmlFor={id}
-              className="min-w-0 flex-1 cursor-pointer text-[15px] leading-[22px] font-semibold"
-            >
-              {field.acknowledge}
-            </label>
-          </div>
+            <span className="min-w-0 flex-1 font-medium">{field.acknowledge}</span>
+          </label>
           {!reachedEnd && (
-            <p id={`${id}-scroll`} className="hint mt-2 flex items-center gap-1.5 pl-9">
+            <p id={`${id}-scroll`} className="hint mb-2 flex items-center gap-1.5 pl-[34px]">
               <Icon name="chevronDown" size={16} />
               Scroll to the end of the text to confirm.
             </p>

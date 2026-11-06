@@ -5,10 +5,6 @@ import { CONTACT } from '../content/site.mjs';
 
 export default function verify() {
   const body = h`<div class="wrap page narrow">
-  <header class="page-head">
-    <h1>Check a certificate</h1>
-    <p class="lede">Confirm that a Serene Insurance certificate is genuine and in force. We show the cover, the dates and the policyholder’s initials, never their full name.</p>
-  </header>
 
   <div class="verify-grid">
     <section class="panel" aria-labelledby="check-title">
@@ -55,6 +51,10 @@ export default function verify() {
     description:
       'Check that a Serene Insurance certificate is genuine and in force, or check any vehicle’s NIC motor sticker by dialling *920*57#.',
     crumbs: [['Check a certificate', '/verify/']],
+    band: {
+      title: 'Check a certificate',
+      lede: h`Confirm that a Serene Insurance certificate is genuine and in force. We show the cover, the dates and the policyholder’s initials, never their full name.`,
+    },
     body,
   };
 }

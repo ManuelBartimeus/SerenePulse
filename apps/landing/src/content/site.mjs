@@ -47,11 +47,63 @@ export const CONTACT = {
 export const mapsUrl = (address) =>
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 
-/** Main navigation (header). */
+/**
+ * Main navigation: four dropdowns (desktop) that become accordions in the phone menu. Each menu
+ * starts with its overview page, so the section is reachable in one tap even without the submenu.
+ */
 export const NAV = [
-  { href: '/insurance/#personal', label: 'Personal', match: '/insurance/' },
-  { href: '/insurance/#business', label: 'Business', match: '/insurance/' },
-  { href: '/claims/', label: 'Claims', match: '/claims/' },
-  { href: '/branches/', label: 'Branches', match: '/branches/' },
-  { href: '/help/', label: 'Help', match: '/help/' },
+  {
+    label: 'Personal',
+    id: 'personal',
+    links: [
+      ['All personal insurance', '/insurance/#personal'],
+      ['Motor insurance', '/insurance/motor/'],
+      ['Travel insurance', '/insurance/travel/'],
+      ['Home insurance', '/insurance/home/'],
+      ['Personal accident', '/insurance/personal-accident/'],
+      ['Fire & burglary', '/insurance/fire-and-burglary/'],
+      ['Burglary (private premises)', '/insurance/burglary-home/'],
+      ['Professional indemnity', '/insurance/professional-indemnity/'],
+    ],
+  },
+  {
+    label: 'Business',
+    id: 'business',
+    wide: true,
+    links: [
+      ['All business insurance', '/insurance/#business'],
+      ['Motor and fleets', '/insurance/motor/'],
+      ['Fire & special perils', '/insurance/fire/'],
+      ['Business interruption', '/insurance/business-interruption/'],
+      ['Public liability', '/insurance/public-liability/'],
+      ['Workmen’s compensation', '/insurance/workmens-compensation/'],
+      ['Group personal accident', '/insurance/group-personal-accident/'],
+      ['Marine cargo', '/insurance/marine-cargo/'],
+      ['Goods in transit', '/insurance/goods-in-transit/'],
+      ['Contractors’ all risks', '/insurance/contractors-all-risks/'],
+      ['Cyber crime', '/insurance/cyber/'],
+      ['Bonds & guarantees', '/insurance/bonds/'],
+    ],
+  },
+  {
+    label: 'Claims',
+    id: 'claims',
+    links: [
+      ['How to make a claim', '/claims/'],
+      ['Documents for each claim', '/claims/#documents'],
+      ['Unhappy with a decision', '/claims/#complaints'],
+      ['Check a certificate', '/verify/'],
+    ],
+  },
+  {
+    label: 'About',
+    id: 'about',
+    links: [
+      ['About Serene', '/about/'],
+      ['Branches', '/branches/'],
+      ['Contact us', '/contact/'],
+      ['Help and questions', '/help/'],
+      ['Proposal forms', '/downloads/'],
+    ],
+  },
 ];

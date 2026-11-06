@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 
 import { ctx, layout } from './src/lib/layout.mjs';
+import { loadPhotos } from './src/lib/photos.mjs';
 import { DOWNLOADS_DIR } from './src/lib/files.mjs';
 import home from './src/pages/home.mjs';
 import { insuranceIndex, productPage } from './src/pages/insurance.mjs';
@@ -104,7 +105,12 @@ const FILES = {
   team720: join(src, 'assets/serene-team-720.webp'),
   team1280: join(src, 'assets/serene-team-1280.webp'),
   icons: join(src, 'icons.svg'),
+  placeholder: join(src, 'assets/photo-placeholder.svg'),
+  // DM Sans has no cedi sign; scripts/make-cedi-font.py builds it from DM Sans's own C (see styles.css).
+  cedi: join(src, 'assets/fonts/dm-sans-cedi-wght.woff2'),
 };
+// Only the logo traces are rounded to whole units; icons and the placeholder keep their decimals.
+const ROUND = new Set(['logo', 'logoReversed']);
 const emitted = [];
 function emit(key, buf, ext) {
   const name = `${key}.${hash(buf)}${ext}`;
@@ -114,10 +120,36 @@ function emit(key, buf, ext) {
 }
 for (const [key, file] of Object.entries(FILES)) {
   let buf = readFileSync(file);
-  if (extname(file) === '.svg') buf = Buffer.from(optimiseSvg(buf.toString('utf8')));
+  if (ROUND.has(key)) buf = Buffer.from(optimiseSvg(buf.toString('utf8')));
+  else if (extname(file) === '.svg') buf = Buffer.from(buf.toString('utf8').replace(/>\s+</g, '><').trim());
   emit(key, buf, extname(file));
 }
-emit('css', Buffer.from(minifyCss(readFileSync(join(src, 'styles.css'), 'utf8'))), '.css');
+ctx.ownPhotos = {
+  tower: {
+    src: ctx.assets.tower800,
+    srcset: `${ctx.assets.tower480} 480w, ${ctx.assets.tower800} 800w`,
+    width: 800,
+    height: 584,
+    alt: 'SU Tower on Castle Road, Ridge, Accra, at dusk. Serene Insurance’s head office is on the fourth floor.',
+  },
+};
+
+// ---- Stock photography (src/assets/stock, see src/lib/photos.mjs) ------------------------------
+ctx.photos = loadPhotos(join(src, 'assets/stock'));
+for (const [slot, p] of Object.entries(ctx.photos)) {
+  p.urls = p.files.map((f) => {
+    const buf = readFileSync(f.path);
+    const name = `stock-${slot}-${f.width}.${hash(buf)}.webp`;
+    writeFileSync(join(dist, 'assets', name), buf);
+    emitted.push([`assets/${name}`, buf]);
+    return { url: `/assets/${name}`, width: f.width, height: f.height };
+  });
+}
+const css = readFileSync(join(src, 'styles.css'), 'utf8').replace(
+  "url('cedi.woff2')",
+  `url('${ctx.assets.cedi}')`,
+);
+emit('css', Buffer.from(minifyCss(css)), '.css');
 emit('js', Buffer.from(minifyJs(readFileSync(join(src, 'main.js'), 'utf8'))), '.js');
 
 ctx.origin = ORIGIN;
@@ -146,7 +178,8 @@ const seen = new Set();
 for (const page of pages) {
   if (seen.has(page.path)) throw new Error(`Duplicate page ${page.path}`);
   seen.add(page.path);
-  const html = minifyHtml(String(layout(page)));
+  // "GH₵ 557" never splits across two lines: a no-break space joins the sign and the amount.
+  const html = minifyHtml(String(layout(page))).replace(/GH₵ (?=\d)/g, 'GH₵\u00a0');
   if (/\sstyle="/.test(html)) throw new Error(`${page.path}: style attributes are blocked by the CSP`);
   for (const m of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) scriptHashes.add(cspHash(m[1]));
   for (const m of html.matchAll(/<style>([\s\S]*?)<\/style>/g)) styleHashes.add(cspHash(m[1]));
@@ -201,4 +234,10 @@ console.log(`styles             ${show('assets/css.')}`);
 console.log(`script             ${show('assets/js.')}`);
 console.log(`site total         ${String(raw).padStart(8)} B ${String(gz).padStart(7)} B gz`);
 console.log(`downloads          ${String(downloadBytes).padStart(8)} B`);
+const missing = new Set(
+  pages.flatMap((p) => [...String(layout(p)).matchAll(/data-slot="([^"]+)"/g)].map((m) => m[1])),
+);
+console.log(
+  `photos             ${Object.keys(ctx.photos).length} slot(s)${missing.size ? `; placeholders for ${[...missing].join(', ')}` : ''}`,
+);
 console.log(`csp                ${scriptHashes.size} script hash(es), ${styleHashes.size} style hash(es)`);

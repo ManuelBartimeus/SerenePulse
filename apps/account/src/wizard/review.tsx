@@ -23,8 +23,8 @@ export function ReviewStep({
         const rows = reviewRows(s.step, answers);
         return (
           <section key={s.id} className="card overflow-hidden" aria-labelledby={`rev-${s.id}`}>
-            <div className="flex items-center justify-between gap-3 border-b border-border-subtle px-5 py-3.5">
-              <h3 id={`rev-${s.id}`} className="text-[17px] font-bold">
+            <div className="flex items-center justify-between gap-3 border-b border-border bg-subtle px-5 py-2">
+              <h3 id={`rev-${s.id}`} className="h-card-sm min-w-0 break-words">
                 {s.title}
               </h3>
               <button
@@ -48,7 +48,7 @@ export function ReviewStep({
                     className="grid gap-1 px-5 py-3 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:gap-6"
                   >
                     <dt className="text-[14px] leading-5 text-secondary">{field.label}</dt>
-                    <dd className="m-0 min-w-0 text-[15px] leading-[22px] font-semibold break-words whitespace-pre-line">
+                    <dd className="m-0 min-w-0 text-[15px] leading-[22px] font-medium break-words whitespace-pre-line">
                       {field.type === 'file' && value ? (
                         <span className="flex flex-wrap gap-x-3 gap-y-1">
                           {value.split(', ').map((n, i) => (
@@ -84,7 +84,7 @@ function TableReview({ field, answers }: { field: TableField; answers: Answers }
     if (v === undefined || v === null || v === '') return '';
     if (col?.type === 'select') return col.options?.find((o) => o.value === v)?.label ?? String(v);
     if (col?.type === 'money')
-      return `GH₵ ${Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2 })}`;
+      return `GH₵\u00a0${Number(v).toLocaleString('en-GB', { minimumFractionDigits: 2 })}`;
     return `${String(v)}${col?.unit ? ` ${col.unit}` : ''}`;
   };
   return (
@@ -93,14 +93,14 @@ function TableReview({ field, answers }: { field: TableField; answers: Answers }
       <dd className="m-0 mt-2 grid gap-2">
         {rows.length === 0 && <span className="text-[15px] text-muted">None</span>}
         {rows.map((r, i) => (
-          <div key={i} className="rounded-xl bg-subtle px-3.5 py-2.5">
+          <div key={i} className="rounded-[8px] border border-border px-3.5 py-2.5">
             {rows.length > 1 && <p className="mb-1 text-[13px] font-bold text-secondary">{i + 1}</p>}
-            <dl className="m-0 grid gap-x-6 gap-y-1 tab:grid-cols-2">
+            <dl className="m-0 grid gap-x-6 gap-y-1 sm:grid-cols-2">
               {field.columns.map((c) =>
                 cell(c.id, r[c.id]) ? (
-                  <div key={c.id} className="flex min-w-0 justify-between gap-3 text-[14px] tab:block">
+                  <div key={c.id} className="flex min-w-0 justify-between gap-3 text-[14px] sm:block">
                     <dt className="text-secondary">{c.label}</dt>
-                    <dd className="m-0 text-right font-semibold break-words tab:text-left">
+                    <dd className="m-0 min-w-0 text-right font-medium break-words sm:text-left">
                       {cell(c.id, r[c.id])}
                     </dd>
                   </div>

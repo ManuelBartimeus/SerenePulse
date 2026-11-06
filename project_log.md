@@ -476,3 +476,125 @@ re-word the staff sign-in page now that the portal is more than feedback; explai
   * 600k-response load test;
   * official logo vector;
   * Kumasi North/Techiman phone number.
+
+**Deployed (commit `3c87ffd`, 2026-11-06 10:47 UTC):** CI passed (lint, types, unit, Edge Functions,
+build, bundle scan, pgTAP, SQL lint, both parity checks), then the automatic deploy ran migrations
+and the Worker on staging and production. Both `/healthz` report version `3c87ffddbe2e`, and `/`,
+`/account/`, `/admin/`, `/verify/` and `/customerfeedback` respond. The renamed staff email subjects
+were applied to hosted Auth with `node scripts/configure-auth.mjs staging|production`.
+
+---
+
+## 2026-11-06 (afternoon) — New landing page and the nic.gov.gh design standard
+
+User feedback on the deployed site, and what is being done:
+
+1. **"You completely obliterated the landing page… bring back the landing page and make sure it
+   looks perfect."** The rebuilt home page had become an information page. The user chose a **new**
+   landing page (not a restoration of the old one), built on top of everything added in the
+   morning: a split hero carousel with photo and two calls to action, the quick quote, quick
+   actions, product cards with photos, how buying works, the cover comparison, the claims promise,
+   why Serene, branches and certificate check, and a closing call to action.
+2. **Design standard: https://nic.gov.gh/** for the whole site and the customer app, "from their
+   font size, font type, to everything UI/UX except the theme colour". NIC's site was measured in
+   Chromium at 1440, 1024, 768, 390 and 360 px (computed styles, fonts, spacing, components,
+   menus, mobile behaviour). The result, mapped to Serene's colours and with NIC's own flaws
+   corrected, is **`docs/site/design-system.md`**. Key points:
+   * DM Sans throughout, with a tight heading scale (36 px section titles, 30 px page titles);
+   * a 1280 px container, and section padding of 48/64/80 px;
+   * a split colour-panel hero;
+   * quick-link cards with icon tiles;
+   * a 48×6 px accent bar;
+   * 6 px buttons and 12 px cards;
+   * a sticky 64 px header with dropdowns and a mobile sheet.
+   We deviate on purpose where NIC is weak: hero calls to action, 44 px touch targets, no type
+   shrink at tablet width, darker muted text for contrast, no one-line truncation on phones,
+   visible form labels, consistent card corners, capped prose width.
+3. **Typeface:** DM Sans replaces Plus Jakarta Sans across the platform (public site, customer app,
+   staff portal, feedback form). It is self-hosted (`packages/ui/assets/fonts/dm-sans-*.woff2`,
+   OFL), because the site's CSP allows fonts only from its own origin. Both the latin and
+   latin-ext subsets are served, because the cedi sign (₵, U+20B5) is in latin-ext.
+4. **Stock photography** for every product line: 16 photos from Pexels (Pexels License: free
+   commercial use, no attribution required), people-centred and West African where available.
+   * Logos, number plates and signs were softened.
+   * Each photo is served as WebP at 640/1024/1600 px (plus 2400 px and a 4:5 mobile crop for the
+     hero, and 480 px squares), 3.9 MB in all, with metadata stripped.
+   * Credits and honest alt text are in `apps/landing/src/assets/stock/CREDITS.md` and
+     `manifest.json`. Only the photos actually taken in Ghana are described as Ghanaian.
+5. **Mobile, again the first priority:** every page of the public site and every screen of the
+   customer app is tested at 320×568, 360×740, 375×667, 390×844, 393×873, 412×915, 430×932,
+   768×1024, 820×1180, 1024×768, 1280, 1440 and landscape 844×390. The checks cover:
+   * no horizontal scroll;
+   * no clipped text;
+   * 44 px tap targets;
+   * 16 px inputs;
+   * the on-screen keyboard not hiding the focused field;
+   * safe-area insets;
+   * the signature canvas and OTP boxes at 320 px;
+   * ₵ rendering in DM Sans.
+
+Also fixed: the scheduled **`health` workflow** had been failing every run since the move to one
+site address (2026-11-05), because it still checked the four retired Workers. It now checks the
+live site: `/healthz`, `/`, `/account/`, `/admin/`, `/customerfeedback` on production and `/healthz`
+on staging.
+
+### What was built (afternoon)
+
+* **Public website** (`apps/landing`, all 40 pages restyled):
+  * **New home page**, in order:
+    1. split hero carousel: blue panel with yellow accent bar, white heading and two calls to action,
+       beside a full-bleed photo. Three slides (motor; home & business; claims & verify), swipeable,
+       keyboard-accessible, 44 px controls, no autoplay;
+    2. the quick quote band;
+    3. quick links: buy motor, renew, claim, check a certificate;
+    4. photo product cards "For you" and "For your business";
+    5. how buying online works;
+    6. the motor cover comparison;
+    7. claims promise;
+    8. why Serene: icon row plus a navy band with yellow figures;
+    9. branches and the certificate check;
+    10. a closing navy call-to-action band.
+  * **Inner pages:** title bands with breadcrumbs (a "‹ Parent" back link on phones), product
+    photos, an "On this page" sidebar, tables that stack under 640 px, accordion FAQs.
+  * **Header and footer:** a sticky 64 px header with dropdowns and a phone menu sheet (44 px rows,
+    usable in landscape); a footer with WhatsApp and claims-line cards.
+  * Photo credits at `/about/#credits`.
+* **DM Sans has no cedi sign.** Every "GH₵" was silently drawn in a system font. A 1.8 KB companion
+  face containing only ₵ was generated from DM Sans's own "C" with the same weight axis
+  (`apps/landing/scripts/make-cedi-font.py`, permitted by the OFL). It is shared as
+  `packages/ui/assets/fonts/dm-sans-cedi-wght.woff2` and declared with `unicode-range: U+20B5` on the
+  site, the customer app, the staff portal and the survey. Tests read the font Chrome actually used
+  to draw prices. "GH₵" is joined to the amount with a no-break space. Vite builds no longer inline
+  `.woff2` files as `data:` URIs, which the CSP would block. Plus Jakarta Sans is removed everywhere.
+* **Customer app** (`apps/account`):
+  * NIC type scale, header and footer matching the public site; a phone menu drawer with 48 px rows;
+    title bands with breadcrumbs;
+  * dashboard quick links (Buy, Renew, Claim, Verify);
+  * NIC numbered steps for the wizard: a sticky list on desktop, "Step n of N" with a progress bar
+    and steps sheet on phones;
+  * a sticky action bar that measures itself so it never covers a field; focused fields scroll
+    clear of the keyboard;
+  * a signature canvas that redraws crisply on rotation;
+  * OTP boxes that fit at 320 px;
+  * tables that become cards under 640 px; 44 px targets; hover styles only on devices that hover.
+  * Input borders use `#8e8e95` (3.2:1) instead of NIC's `#e2e2e4`, which fails the WCAG 3:1 rule for
+    input boundaries.
+* **Staff portal and survey:** DM Sans only, no other visual change.
+
+### Verification (afternoon, on the combined code)
+
+* Lint, prettier and typecheck are clean. Unit tests pass: proposals 311, survey Worker 149,
+  portal 82, customer app 34, metrics 30, survey engine 25, contracts 7, Edge Functions 40.
+  `pnpm build`, the site assembly and the bundle scan (221 files) pass. No fonts are inlined.
+* Public site browser tests **185/185**: every page at 320, 390, 768 and 1440 with full checks
+  (overflow with the clip lifted, clipped text, tap targets and spacing, 16 px text and inputs,
+  headings, images, anchors under the sticky header, console/CSP errors, axe); overflow at 360,
+  375, 393, 412, 430, 820, 1024, 1280 and landscape 844×390; ₵ in DM Sans; touch-swipe carousel;
+  menu in portrait and landscape; quick quote; verify; no-JavaScript.
+* Customer app browser tests: all flows on phone-320, phone-360, phone-390, tablet-768 and
+  desktop-1440. The all-screens-at-all-13-viewports pass takes about 6 minutes, so it now has its
+  own 15-minute limit; it timed out once under load and then passed on its own. The purchase test
+  ran against the real Worker at 320, 360, 390, 768 and 1440 (5/5).
+* Survey browser tests 40/40 with the new font.
+* Screens reviewed by eye: the landing page at desktop and at every phone width, the public pages
+  at 360 and 1440, and the customer app's sign-in, wizard, documents, sign and success screens.

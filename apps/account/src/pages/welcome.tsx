@@ -5,7 +5,7 @@ import { errorMessage } from '../api/client';
 import { accountApi, keys, meQuery } from '../api/queries';
 import { formatPhoneLocal } from '../lib/format';
 import { Banner, Button } from '../ui/components';
-import { usePageTitle } from '../ui/shell';
+import { PAGE, TitleBand, usePageTitle } from '../ui/shell';
 import { TextInput } from '../ui/inputs';
 
 const route = getRouteApi('/app/welcome');
@@ -49,49 +49,56 @@ export function WelcomePage() {
   }
 
   return (
-    <div className="wrap wrap-narrow py-8 md:py-14">
-      <form onSubmit={submit} noValidate className="enter card card-pad">
-        <p className="eyebrow">Signed in as {me.data ? formatPhoneLocal(me.data.phone) : ''}</p>
-        <h1 className="h-display mt-2">About you</h1>
-        <p className="mt-3 text-secondary">
-          We use your name on your proposals and certificates, and email you copies. You can change these
-          later.
-        </p>
-        <div className="mt-8 grid gap-6">
-          <TextInput
-            id="welcome-name"
-            label="Full name"
-            hint="As on your Ghana Card or passport."
-            value={name}
-            onChange={setName}
-            autoComplete="name"
-            autoCapitalize="words"
-          />
-          <TextInput
-            id="welcome-email"
-            label="Email address (optional)"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            value={email}
-            onChange={setEmail}
-            error={errors.email}
-          />
-        </div>
-        {failure && (
-          <Banner tone="danger" className="mt-6" role="alert">
-            {failure}
-          </Banner>
-        )}
-        <div className="mt-8 flex flex-col-reverse gap-3 tab:flex-row tab:items-center tab:justify-between">
-          <button type="button" className="btn btn-ghost" onClick={() => void done()}>
-            Skip for now
-          </button>
-          <Button type="submit" size="lg" busy={busy} busyLabel="Saving">
-            Continue
-          </Button>
-        </div>
-      </form>
-    </div>
+    <>
+      <TitleBand
+        crumbs={[{ label: 'My account', to: '/' }, { label: 'About you' }]}
+        title="About you"
+        intro="We use your name on your proposals and certificates, and email you copies. You can change these later."
+      />
+      <div className={PAGE}>
+        <form onSubmit={submit} noValidate className="enter card card-pad max-w-[640px]">
+          <p className="eyebrow">
+            Signed in as{' '}
+            <span className="tnum font-semibold text-ink">
+              {me.data ? formatPhoneLocal(me.data.phone) : ''}
+            </span>
+          </p>
+          <div className="mt-6 grid gap-6">
+            <TextInput
+              id="welcome-name"
+              label="Full name"
+              hint="As on your Ghana Card or passport."
+              value={name}
+              onChange={setName}
+              autoComplete="name"
+              autoCapitalize="words"
+            />
+            <TextInput
+              id="welcome-email"
+              label="Email address (optional)"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={email}
+              onChange={setEmail}
+              error={errors.email}
+            />
+          </div>
+          {failure && (
+            <Banner tone="danger" className="mt-6" role="alert">
+              {failure}
+            </Banner>
+          )}
+          <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <button type="button" className="btn btn-ghost" onClick={() => void done()}>
+              Skip for now
+            </button>
+            <Button type="submit" size="lg" busy={busy} busyLabel="Saving">
+              Continue
+            </Button>
+          </div>
+        </form>
+      </div>
+    </>
   );
 }

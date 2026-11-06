@@ -22,10 +22,10 @@ import {
 import { Banner, Button, PageSkeleton, cx } from '../../ui/components';
 import { Icon } from '../../ui/icons';
 import { TextArea, TextInput } from '../../ui/inputs';
-import { usePageTitle } from '../../ui/shell';
+import { ActionBar, Breadcrumbs, usePageTitle } from '../../ui/shell';
 import type { UploadedFile } from '../../wizard/context';
 import { FileUploader } from '../../wizard/file-field';
-import { Stepper, type StepState } from '../../wizard/stepper';
+import { StepBar, StepList, type StepState } from '../../wizard/stepper';
 import { CLAIM_PRINCIPLE } from './status';
 
 const route = getRouteApi('/app/policies/$id/claim');
@@ -210,25 +210,39 @@ function ClaimFlow({ policy }: { policy: PolicySummary }) {
 
   return (
     <>
-      <div className="wrap pt-4 pb-6 lg:pt-6">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <p className="min-w-0 truncate text-[14px] text-secondary">
-            <span className="font-semibold text-ink">Claim</span> · {policy.productName} ·{' '}
-            <span className="tnum">{policy.policyNo}</span>
-          </p>
-          <Link
-            to="/policies/$id"
-            params={{ id: policy.id }}
-            className="btn btn-ghost btn-sm -mr-2 hidden md:inline-flex"
-          >
-            Cancel
-          </Link>
+      <div className="band band-compact">
+        <div className="wrap">
+          <Breadcrumbs
+            items={[
+              { label: 'My account', to: '/' },
+              { label: `Policy ${policy.policyNo}`, to: '/policies/$id', params: { id: policy.id } },
+              { label: 'Report a claim' },
+            ]}
+          />
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <p className="meta min-w-0">
+              <span className="hidden sm:inline">
+                <span className="font-medium text-ink">Claim</span> · {policy.productName} ·{' '}
+              </span>
+              <span className="tnum">{policy.policyNo}</span>
+            </p>
+            <Link to="/policies/$id" params={{ id: policy.id }} className="btn btn-ghost btn-sm -mr-3">
+              Cancel
+            </Link>
+          </div>
+          <div className="mt-2 lg:hidden">
+            <StepBar steps={stepStates} current={step} onGo={go} label="Claim progress" />
+          </div>
         </div>
-        <Stepper steps={stepStates} current={step} onGo={go} label="Claim progress" />
       </div>
 
-      <div className="wrap">
-        <div key={step} className="enter max-w-[760px]">
+      <div className="wrap grid gap-8 pt-6 sm:pt-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:pt-10">
+        <aside className="hidden lg:block">
+          <div className="sticky top-[88px]">
+            <StepList steps={stepStates} current={step} onGo={go} label="Claim progress" />
+          </div>
+        </aside>
+        <div key={step} className="enter min-w-0 max-w-[760px]">
           {step === 0 && (
             <>
               <h1 className="h-display outline-none" tabIndex={-1}>
@@ -246,7 +260,7 @@ function ClaimFlow({ policy }: { policy: PolicySummary }) {
                 aria-describedby={errors.claimType ? 'c-claimType-err' : undefined}
               >
                 <legend className="sr-only">Type of claim</legend>
-                <div className="grid gap-2.5 md:grid-cols-2" id="c-claimType" tabIndex={-1}>
+                <div className="grid gap-2.5 sm:grid-cols-2" id="c-claimType" tabIndex={-1}>
                   {types.map((t) => (
                     <label key={t.id} className={cx('option', errors.claimType && 'option-invalid')}>
                       <input
@@ -324,7 +338,7 @@ function ClaimFlow({ policy }: { policy: PolicySummary }) {
                   disabled={!!claim}
                 />
                 {isThirdParty(type.id) && (
-                  <div className="grid gap-5 rounded-2xl bg-subtle p-4">
+                  <div className="grid gap-5 rounded-[8px] bg-subtle p-4">
                     <p className="font-semibold">The other party</p>
                     <TextInput
                       id="c-tpName"
@@ -494,13 +508,14 @@ function ClaimFlow({ policy }: { policy: PolicySummary }) {
         </div>
       </div>
 
-      <div className="action-bar-spacer lg:hidden" aria-hidden="true" />
-      <div className="action-bar lg:hidden">
-        <div className="mx-auto flex max-w-[760px] gap-2">
+      <div className="h-12 lg:h-16" aria-hidden="true" />
+
+      <ActionBar>
+        <div className="flex gap-2">
           {step > 0 && !(claim && step === 2) && (
             <button
               type="button"
-              className="btn btn-secondary btn-lg btn-icon !h-[54px] !w-[54px] flex-none"
+              className="btn btn-secondary btn-lg btn-icon !h-12 !w-12 flex-none !p-0"
               onClick={() => go(step - 1)}
               aria-label="Back"
             >
@@ -517,7 +532,7 @@ function ClaimFlow({ policy }: { policy: PolicySummary }) {
             {nextLabel}
           </Button>
         </div>
-      </div>
+      </ActionBar>
     </>
   );
 }

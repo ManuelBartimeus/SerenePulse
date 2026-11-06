@@ -10,11 +10,6 @@ const UPDATED = '6 November 2026';
 function prose(title, intro, sections, path, description) {
   const body = h`<div class="wrap page narrow">
   <!-- LEGAL REVIEW: draft wording, to be approved by Serene Insurance's legal and compliance team before go-live. -->
-  <header class="page-head">
-    <h1>${title}</h1>
-    <p class="lede">${intro}</p>
-    <p class="hint">Last updated ${UPDATED}.</p>
-  </header>
   <nav class="toc toc-inline" aria-label="Contents">
     <ol>${sections.map(([id, t]) => h`<li><a href="#${id}">${t}</a></li>`)}</ol>
   </nav>
@@ -22,7 +17,14 @@ function prose(title, intro, sections, path, description) {
     ${sections.map(([id, t, content]) => h`<section id="${id}" aria-labelledby="${id}-title"><h2 id="${id}-title">${t}</h2>${content}</section>`)}
   </div>
 </div>`;
-  return { path, title, description, crumbs: [[title, path]], body };
+  return {
+    path,
+    title,
+    description,
+    crumbs: [[title, path]],
+    band: { title, lede: intro, meta: h`<p class="band-meta">Last updated ${UPDATED}.</p>` },
+    body,
+  };
 }
 
 export function privacy() {
@@ -172,10 +174,6 @@ export function terms() {
 
 export function notFound() {
   const body = h`<div class="wrap page narrow not-found">
-  <header class="page-head">
-    <h1>We can’t find that page</h1>
-    <p class="lede">The address may be mistyped, or the page has moved since our site was rebuilt.</p>
-  </header>
   <ul class="plain link-list">
     <li><a href="/#quote">Get a motor or travel price</a></li>
     <li><a href="/insurance/">All insurance products</a></li>
@@ -190,6 +188,10 @@ export function notFound() {
     title: 'Page not found',
     description: 'This page could not be found on the Serene Insurance website.',
     robots: 'noindex',
+    band: {
+      title: 'We can’t find that page',
+      lede: 'The address may be mistyped, or the page has moved since our site was rebuilt.',
+    },
     body,
   };
 }

@@ -166,21 +166,19 @@ export function CheckboxRow({
   const id = givenId ?? auto;
   return (
     <div>
-      <div className={cx('flex items-start gap-3 rounded-xl py-1', disabled && 'opacity-60')}>
+      <label htmlFor={id} className={cx('check-row', disabled && 'cursor-not-allowed opacity-60')}>
         <input
           id={id}
           type="checkbox"
-          className="check mt-0.5"
+          className="check"
           checked={checked}
           disabled={disabled}
           onChange={(e) => onChange(e.target.checked)}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-err` : undefined}
         />
-        <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer text-[15px] leading-[22px]">
-          {children}
-        </label>
-      </div>
+        <span className="min-w-0 flex-1">{children}</span>
+      </label>
       {error && <ErrorText id={`${id}-err`}>{error}</ErrorText>}
     </div>
   );

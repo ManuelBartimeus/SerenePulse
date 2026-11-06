@@ -1,16 +1,55 @@
 import { Link, type ErrorComponentProps } from '@tanstack/react-router';
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { Leaf } from '../ui/icons';
-import { usePageTitle } from '../ui/shell';
+import { Logo, SiteFooter, SiteHeader, useInShell, usePageTitle } from '../ui/shell';
 
-function ErrorLayout({ title, children, action }: { title: string; children: ReactNode; action: ReactNode }) {
+function ErrorBody({ title, children, action }: { title: string; children: ReactNode; action: ReactNode }) {
   return (
-    <main id="main" className="wrap wrap-narrow flex flex-1 flex-col justify-center py-16">
-      <Leaf className="text-brand" size={56} />
-      <h1 className="h-display mt-6">{title}</h1>
-      <div className="mt-3 max-w-prose text-[17px] leading-7 text-secondary">{children}</div>
-      <div className="mt-8 flex flex-wrap gap-3">{action}</div>
-    </main>
+    <>
+      <div className="band">
+        <div className="wrap">
+          <p className="kicker">Serene Insurance</p>
+          <h1 className="h-display mt-2">{title}</h1>
+        </div>
+      </div>
+      <div className="wrap py-10 lg:py-16">
+        <span className="accent-bar" aria-hidden="true" />
+        <div className="prose-w mt-5 text-[18px] leading-7 text-secondary">{children}</div>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">{action}</div>
+      </div>
+    </>
+  );
+}
+
+/** Inside the signed-in frame: body only. Elsewhere: the site header and footer around it. */
+function ErrorLayout(props: { title: string; children: ReactNode; action: ReactNode }) {
+  const inShell = useInShell();
+  if (inShell) return <ErrorBody {...props} />;
+  return (
+    <>
+      <SiteHeader />
+      <main id="main" className="flex-1">
+        <ErrorBody {...props} />
+      </main>
+      <SiteFooter />
+    </>
+  );
+}
+
+/** Outside the router (last-resort boundary): a plain frame with the logo only. */
+function BareErrorLayout(props: { title: string; children: ReactNode; action: ReactNode }) {
+  return (
+    <>
+      <header className="site-header">
+        <div className="wrap flex h-full items-center">
+          <a href="/" aria-label="Serene Insurance home" className="flex items-center">
+            <Logo className="h-9 w-auto sm:h-10" />
+          </a>
+        </div>
+      </header>
+      <main id="main" className="flex-1">
+        <ErrorBody {...props} />
+      </main>
+    </>
   );
 }
 
@@ -81,7 +120,7 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, { error
   override render() {
     if (!this.state.error) return this.props.children;
     return (
-      <ErrorLayout
+      <BareErrorLayout
         title="Something went wrong"
         action={
           <button type="button" className="btn btn-primary btn-lg" onClick={() => location.reload()}>
@@ -92,7 +131,7 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, { error
         <p>
           Your saved answers are safe. Reload the page, and if it keeps happening call us on 030 291 7444.
         </p>
-      </ErrorLayout>
+      </BareErrorLayout>
     );
   }
 }

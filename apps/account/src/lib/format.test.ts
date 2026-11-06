@@ -57,9 +57,9 @@ describe('phone numbers', () => {
 
 describe('money', () => {
   it('formats cedi amounts', () => {
-    expect(formatMoney(1234.5)).toBe('GH₵ 1,234.50');
-    expect(formatMoney(-50)).toBe('−GH₵ 50.00');
-    expect(formatMoney(10, 'USD')).toBe('US$ 10.00');
+    expect(formatMoney(1234.5)).toBe('GH₵\u00a01,234.50');
+    expect(formatMoney(-50)).toBe('−GH₵\u00a050.00');
+    expect(formatMoney(10, 'USD')).toBe('US$\u00a010.00');
   });
   it('groups thousands while typing and parses back', () => {
     expect(formatAmountInput('1234567')).toBe('1,234,567');

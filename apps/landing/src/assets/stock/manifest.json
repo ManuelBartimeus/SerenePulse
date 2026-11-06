@@ -1,0 +1,308 @@
+{
+  "hero": {
+    "alt": "Smiling Ghanaian family with their toddler son on a park bench in Kumasi",
+    "widths": [
+      640,
+      1024,
+      1600,
+      2400
+    ],
+    "aspect": "16:9",
+    "credit": "Photo by Emmanuel Yaw Opoku on Pexels",
+    "source": "https://www.pexels.com/photo/happy-family-on-bench-17682756/",
+    "license": "Pexels License",
+    "mobile": {
+      "aspect": "4:5",
+      "widths": [
+        640,
+        1024
+      ],
+      "stem": "hero-mobile"
+    }
+  },
+  "motor": {
+    "alt": "Smiling driver in sunglasses leaning out of his car window",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by Olasupo John on Pexels",
+    "source": "https://www.pexels.com/photo/a-man-in-sunglasses-driving-a-car-7569655/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "motor-sq"
+    }
+  },
+  "transport": {
+    "alt": "White trotro minibus carrying passengers along a sunny Ghanaian road",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by Kwaku Griffin on Pexels",
+    "source": "https://www.pexels.com/photo/wide-angle-photo-of-a-van-on-a-road-14346809/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "transport-sq"
+    }
+  },
+  "motorcycle": {
+    "alt": "Delivery rider in a helmet checking his phone on his scooter",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by RDNE Stock project on Pexels",
+    "source": "https://www.pexels.com/photo/delivery-man-smiling-while-looking-at-his-smartphone-7362949/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "motorcycle-sq"
+    }
+  },
+  "home": {
+    "alt": "Row of blue single-storey homes with palm trees and neat hedges",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by yahaya ahmed on Pexels",
+    "source": "https://www.pexels.com/photo/tropical-apartments-in-abuja-nigeria-34432716/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "home-sq"
+    }
+  },
+  "property": {
+    "alt": "Warehouse worker with a clipboard checking boxed stock on shelves",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by Tima Miroshnichenko on Pexels",
+    "source": "https://www.pexels.com/photo/man-checking-boxes-for-delivery-6169643/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "property-sq"
+    }
+  },
+  "travel": {
+    "alt": "Smiling traveller with a suitcase and passport walking through an airport corridor",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by Gustavo Fring on Pexels",
+    "source": "https://www.pexels.com/photo/stylish-man-with-suitcase-and-passport-walking-along-airport-corridor-4173219/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "travel-sq"
+    }
+  },
+  "health": {
+    "alt": "Doctor talking with a patient during a blood-pressure check",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by Ninthgrid on Pexels",
+    "source": "https://www.pexels.com/photo/doctor-consultation-with-blood-pressure-checkup-30677591/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "health-sq"
+    }
+  },
+  "business": {
+    "alt": "Shopkeeper standing in his well-stocked provisions shop",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by Kalz Michael on Pexels",
+    "source": "https://www.pexels.com/photo/small-shop-interior-with-local-shopkeeper-30848031/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "business-sq"
+    }
+  },
+  "marine": {
+    "alt": "Aerial view of a busy port at dusk with ships, cranes and containers",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by Tom Fisk on Pexels",
+    "source": "https://www.pexels.com/photo/bird-s-eye-view-of-canoes-during-dawn-dusk-3376481/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "marine-sq"
+    }
+  },
+  "engineering": {
+    "alt": "Construction workers in hard hats and hi-vis vests on a building site",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by This Viktọ on Pexels",
+    "source": "https://www.pexels.com/photo/construction-workers-on-the-building-site-10202865/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "engineering-sq"
+    }
+  },
+  "bonds": {
+    "alt": "Hands signing a document with a fountain pen",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by Cytonn Photography on Pexels",
+    "source": "https://www.pexels.com/photo/close-up-photography-of-person-writing-on-white-paper-955392/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "bonds-sq"
+    }
+  },
+  "liability": {
+    "alt": "Laughing couple sharing a meal in a busy restaurant",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by Veneka Dziruni on Pexels",
+    "source": "https://www.pexels.com/photo/happy-couple-dining-at-a-cozy-restaurant-36861445/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "liability-sq"
+    }
+  },
+  "claims": {
+    "alt": "Friendly support agent wearing a headset, ready to take a call",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by Jep Gambardella on Pexels",
+    "source": "https://www.pexels.com/photo/call-center-employee-in-office-7689639/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "claims-sq"
+    }
+  },
+  "app": {
+    "alt": "Woman in a headwrap using her smartphone at home",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by August de Richelieu on Pexels",
+    "source": "https://www.pexels.com/photo/a-woman-holding-a-smartphone-7433325/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "app-sq"
+    }
+  },
+  "about": {
+    "alt": "Colleagues working together around a laptop in a bright office",
+    "widths": [
+      640,
+      1024,
+      1600
+    ],
+    "aspect": "3:2",
+    "credit": "Photo by Edmond Dantès on Pexels",
+    "source": "https://www.pexels.com/photo/people-looking-at-the-screen-of-a-laptop-8547282/",
+    "license": "Pexels License",
+    "square": {
+      "aspect": "1:1",
+      "widths": [
+        480
+      ],
+      "stem": "about-sq"
+    }
+  }
+}

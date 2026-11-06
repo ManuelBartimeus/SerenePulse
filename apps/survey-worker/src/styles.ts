@@ -1,5 +1,5 @@
 // Inline critical CSS for every Worker-rendered page. Values are the packages/ui tokens (E1–E10);
-// the survey uses self-hosted Plus Jakarta Sans with font-display:swap, so first paint never waits for it.
+// the survey uses self-hosted DM Sans (two subsets plus a companion face for ₵, which DM Sans lacks) with font-display:swap, so first paint never waits for it.
 //
 // Recommendation scale (0–10): each digit sits dead centre. The number span used to inherit the
 // generic `.num{min-width:20px}` with left-aligned text, so single digits sat ~5px left of centre in
@@ -9,10 +9,12 @@
 // Submit overlay (.sv-ov): blurs and locks the form while the feedback is sent, then the spinner
 // morphs into a drawn tick (stroke-dashoffset) when the server confirms.
 export const CSS = `
-@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:200 800;font-display:swap;src:url('/fonts/plus-jakarta-sans-latin-wght-v5.woff2') format('woff2')}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:400 700;font-display:swap;src:url('/fonts/dm-sans-latin-ext-wght-v17.woff2') format('woff2');unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20B4,U+20B6-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:400 700;font-display:swap;src:url('/fonts/dm-sans-latin-wght-v17.woff2') format('woff2');unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:400 700;font-display:swap;src:url('/fonts/dm-sans-cedi-wght.woff2') format('woff2');unicode-range:U+20B5}
 :root{--brand:#1108bf;--brand-700:#0d0699;--brand-50:#ecebfb;--accent:#fbde04;--ink:#111;--text2:#545454;
 --border:#d3d3d3;--border-strong:#8a8a8a;--danger:#b42332;--danger-bg:#fdecee;--warn:#8a5a00;--warn-bg:#fff4db;
---subtle:#f7f7f7;--font:'Plus Jakarta Sans',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+--subtle:#f7f7f7;--font:'DM Sans',system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
 --ease:cubic-bezier(.2,0,0,1);--sel:120ms;--page:240ms;--fast:200ms}
 @media (prefers-reduced-motion:reduce){:root{--sel:0ms;--page:0ms;--fast:0ms}}
 *,*::before,*::after{box-sizing:border-box}

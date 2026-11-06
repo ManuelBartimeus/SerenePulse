@@ -13,9 +13,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { errorMessage } from '../api/client';
 import { accountApi, keys, proposalsQuery } from '../api/queries';
 import { formatDate } from '../lib/format';
-import { Banner, Button, Sheet, cx } from '../ui/components';
+import { Banner, Button, Sheet } from '../ui/components';
 import { Icon } from '../ui/icons';
-import { usePageTitle } from '../ui/shell';
+import { PAGE, TitleBand, usePageTitle } from '../ui/shell';
 import { CATEGORY_ICON } from './dashboard';
 
 const route = getRouteApi('/app/buy');
@@ -66,6 +66,8 @@ export function BuyPage() {
     return [...byCat.entries()];
   }, [audience]);
 
+  const shown = groups.filter(([c]) => !category || c === category).flatMap(([, products]) => products);
+
   function pick(p: Product) {
     setSelected(p);
     void navigate({
@@ -80,115 +82,116 @@ export function BuyPage() {
   }
 
   return (
-    <div className="wrap py-6 md:py-10">
-      <Link to="/" className="btn btn-ghost -ml-3 text-secondary">
-        <Icon name="arrowLeft" size={18} />
-        My account
-      </Link>
-      <h1 className="h-display mt-2">What would you like to insure?</h1>
-      <p className="mt-2 max-w-2xl text-[17px] leading-7 text-secondary">
-        Choose a cover to start the proposal form. You can save and come back at any time.
-      </p>
-
-      <div role="tablist" aria-label="Who is the cover for" className="segmented mt-6 !max-w-[360px]">
-        {(['individual', 'business'] as const).map((a) => (
-          <button
-            key={a}
-            role="tab"
-            type="button"
-            aria-selected={audience === a}
-            className={cx(
-              'min-h-[46px] rounded-[10px] font-semibold',
-              audience === a
-                ? 'bg-white text-brand shadow-[0_1px_2px_rgb(17_17_17/0.08),0_0_0_1px_var(--color-brand)]'
-                : 'text-secondary',
-            )}
-            onClick={() => {
-              setAudience(a);
-              setCategory(null);
-              void navigate({
-                to: '/buy',
-                search: a === 'business' ? { for: 'business' } : {},
-                replace: true,
-              });
-            }}
-          >
-            {a === 'individual' ? 'Individuals' : 'Businesses'}
-          </button>
-        ))}
-      </div>
-
-      <div
-        className="mt-6 -mx-[var(--gutter)] overflow-x-auto px-[var(--gutter)] [scrollbar-width:none]"
-        role="tabpanel"
-      >
-        <div className="flex w-max gap-2 pb-1" role="group" aria-label="Filter by type of cover">
-          {[null, ...groups.map(([c]) => c)].map((c) => {
-            const on = category === c;
-            return (
-              <button
-                key={c ?? 'all'}
-                type="button"
-                aria-pressed={on}
-                onClick={() => setCategory(c)}
-                className={cx(
-                  'inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 text-[15px] font-semibold whitespace-nowrap transition-colors',
-                  on ? 'border-ink bg-ink text-white' : 'border-border bg-white text-ink hover:border-ink',
-                )}
-              >
-                {c && <Icon name={CATEGORY_ICON[c] ?? 'shield'} size={18} />}
-                {c ? CATEGORY_LABELS[c] : 'All covers'}
-              </button>
-            );
-          })}
+    <>
+      <TitleBand
+        crumbs={[{ label: 'My account', to: '/' }, { label: 'Buy insurance' }]}
+        title="What would you like to insure?"
+        intro="Choose a cover to start the proposal form. You can save and come back at any time."
+      />
+      <div className={PAGE}>
+        <div className="grid gap-5 rounded-[12px] border border-border bg-subtle p-4 sm:p-5 lg:grid-cols-[auto_minmax(0,1fr)] lg:items-start lg:gap-8">
+          <div>
+            <p className="label" id="audience-label">
+              Who is the cover for?
+            </p>
+            <div
+              role="tablist"
+              aria-labelledby="audience-label"
+              className="segmented mt-2 bg-white !max-w-none sm:!max-w-[340px]"
+            >
+              {(['individual', 'business'] as const).map((a) => (
+                <button
+                  key={a}
+                  role="tab"
+                  type="button"
+                  aria-selected={audience === a}
+                  onClick={() => {
+                    setAudience(a);
+                    setCategory(null);
+                    void navigate({
+                      to: '/buy',
+                      search: a === 'business' ? { for: 'business' } : {},
+                      replace: true,
+                    });
+                  }}
+                >
+                  {a === 'individual' ? 'Individuals' : 'Businesses'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div role="tabpanel" className="min-w-0">
+            <p className="label" id="type-label">
+              Type of cover
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2" role="group" aria-labelledby="type-label">
+              {[null, ...groups.map(([c]) => c)].map((c) => {
+                const on = category === c;
+                return (
+                  <button
+                    key={c ?? 'all'}
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => setCategory(c)}
+                    className="filter-chip"
+                  >
+                    {c && <Icon name={CATEGORY_ICON[c] ?? 'shield'} size={18} />}
+                    {c ? CATEGORY_LABELS[c] : 'All covers'}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </div>
-      </div>
 
-      <ul className="m-0 mt-5 grid list-none gap-3 p-0 md:grid-cols-2 xl:grid-cols-3">
-        {groups
-          .filter(([c]) => !category || c === category)
-          .flatMap(([, products]) => products)
-          .map((p) => (
+        <p className="meta mt-8" role="status">
+          {shown.length} {shown.length === 1 ? 'cover' : 'covers'}
+          {category ? ` in ${CATEGORY_LABELS[category].toLowerCase()}` : ''}
+        </p>
+        <ul className="m-0 mt-4 grid list-none gap-5 p-0 sm:grid-cols-2 xl:grid-cols-3">
+          {shown.map((p) => (
             <li key={p.code}>
               <button
                 type="button"
                 onClick={() => pick(p)}
-                className="card group flex h-full w-full cursor-pointer flex-col items-start gap-2 p-5 text-left transition-[border-color,box-shadow] hover:border-brand hover:shadow-sm"
+                className="card card-link group flex h-full w-full cursor-pointer flex-col items-start p-5 text-left sm:p-6"
               >
-                <span className="flex w-full items-center justify-between gap-3">
-                  <span className="flex items-center gap-2 text-[13px] font-semibold text-secondary">
-                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-50 text-brand">
-                      <Icon name={CATEGORY_ICON[p.category] ?? 'shield'} size={18} />
-                    </span>
-                    {CATEGORY_LABELS[p.category]}
+                <span className="accent-bar" aria-hidden="true" />
+                <span className="mt-5 flex w-full flex-wrap items-start justify-between gap-x-3 gap-y-2">
+                  <span className="min-w-0 flex-1 basis-40 text-[18px] leading-7 font-semibold text-ink">
+                    {p.name}
                   </span>
-                  <Icon
-                    name="arrowRight"
-                    size={20}
-                    className="flex-none text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-brand"
-                  />
-                </span>
-                <span className="mt-1 text-[17px] leading-6 font-bold text-ink">{p.name}</span>
-                <span className="text-[15px] leading-[22px] text-secondary">{p.summary}</span>
-                <span className="mt-auto pt-2">
                   {p.purchase === 'instant' ? (
-                    <span className="chip chip-success">Instant price</span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-secondary">
-                      <Icon name="clock" size={16} />
-                      Priced by an underwriter
+                    <span className="chip chip-success flex-none">
+                      <Icon name="check" size={14} />
+                      Instant price
                     </span>
-                  )}
+                  ) : null}
+                </span>
+                <span className="mt-1 flex items-center gap-2 text-[14px] leading-5 text-secondary">
+                  <Icon
+                    name={CATEGORY_ICON[p.category] ?? 'shield'}
+                    size={16}
+                    className="flex-none text-brand"
+                  />
+                  {CATEGORY_LABELS[p.category]}
+                  {p.purchase !== 'instant' && ' · priced by an underwriter'}
+                </span>
+                <span className="card-text mt-3">{p.summary}</span>
+                <span className="more mt-auto pt-5 group-hover:underline">
+                  Start a proposal
+                  <Icon name="arrowRight" size={16} />
                 </span>
               </button>
             </li>
           ))}
-      </ul>
+        </ul>
+      </div>
 
       <Sheet open={!!selected} onClose={close} title={selected?.name ?? ''}>
         {selected && <ProductDetail product={selected} />}
       </Sheet>
-    </div>
+    </>
   );
 }
 
@@ -260,20 +263,18 @@ function ProductDetail({ product }: { product: Product }) {
 
       {available && form ? (
         <>
-          <h3 className="mt-6 text-[15px] font-bold">The form asks about</h3>
-          <ol className="m-0 mt-2 grid list-none gap-1.5 p-0">
+          <h3 className="h-card-sm mt-6">The form asks about</h3>
+          <ol className="m-0 mt-3 grid list-none gap-2 p-0">
             {form.steps.map((s, i) => (
-              <li key={s.id} className="flex items-center gap-3 text-[15px]">
-                <span className="tnum grid h-6 w-6 flex-none place-items-center rounded-full bg-surface-muted text-[12px] font-bold">
-                  {i + 1}
-                </span>
+              <li key={s.id} className="flex items-center gap-3 text-[15px] leading-[22px]">
+                <span className="step-num">{i + 1}</span>
                 {s.title}
               </li>
             ))}
           </ol>
           {documents.length > 0 && (
             <>
-              <h3 className="mt-6 text-[15px] font-bold">Have these ready</h3>
+              <h3 className="h-card-sm mt-6">Have these ready</h3>
               <ul className="m-0 mt-2 grid list-none gap-1.5 p-0 text-[15px]">
                 {documents.map((d) => (
                   <li key={d} className="flex gap-2">
@@ -290,14 +291,14 @@ function ProductDetail({ product }: { product: Product }) {
             </Banner>
           )}
           {drafts.length > 0 && (
-            <div className="mt-6 rounded-2xl bg-subtle p-4">
+            <div className="mt-6 rounded-[8px] bg-subtle p-4">
               <p className="text-[15px] font-semibold">You already started one</p>
               {drafts.map((d) => (
                 <Link
                   key={d.id}
                   to="/proposals/$id"
                   params={{ id: d.id }}
-                  className="mt-2 flex items-center justify-between gap-3 rounded-xl bg-white p-3 text-ink no-underline ring-1 ring-border-subtle hover:ring-brand"
+                  className="mt-2 flex flex-wrap items-center justify-between gap-3 rounded-[8px] bg-white p-3 text-ink no-underline ring-1 ring-border hover:text-ink hover:ring-brand"
                 >
                   <span className="min-w-0">
                     <span className="tnum block text-[15px] font-semibold">{d.proposalNo}</span>

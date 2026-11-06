@@ -39,11 +39,11 @@
   --color-nps-passive: #8a8a8a;
   --color-nps-promoter: var(--color-success);
 
-  /* E3 typography: Plus Jakarta Sans (self-hosted, font-display swap so first paint never waits on it; user direction 2026-11-05), system stack as fallback. */
+  /* E3 typography: DM Sans (self-hosted, font-display swap so first paint never waits on it; nic.gov.gh standard, user direction 2026-11-06), system stack as fallback. */
   --font-system:
     system-ui, -apple-system, 'Segoe UI Variable Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
-  --font-sans: 'Plus Jakarta Sans', var(--font-system);
+  --font-sans: 'DM Sans', var(--font-system);
   --text-display: 36px;
   --leading-display: 44px;
   --text-display-sm: 28px;

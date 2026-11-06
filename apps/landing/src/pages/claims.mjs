@@ -10,10 +10,6 @@ import { COMPANY, CONTACT } from '../content/site.mjs';
 export default function claims() {
   const typeById = Object.fromEntries(CLAIM_TYPES.map((t) => [t.id, t]));
   const body = h`<div class="wrap page">
-  <header class="page-head">
-    <h1>Make a claim</h1>
-    <p class="lede">Tell us as soon as something happens. Our rule is that no claim should wait in our books more than one week after we receive the last document from you.</p>
-  </header>
 
   <div class="claims-top">
     <section aria-labelledby="first-title" class="callout callout-strong">
@@ -76,7 +72,7 @@ export default function claims() {
     </div>
   </section>
 
-  <section class="section-block" aria-labelledby="docs-title">
+  <section class="section-block" id="documents" aria-labelledby="docs-title">
     <h2 id="docs-title">Documents for each type of claim</h2>
     <p>These are the documents the online claim form asks for. Optional items help us settle faster.</p>
     <div class="claim-groups">
@@ -128,6 +124,10 @@ export default function claims() {
       'How to make an insurance claim with Serene Insurance: what to do first, documents for each type of claim, time limits and what happens next. Our aim is to settle within a week of your last document.',
     section: 'Claims',
     crumbs: [['Claims', '/claims/']],
+    band: {
+      title: 'Make a claim',
+      lede: h`Tell us as soon as something happens. Our rule is that no claim should wait in our books more than one week after we receive the last document from you.`,
+    },
     body,
   };
 }

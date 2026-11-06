@@ -1,6 +1,7 @@
 // /insurance/ (all products) and /insurance/<slug>/ (one page per product in PRODUCTS).
 import { h, md, raw, cedi } from '../lib/html.mjs';
 import { icon } from '../lib/layout.mjs';
+import { photo } from '../lib/photos.mjs';
 import {
   buyUrl,
   coverComparison,
@@ -8,6 +9,7 @@ import {
   faqList,
   priceLine,
   productRow,
+  productSlot,
   stackTable,
   tick,
 } from '../lib/components.mjs';
@@ -41,34 +43,34 @@ export function insuranceIndex() {
     title,
     intro,
     audience,
-  ) => h`<section class="section-block" id="${id}" aria-labelledby="${id}-title">
-  <h2 id="${id}-title" class="section-title">${title}</h2>
-  <p class="section-intro">${intro}</p>
-  ${grouped(audience).map(
-    ([cat, list]) => h`<h3 class="cat-title">${CATEGORY_LABELS[cat]}</h3>
-  <ul class="prod-list prod-list-wide">${list.map((p) => productRow(p, { level: 4 }))}</ul>`,
-  )}
+  ) => h`<section class="section${audience === 'business' ? ' section-grey' : ''}" id="${id}" aria-labelledby="${id}-title">
+  <div class="wrap">
+    <div class="section-head"><div class="section-head-text">
+      <span class="bar" aria-hidden="true"></span>
+      <h2 id="${id}-title" class="section-title">${title}</h2>
+      <p class="section-lede">${intro}</p>
+    </div></div>
+    <ul class="prods">${grouped(audience).flatMap(([cat, list]) => list.map((p) => productRow(p, { level: 3, overline: CATEGORY_LABELS[cat] })))}</ul>
+  </div>
 </section>`;
   const nPersonal = PRODUCTS.filter((p) => p.audience.includes('individual')).length;
   const nBusiness = PRODUCTS.filter((p) => p.audience.includes('business')).length;
-  const body = h`<div class="wrap page">
-  <header class="page-head">
-    <h1>Insurance products</h1>
-    <p class="lede">All ${PRODUCTS.length} of Serene’s products can be applied for online. Four get an instant price; the rest are priced by an underwriter, usually within one working day. Prefer paper? Every proposal form is on the <a href="/downloads/">downloads page</a>.</p>
-    <nav class="jump" aria-label="On this page">
-      <a href="#personal">Personal (${nPersonal})</a>
-      <a href="#business">Business (${nBusiness})</a>
-    </nav>
-  </header>
-  ${section('personal', 'Personal insurance', 'For you, your family, your car and your home.', 'individual')}
-  ${section('business', 'Business insurance', 'For companies, partnerships, institutions and sole traders. Motor, fire and professional indemnity appear in both lists.', 'business')}
-</div>`;
+  const body = h`${section('personal', 'Personal insurance', 'For you, your family, your car and your home.', 'individual')}
+${section('business', 'Business insurance', 'For companies, partnerships, institutions and sole traders. Motor, fire and professional indemnity appear in both lists.', 'business')}`;
   return {
     path: '/insurance/',
     title: 'Insurance products',
     description: `All ${PRODUCTS.length} Serene Insurance products for individuals and businesses in Ghana: motor, travel, home, fire, liability, marine, engineering and bonds.`,
     section: 'Personal',
     crumbs: [['Insurance', '/insurance/']],
+    band: {
+      title: 'Insurance products',
+      lede: h`All ${PRODUCTS.length} of Serene’s products can be applied for online. Four get an instant price; the rest are priced by an underwriter, usually within one working day. Prefer paper? Every proposal form is on the <a href="/downloads/">downloads page</a>.`,
+      meta: h`<nav class="jump" aria-label="On this page">
+        <a class="btn btn-outline" href="#personal">${icon('user')}Personal (${nPersonal})</a>
+        <a class="btn btn-outline" href="#business">${icon('briefcase')}Business (${nBusiness})</a>
+      </nav>`,
+    },
     body,
   };
 }
@@ -131,6 +133,10 @@ function motorExtras() {
     rows: TPO_TARIFF.map(([label, amount, note]) => [label, cedi(amount), note]),
     className: 'tariff',
   })}
+  <figure class="inline-figure">
+    ${photo('motorcycle', { sizes: '(min-width: 1280px) 640px, (min-width: 1024px) 50vw, 100vw', ratio: [3, 2] })}
+    <figcaption>Third party only for a motorcycle is ${cedi(331)} a year, and ${cedi(431)} for a tricycle or aboboyaa.</figcaption>
+  </figure>
   <p class="source">Source: National Insurance Commission motor tariff effective ${TARIFF_DATE}. Agricultural vehicles and buses over 23 seats are priced by an underwriter.</p>
 </section>
 
@@ -214,7 +220,7 @@ function claimBlock(p) {
     </ul>
   </div>`,
   )}
-  <p><a href="/claims/#${claimAnchor(p)}">Full claims guidance${icon('arrow')}</a></p>
+  <p><a class="see-all" href="/claims/#${claimAnchor(p)}">Full claims guidance${icon('chevron-right')}</a></p>
 </section>`;
 }
 
@@ -232,30 +238,14 @@ export function productPage(p) {
     ['claim', 'Making a claim'],
   ].filter(Boolean);
 
-  const body = h`<div class="wrap page product">
-  <header class="page-head product-head">
-    <h1>${p.name}</h1>
-    <p class="lede">${p.intro}</p>
-  </header>
+  const quick = p.code === 'MTR' || p.code === 'TRV';
+  const body = h`<div class="wrap page-grid product-grid">
+  <nav class="toc" aria-label="On this page">
+    <p class="toc-title">On this page</p>
+    <ul>${toc.map(([id, label]) => h`<li><a href="#${id}">${label}</a></li>`)}</ul>
+  </nav>
 
-  <aside class="buy-box" aria-labelledby="buy-title">
-    <h2 id="buy-title" class="sr-only">Apply for ${p.name}</h2>
-    <p class="buy-price${p.purchase === 'instant' ? ' is-instant' : ''}">${priceLine(p)}</p>
-    ${p.slug === 'motor' ? h`<p class="buy-from">Third party from <strong>GH₵ 557</strong> a year for a private car</p>` : ''}
-    <a class="btn btn-primary btn-block" href="${buyUrl(p.code)}">Start your proposal</a>
-    ${p.code === 'MTR' || p.code === 'TRV' ? h`<a class="btn btn-secondary btn-block" href="${p.code === 'TRV' ? '/?quote=travel#quote' : '/#quote'}">Get a quick price</a>` : ''}
-    <ul class="buy-links">
-      <li><a href="/downloads/${p.file}" download>${icon('download')}<span>Download the paper form<span class="meta">${file.type}, ${file.size}</span></span></a></li>
-      <li><a href="/claims/#${claimAnchor(p)}">${icon('arrow')}Make a claim</a></li>
-      <li><a href="tel:${CONTACT.phoneTel}">${icon('phone')}Talk to us: ${CONTACT.phoneDisplay}</a></li>
-    </ul>
-  </aside>
-
-  <div class="product-body">
-    <nav class="toc" aria-label="On this page">
-      <ul>${toc.map(([id, label]) => h`<li><a href="#${id}">${label}</a></li>`)}</ul>
-    </nav>
-
+  <div class="content">
     ${
       p.covers.length
         ? h`<section id="covers" aria-labelledby="covers-title">
@@ -291,11 +281,24 @@ export function productPage(p) {
       related.length
         ? h`<section aria-labelledby="related-title" class="related">
       <h2 id="related-title">Related cover</h2>
-      <ul>${related.map((r) => h`<li><a href="/insurance/${r.slug}/">${r.name}</a><span>${r.summary}</span></li>`)}</ul>
+      <ul class="related-list">${related.map((r) => h`<li><a class="related-card" href="/insurance/${r.slug}/"><span class="related-name">${r.name}${icon('chevron-right')}</span><span class="related-text">${r.summary}</span></a></li>`)}</ul>
     </section>`
         : ''
     }
   </div>
+
+  <aside class="buy-box" aria-labelledby="buy-title">
+    <h2 id="buy-title" class="buy-title">Apply online or on paper</h2>
+    <p class="buy-price${p.purchase === 'instant' ? ' is-instant' : ''}">${icon(p.purchase === 'instant' ? 'calculator' : 'clock')}<span>${priceLine(p)}</span></p>
+    ${p.slug === 'motor' ? h`<p class="buy-from">Third party from <strong>GH₵ 557</strong> a year for a private car</p>` : ''}
+    <a class="btn btn-primary btn-block" href="${buyUrl(p.code)}">Start your proposal</a>
+    ${quick ? h`<a class="btn btn-outline btn-block" href="${p.code === 'TRV' ? '/?quote=travel#quote' : '/#quote'}">Get a quick price</a>` : ''}
+    <ul class="buy-links">
+      <li><a href="/downloads/${p.file}" download>${icon('download')}<span>Download the paper form<span class="meta">${file.type}, ${file.size}</span></span></a></li>
+      <li><a href="/claims/#${claimAnchor(p)}">${icon('file')}<span>Make a claim</span></a></li>
+      <li><a href="tel:${CONTACT.phoneTel}">${icon('phone')}<span>Talk to us: ${CONTACT.phoneDisplay}</span></a></li>
+    </ul>
+  </aside>
 </div>`;
 
   return {
@@ -307,6 +310,21 @@ export function productPage(p) {
       ['Insurance', '/insurance/'],
       [p.name, `/insurance/${p.slug}/`],
     ],
+    band: {
+      title: p.name,
+      lede: p.intro,
+      meta: h`<p class="band-meta${p.purchase === 'instant' ? ' is-instant' : ''}">${icon(p.purchase === 'instant' ? 'calculator' : 'clock')}<span>${priceLine(p)}</span></p>`,
+      actions: h`<a class="btn btn-primary btn-lg" href="${buyUrl(p.code)}">Start your proposal</a>${
+        quick
+          ? h`<a class="btn btn-outline btn-lg" href="${p.code === 'TRV' ? '/?quote=travel#quote' : '/#quote'}">Get a quick price</a>`
+          : h`<a class="btn btn-outline btn-lg" href="/downloads/${p.file}" download>${icon('download')}Paper form<span class="sr-only"> (${file.type}, ${file.size})</span></a>`
+      }`,
+      photo: photo(productSlot(p), {
+        eager: true,
+        sizes: '(min-width: 1280px) 560px, (min-width: 1024px) 44vw, 100vw',
+        ratio: [3, 2],
+      }),
+    },
     body,
   };
 }

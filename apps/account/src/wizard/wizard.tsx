@@ -38,13 +38,13 @@ import {
 } from '../lib/wizard';
 import { Banner, Button, LiveText, Sheet, cx } from '../ui/components';
 import { Icon } from '../ui/icons';
-import { usePageTitle } from '../ui/shell';
+import { ActionBar, Breadcrumbs, usePageTitle } from '../ui/shell';
 import { WizardContext, type UploadedFile, type WizardCtx } from './context';
 import { FieldRenderer } from './fields';
 import { QuoteBarButton, QuoteSheetBody, QuoteSidebar, type QuoteState } from './quote-panel';
 import { ReviewStep } from './review';
 import { SignStep, allConfirmations, validateSign, type SignErrors, type SignState } from './sign';
-import { Stepper, type StepState } from './stepper';
+import { StepBar, StepList, type StepState } from './stepper';
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'error' | 'offline';
 
@@ -445,27 +445,43 @@ export function Wizard({
 
   return (
     <WizardContext.Provider value={ctxWithErrors}>
-      <div className="wrap pt-4 pb-6 lg:pt-6">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <p className="min-w-0 truncate text-[14px] text-secondary">
-            <span className="font-semibold text-ink">{product.name}</span>
-            <span className="tnum"> · {detail.proposalNo}</span>
-          </p>
-          <div className="flex flex-none items-center gap-1">
-            <SaveIndicator state={save} />
-            <Link
-              to="/"
-              className="btn btn-ghost btn-sm -mr-2 hidden md:inline-flex"
-              onClick={() => void flush()}
-            >
-              Save and exit
-            </Link>
+      <div className="band band-compact">
+        <div className="wrap">
+          <Breadcrumbs items={[{ label: 'My account', to: '/' }, { label: product.name }]} />
+          <div className="mt-1 flex flex-wrap items-center justify-between gap-x-4">
+            <p className="meta min-w-0">
+              <span className="hidden font-medium text-ink sm:inline">{product.name} · </span>
+              <span className="tnum">{detail.proposalNo}</span>
+            </p>
+            <div className="-mr-3 ml-auto flex flex-wrap items-center justify-end gap-x-1">
+              <SaveIndicator state={save} />
+              <Link to="/" className="btn btn-ghost btn-sm" onClick={() => void flush()}>
+                Save and exit
+              </Link>
+            </div>
+          </div>
+          <div className="mt-2 lg:hidden">
+            <StepBar steps={steps} current={stepIndex} onGo={goTo} />
           </div>
         </div>
-        <Stepper steps={steps} current={stepIndex} onGo={goTo} />
       </div>
 
-      <div className={cx('wrap grid gap-8', instant && 'lg:grid-cols-[minmax(0,1fr)_340px]')}>
+      <div
+        className={cx(
+          'wrap grid gap-8 pt-6 sm:pt-8 lg:grid-cols-[240px_minmax(0,1fr)] lg:pt-10',
+          instant && 'xl:grid-cols-[240px_minmax(0,1fr)_320px]',
+        )}
+      >
+        <aside className="hidden lg:block">
+          <div className="sticky top-[88px] grid max-h-[calc(100dvh-104px)] gap-6 overflow-y-auto pb-2">
+            <StepList steps={steps} current={stepIndex} onGo={goTo} />
+            {instant && (
+              <div className="xl:hidden">
+                <QuoteSidebar state={quote} productName={product.name} />
+              </div>
+            )}
+          </div>
+        </aside>
         <div className="min-w-0 max-w-[760px]">
           {detail.status === 'info_requested' && detail.staffMessage && (
             <Banner tone="warning" title="Message from the underwriter" className="mb-5" icon="info">
@@ -490,7 +506,9 @@ export function Wizard({
                   : current.title}
             </h1>
             {current.kind === 'form' && current.step.description && (
-              <p className="mt-2 text-[16px] leading-6 text-secondary">{current.step.description}</p>
+              <p className="prose-w mt-2 text-[16px] leading-[26px] text-secondary">
+                {current.step.description}
+              </p>
             )}
             {current.kind === 'review' && (
               <p className="mt-2 text-secondary">Make sure everything is right. You can edit any section.</p>
@@ -504,9 +522,9 @@ export function Wizard({
                 id="error-summary"
                 tabIndex={-1}
                 role="alert"
-                className="mt-6 rounded-2xl border-2 border-danger bg-white p-4 md:p-5"
+                className="mt-6 rounded-[8px] border-2 border-danger bg-white p-4 md:p-5"
               >
-                <h2 className="flex items-center gap-2 text-[17px] font-bold text-danger">
+                <h2 className="flex items-center gap-2 text-[18px] leading-7 font-semibold text-danger">
                   <Icon name="alert" size={20} />
                   {current.kind === 'sign'
                     ? 'Before you can sign'
@@ -519,7 +537,7 @@ export function Wizard({
                     <li key={`${e.field}-${e.row ?? ''}-${e.column ?? ''}-${i}`}>
                       <a
                         href={`#${errorTargetId(e)}`}
-                        className="text-[15px] font-semibold"
+                        className="flex min-h-11 items-center py-1 text-[15px] leading-[22px] font-medium"
                         onClick={(ev) => {
                           ev.preventDefault();
                           const el = document.getElementById(errorTargetId(e));
@@ -575,15 +593,16 @@ export function Wizard({
                       {(sec.title || sec.description) && (
                         <div className="mb-5">
                           {sec.title && (
-                            <h2 id={`sec-${sec.id}`} className="h-section">
-                              {sec.number && <span className="mr-1.5 text-secondary">{sec.number}.</span>}
-                              {sentenceCase(sec.title)}
-                            </h2>
+                            <>
+                              <h2 id={`sec-${sec.id}`} className="h-section">
+                                {sec.number && <span className="mr-1.5 text-secondary">{sec.number}.</span>}
+                                {sentenceCase(sec.title)}
+                              </h2>
+                              <span className="accent-bar mt-3" aria-hidden="true" />
+                            </>
                           )}
                           {sec.description && (
-                            <p className="mt-1 text-[15px] leading-[22px] text-secondary">
-                              {sec.description}
-                            </p>
+                            <p className={cx('card-text', sec.title ? 'mt-3' : '')}>{sec.description}</p>
                           )}
                         </div>
                       )}
@@ -648,49 +667,47 @@ export function Wizard({
           </div>
         </div>
         {instant && (
-          <div className="hidden lg:block">
-            <QuoteSidebar state={quote} productName={product.name} />
+          <div className="hidden xl:block">
+            <div className="sticky top-[88px]">
+              <QuoteSidebar state={quote} productName={product.name} />
+            </div>
           </div>
         )}
       </div>
+      <div className="h-12 lg:h-16" aria-hidden="true" />
 
       {/* Phones and tablets: sticky bottom action bar within thumb reach */}
-      <div className="action-bar-spacer lg:hidden" aria-hidden="true" />
-      <div className="action-bar lg:hidden">
-        <div className="mx-auto max-w-[760px]">
-          {instant && <QuoteBarButton state={quote} onOpen={() => setQuoteOpen(true)} />}
-          <div className="flex gap-2">
-            {!isFirst && (
-              <button
-                type="button"
-                className="btn btn-secondary btn-lg btn-icon !h-[54px] !w-[54px] flex-none"
-                onClick={onBack}
-                aria-label="Back"
-              >
-                <Icon name="arrowLeft" />
-              </button>
-            )}
-            <Button
-              size="lg"
-              block
-              onClick={onContinue}
-              busy={submitting}
-              busyLabel="Submitting"
-              className="min-w-0"
+      <ActionBar>
+        {instant && <QuoteBarButton state={quote} onOpen={() => setQuoteOpen(true)} />}
+        <div className="flex gap-2">
+          {!isFirst && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-lg btn-icon !h-12 !w-12 flex-none !p-0"
+              onClick={onBack}
+              aria-label="Back"
             >
-              <span className="truncate">
-                {current.kind === 'sign'
-                  ? instant
-                    ? 'Sign and pay'
-                    : 'Sign and send'
-                  : current.kind === 'review'
-                    ? 'Continue to sign'
-                    : 'Continue'}
-              </span>
-            </Button>
-          </div>
+              <Icon name="arrowLeft" />
+            </button>
+          )}
+          <Button
+            size="lg"
+            block
+            onClick={onContinue}
+            busy={submitting}
+            busyLabel="Submitting"
+            className="min-w-0 !px-4"
+          >
+            {current.kind === 'sign'
+              ? instant
+                ? 'Sign and pay'
+                : 'Sign and send'
+              : current.kind === 'review'
+                ? 'Continue to sign'
+                : 'Continue'}
+          </Button>
         </div>
-      </div>
+      </ActionBar>
       {instant && (
         <Sheet open={quoteOpen} onClose={() => setQuoteOpen(false)} title="Your price">
           <QuoteSheetBody state={quote} />

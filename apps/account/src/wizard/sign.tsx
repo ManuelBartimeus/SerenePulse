@@ -78,14 +78,14 @@ export function SignStep({
   return (
     <div className="grid gap-6">
       <section className="card overflow-hidden" aria-labelledby="decl-h">
-        <div className="flex items-center gap-2 border-b border-border-subtle bg-subtle px-5 py-3.5">
-          <Icon name="document" size={20} className="text-brand" />
-          <h3 id="decl-h" className="text-[17px] font-bold">
+        <div className="flex items-center gap-2 border-b border-border bg-subtle px-5 py-3">
+          <Icon name="document" size={20} className="flex-none text-brand" />
+          <h3 id="decl-h" className="h-card-sm min-w-0 break-words">
             {d.title ? d.title.charAt(0) + d.title.slice(1).toLowerCase() : 'Declaration'}
           </h3>
         </div>
-        <div className="read-panel !max-h-[360px] px-5 py-4" tabIndex={0} aria-label="Declaration text">
-          <div className="grid max-w-prose gap-3 text-[16px] leading-[26px]">
+        <div className="read-panel px-5 py-4" tabIndex={0} aria-label="Declaration text">
+          <div className="prose-w grid gap-3 text-[16px] leading-[26px]">
             {d.paragraphs.map((p, i) => (
               <p key={i}>{p}</p>
             ))}
@@ -105,8 +105,9 @@ export function SignStep({
         <h3 id="confirm-h" className="h-section">
           Please confirm
         </h3>
-        <p className="hint mt-1">Tick each statement. All are needed to sign.</p>
-        <div className="mt-4 grid gap-3">
+        <span className="accent-bar mt-3" aria-hidden="true" />
+        <p className="hint mt-3">Tick each statement. All are needed to sign.</p>
+        <div className="mt-3 grid gap-1">
           {allConfirmations(form).map((c) => (
             <CheckboxRow
               key={c.id}
@@ -121,7 +122,7 @@ export function SignStep({
             </CheckboxRow>
           ))}
         </div>
-        <div className="mt-5 border-t border-border-subtle pt-4">
+        <div className="mt-4 border-t border-border pt-3">
           <CheckboxRow
             checked={state.marketingConsent}
             onChange={(v) => setState((st) => ({ ...st, marketingConsent: v }))}
@@ -138,6 +139,7 @@ export function SignStep({
         <h3 id="sig-h" className="h-section">
           {d.signatureLabel.replace(/’s Signature$/, '’s signature')}
         </h3>
+        <span className="accent-bar mt-3" aria-hidden="true" />
         <div className="mt-4 max-w-md">
           <label htmlFor="f-signed-name" className="label">
             Full name of signatory

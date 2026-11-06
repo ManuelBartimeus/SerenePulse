@@ -9,7 +9,7 @@ import { downloadProposal, type ProposalDocumentResponse } from '../lib/document
 import { formatDate, formatDateTime, formatMoney } from '../lib/format';
 import { Banner, Button, PageSkeleton, StatusChip, STATUS_LABEL, cx } from '../ui/components';
 import { Icon } from '../ui/icons';
-import { usePageTitle } from '../ui/shell';
+import { PAGE, TitleBand, usePageTitle } from '../ui/shell';
 import { QuoteBreakdown } from '../wizard/quote-panel';
 import { Wizard } from '../wizard/wizard';
 import { NotFoundPage } from './errors';
@@ -138,173 +138,179 @@ export function ProposalStatusView({
   }
 
   return (
-    <div className="wrap py-6 md:py-10">
-      <Link to="/" className="btn btn-ghost -ml-3 text-secondary">
-        <Icon name="arrowLeft" size={18} />
-        My account
-      </Link>
+    <>
+      <TitleBand
+        crumbs={[{ label: 'My account', to: '/' }, { label: `Proposal ${detail.proposalNo}` }]}
+        title={detail.productName}
+        aside={<StatusChip status={detail.status} />}
+        intro={
+          <>
+            Proposal <span className="tnum font-medium text-ink">{detail.proposalNo}</span>
+            {detail.insuredSubject ? ` · ${detail.insuredSubject}` : ''}
+          </>
+        }
+      />
+      <div className={PAGE}>
+        {justSubmitted && withUnderwriter && (
+          <div
+            className="enter mb-8 rounded-[12px] border border-[#b7dcc8] bg-success-bg p-5 md:p-7"
+            role="status"
+          >
+            <span className="grid h-12 w-12 place-items-center rounded-full bg-[var(--success-strong)] text-white">
+              <Icon name="check" size={26} />
+            </span>
+            <p className="mt-4 text-[20px] leading-7 font-bold text-[#00492b] md:text-[24px] md:leading-8">
+              Proposal <span className="tnum">{detail.proposalNo}</span> is with our underwriters.
+            </p>
+            <p className="mt-1 text-[16px] text-[#00492b]">
+              We’ll text you when your price is ready. This is usually within 1 working day.
+            </p>
+          </div>
+        )}
 
-      {justSubmitted && withUnderwriter && (
-        <div className="enter mt-4 rounded-[24px] bg-success-bg p-5 md:p-7" role="status">
-          <span className="grid h-12 w-12 place-items-center rounded-full bg-[var(--success-strong)] text-white">
-            <Icon name="check" size={26} />
-          </span>
-          <p className="mt-4 text-[20px] leading-7 font-bold text-[#0f4a22] md:text-[22px]">
-            Proposal <span className="tnum">{detail.proposalNo}</span> is with our underwriters.
-          </p>
-          <p className="mt-1 text-[16px] text-[#155b2a]">
-            We’ll text you when your price is ready. This is usually within 1 working day.
-          </p>
-        </div>
-      )}
-
-      <div className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <h1 className="h-display">{detail.productName}</h1>
-        <StatusChip status={detail.status} />
-      </div>
-      <p className="mt-1 text-secondary">
-        Proposal <span className="tnum font-semibold">{detail.proposalNo}</span>
-        {detail.insuredSubject ? ` · ${detail.insuredSubject}` : ''}
-      </p>
-
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <div className="grid min-w-0 content-start gap-6">
-          {NEXT_TEXT[detail.status] && !(justSubmitted && withUnderwriter) && (
-            <Banner
-              tone={detail.status === 'declined' ? 'danger' : detail.status === 'quoted' ? 'success' : 'info'}
-            >
-              {NEXT_TEXT[detail.status]}
-            </Banner>
-          )}
-          {detail.staffMessage && (
-            <section className="card card-pad">
-              <h2 className="h-section">Message from the underwriter</h2>
-              <p className="mt-2 whitespace-pre-line">{detail.staffMessage}</p>
-            </section>
-          )}
-          {detail.status === 'quoted' && detail.quote && (
-            <section className="card card-pad">
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="h-section">Your price</h2>
-                <span className="text-[14px] text-secondary">
-                  Valid until {formatDate(detail.quote.validUntil)}
-                </span>
-              </div>
-              {detail.quote.underwriterNote && (
-                <p className="mt-2 rounded-xl bg-subtle p-3 text-[15px]">{detail.quote.underwriterNote}</p>
-              )}
-              <div className="mt-4">
-                <QuoteBreakdown quote={detail.quote} />
-              </div>
-              <Link
-                to="/proposals/$id/pay"
-                params={{ id: detail.id }}
-                className="btn btn-primary btn-lg mt-6 w-full tab:w-auto"
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:gap-8">
+          <div className="grid min-w-0 content-start gap-6">
+            {NEXT_TEXT[detail.status] && !(justSubmitted && withUnderwriter) && (
+              <Banner
+                tone={
+                  detail.status === 'declined' ? 'danger' : detail.status === 'quoted' ? 'success' : 'info'
+                }
               >
-                Pay {formatMoney(detail.quote.total)}
+                {NEXT_TEXT[detail.status]}
+              </Banner>
+            )}
+            {detail.staffMessage && (
+              <section className="card card-pad">
+                <h2 className="h-section">Message from the underwriter</h2>
+                <p className="mt-2 whitespace-pre-line">{detail.staffMessage}</p>
+              </section>
+            )}
+            {detail.status === 'quoted' && detail.quote && (
+              <section className="card card-pad">
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="h-section">Your price</h2>
+                  <span className="text-[14px] text-secondary">
+                    Valid until {formatDate(detail.quote.validUntil)}
+                  </span>
+                </div>
+                {detail.quote.underwriterNote && (
+                  <p className="mt-2 rounded-[8px] bg-subtle p-3 text-[14px] leading-[22px]">
+                    {detail.quote.underwriterNote}
+                  </p>
+                )}
+                <div className="mt-4">
+                  <QuoteBreakdown quote={detail.quote} />
+                </div>
+                <Link
+                  to="/proposals/$id/pay"
+                  params={{ id: detail.id }}
+                  className="btn btn-primary btn-lg mt-6 w-full sm:w-auto"
+                >
+                  Pay {formatMoney(detail.quote.total)}
+                  <Icon name="arrowRight" size={18} />
+                </Link>
+              </section>
+            )}
+            {detail.status === 'issued' && detail.policyId && (
+              <Link
+                to="/policies/$id"
+                params={{ id: detail.policyId }}
+                className="btn btn-primary btn-lg w-full sm:w-fit"
+              >
+                View your policy
                 <Icon name="arrowRight" size={18} />
               </Link>
-            </section>
-          )}
-          {detail.status === 'issued' && detail.policyId && (
-            <Link
-              to="/policies/$id"
-              params={{ id: detail.policyId }}
-              className="btn btn-primary btn-lg w-full tab:w-fit"
-            >
-              View your policy
-              <Icon name="arrowRight" size={18} />
-            </Link>
-          )}
-          <section className="card card-pad" aria-labelledby="hist-h">
-            <h2 id="hist-h" className="h-section">
-              History
-            </h2>
-            <ol className="m-0 mt-5 list-none p-0">
-              {history.map((ev, i) => {
-                const last = i === history.length - 1;
-                return (
-                  <li key={`${ev.text}-${ev.at}-${i}`} className="relative flex gap-4 pb-6 last:pb-0">
-                    {!last && (
-                      <span
-                        className="absolute top-7 bottom-0 left-[13px] w-[2px] bg-border-subtle"
-                        aria-hidden="true"
-                      />
-                    )}
-                    <span
-                      className={cx(
-                        'relative z-10 grid h-7 w-7 flex-none place-items-center rounded-full',
-                        last ? 'bg-brand text-white' : 'bg-brand-50 text-brand',
+            )}
+            <section className="card card-pad" aria-labelledby="hist-h">
+              <h2 id="hist-h" className="h-section">
+                History
+              </h2>
+              <ol className="m-0 mt-5 list-none p-0">
+                {history.map((ev, i) => {
+                  const last = i === history.length - 1;
+                  return (
+                    <li key={`${ev.text}-${ev.at}-${i}`} className="relative flex gap-4 pb-6 last:pb-0">
+                      {!last && (
+                        <span
+                          className="absolute top-7 bottom-0 left-[13px] w-[2px] bg-border"
+                          aria-hidden="true"
+                        />
                       )}
-                    >
-                      <Icon name="check" size={15} />
-                    </span>
-                    <div className="min-w-0 pt-0.5">
-                      <p className="font-semibold">{ev.text}</p>
-                      <p className="text-[14px] text-secondary">{formatDateTime(ev.at)}</p>
-                      {ev.note && <p className="mt-0.5 text-[14px] text-secondary">{ev.note}</p>}
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
-        </div>
-        <aside className="grid content-start gap-4">
-          <section className="card card-pad">
-            <h2 className="h-section">Documents</h2>
-            <Button
-              variant="secondary"
-              className="mt-4 w-full"
-              onClick={() => void download()}
-              busy={busy}
-              busyLabel="Preparing PDF"
-            >
-              <Icon name="download" size={18} />
-              Proposal form (PDF)
-            </Button>
-            {err && (
-              <p className="error-text mt-2" role="alert">
-                {err}
-              </p>
-            )}
-            {detail.files.length > 0 && (
-              <>
-                <h3 className="mt-5 text-[14px] font-bold text-secondary">Attached</h3>
-                <ul className="m-0 mt-2 grid list-none gap-1.5 p-0 text-[14px]">
-                  {detail.files.map((f) => (
-                    <li key={f.id} className="flex min-w-0 items-center gap-2">
-                      <Icon
-                        name={f.mime === 'application/pdf' ? 'pdf' : 'file'}
-                        size={16}
-                        className="flex-none text-secondary"
-                      />
-                      <span className="truncate">{f.name}</span>
+                      <span
+                        className={cx(
+                          'relative z-10 grid h-7 w-7 flex-none place-items-center rounded-full',
+                          last ? 'bg-brand text-white' : 'bg-accent-surface text-brand ring-1 ring-brand-100',
+                        )}
+                      >
+                        <Icon name="check" size={15} />
+                      </span>
+                      <div className="min-w-0 pt-0.5">
+                        <p className="font-medium">{ev.text}</p>
+                        <p className="text-[14px] text-secondary">{formatDateTime(ev.at)}</p>
+                        {ev.note && <p className="mt-0.5 text-[14px] text-secondary">{ev.note}</p>}
+                      </div>
                     </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </section>
-          {detail.signature && (
-            <section className="card card-pad text-[14px]">
-              <h2 className="h-section">Signed</h2>
-              <p className="mt-2">
-                {detail.signature.signedName} · {formatDateTime(detail.signature.signedAt)}
-              </p>
+                  );
+                })}
+              </ol>
             </section>
-          )}
-          {(detail.status === 'submitted' ||
-            detail.status === 'under_review' ||
-            detail.status === 'quoted') && (
-            <CancelProposal
-              id={detail.id}
-              onDone={() => void qc.invalidateQueries({ queryKey: keys.proposal(detail.id) })}
-            />
-          )}
-        </aside>
+          </div>
+          <aside className="grid content-start gap-4">
+            <section className="card card-pad">
+              <h2 className="h-section">Documents</h2>
+              <Button
+                variant="secondary"
+                className="mt-4 w-full"
+                onClick={() => void download()}
+                busy={busy}
+                busyLabel="Preparing PDF"
+              >
+                <Icon name="download" size={18} />
+                Proposal form (PDF)
+              </Button>
+              {err && (
+                <p className="error-text mt-2" role="alert">
+                  {err}
+                </p>
+              )}
+              {detail.files.length > 0 && (
+                <>
+                  <h3 className="mt-5 text-[14px] font-bold text-secondary">Attached</h3>
+                  <ul className="m-0 mt-2 grid list-none gap-1.5 p-0 text-[14px]">
+                    {detail.files.map((f) => (
+                      <li key={f.id} className="flex min-w-0 items-center gap-2">
+                        <Icon
+                          name={f.mime === 'application/pdf' ? 'pdf' : 'file'}
+                          size={16}
+                          className="flex-none text-secondary"
+                        />
+                        <span className="truncate">{f.name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </section>
+            {detail.signature && (
+              <section className="card card-pad text-[14px]">
+                <h2 className="h-section">Signed</h2>
+                <p className="mt-2">
+                  {detail.signature.signedName} · {formatDateTime(detail.signature.signedAt)}
+                </p>
+              </section>
+            )}
+            {(detail.status === 'submitted' ||
+              detail.status === 'under_review' ||
+              detail.status === 'quoted') && (
+              <CancelProposal
+                id={detail.id}
+                onDone={() => void qc.invalidateQueries({ queryKey: keys.proposal(detail.id) })}
+              />
+            )}
+          </aside>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

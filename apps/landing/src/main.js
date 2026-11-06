@@ -28,7 +28,7 @@
   }
   function money(n) {
     var v = Number(n) || 0;
-    return 'GH₵ ' + v.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return 'GH₵\u00a0' + v.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
   function iso(d) {
     var m = String(d.getMonth() + 1).padStart(2, '0');
@@ -56,61 +56,229 @@
     return d;
   }
 
-  // ---- Header: compact on scroll, full-height mobile menu --------------------------------------
-  var header = doc.querySelector('[data-header]');
-  if (header) {
-    var onScroll = function () {
-      header.classList.toggle('is-compact', window.scrollY > 24);
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-  }
+  // ---- Header: dropdowns (desktop) and the menu sheet with accordions (phones and tablets) --------
+  var nav = doc.querySelector('[data-nav]');
   var menuBtn = doc.querySelector('.menu-btn');
-  var nav = doc.getElementById('site-nav');
-  if (menuBtn && nav && header) {
+  var scrim = doc.querySelector('.nav-scrim');
+  var wide = window.matchMedia('(min-width: 1024px)');
+  var hoverable = window.matchMedia('(hover: hover) and (pointer: fine)');
+  var items = nav ? Array.prototype.slice.call(nav.querySelectorAll('[data-menu]')) : [];
+  function setItem(item, open) {
+    item.classList.toggle('is-open', open);
+    item.querySelector('.nav-top').setAttribute('aria-expanded', String(open));
+  }
+  function closeItems(except) {
+    items.forEach(function (it) {
+      if (it !== except) setItem(it, false);
+    });
+  }
+  items.forEach(function (item) {
+    var top = item.querySelector('.nav-top');
+    var timer = null;
+    var hoverAt = 0;
+    top.addEventListener('click', function () {
+      // A click that follows the hover that just opened the menu keeps it open.
+      var justHovered = Date.now() - hoverAt < 600;
+      var open = justHovered || !item.classList.contains('is-open');
+      hoverAt = 0;
+      if (wide.matches) closeItems(item);
+      setItem(item, open);
+    });
+    item.addEventListener('mouseenter', function () {
+      if (!wide.matches || !hoverable.matches) return;
+      clearTimeout(timer);
+      closeItems(item);
+      if (!item.classList.contains('is-open')) hoverAt = Date.now();
+      setItem(item, true);
+    });
+    item.addEventListener('mouseleave', function () {
+      if (!wide.matches || !hoverable.matches) return;
+      timer = setTimeout(function () {
+        setItem(item, false);
+      }, 150);
+    });
+    item.addEventListener('focusout', function (e) {
+      if (wide.matches && !item.contains(e.relatedTarget)) setItem(item, false);
+    });
+  });
+  doc.addEventListener('click', function (e) {
+    if (wide.matches && nav && !nav.contains(e.target)) closeItems(null);
+  });
+  var sheetOpen = function () {
+    return nav && nav.classList.contains('is-open');
+  };
+  function setSheet(open, focusBack) {
+    nav.classList.toggle('is-open', open);
+    doc.documentElement.classList.toggle('menu-open', open);
+    menuBtn.setAttribute('aria-expanded', String(open));
+    if (scrim) scrim.hidden = !open;
+    if (open) {
+      var current = nav.querySelector('.nav-top.is-current');
+      if (current && !current.parentNode.classList.contains('is-open')) setItem(current.parentNode, true);
+      var first = nav.querySelector('.sheet-close');
+      if (first) first.focus();
+    } else if (focusBack) {
+      menuBtn.focus();
+    }
+  }
+  if (nav && menuBtn) {
     menuBtn.hidden = false;
-    var label = menuBtn.querySelector('.menu-label');
-    var setOpen = function (open, focusBack) {
-      nav.classList.toggle('is-open', open);
-      doc.documentElement.classList.toggle('menu-open', open);
-      menuBtn.setAttribute('aria-expanded', String(open));
-      if (label) label.textContent = open ? 'Close' : 'Menu';
-      if (open) {
-        var first = nav.querySelector('a');
-        if (first) first.focus();
-      } else if (focusBack) {
-        menuBtn.focus();
-      }
-    };
     menuBtn.addEventListener('click', function () {
-      setOpen(menuBtn.getAttribute('aria-expanded') !== 'true', true);
+      setSheet(!sheetOpen(), true);
+    });
+    Array.prototype.forEach.call(doc.querySelectorAll('[data-nav-close]'), function (c) {
+      c.addEventListener('click', function () {
+        setSheet(false, true);
+      });
     });
     nav.addEventListener('click', function (e) {
-      if (e.target.closest && e.target.closest('a')) setOpen(false, false);
+      if (sheetOpen() && e.target.closest && e.target.closest('a')) setSheet(false, false);
     });
-    doc.addEventListener('keydown', function (e) {
-      if (!nav.classList.contains('is-open')) return;
-      if (e.key === 'Escape') {
-        setOpen(false, true);
+    if (wide.addEventListener)
+      wide.addEventListener('change', function () {
+        if (sheetOpen()) setSheet(false, false);
+        closeItems(null);
+      });
+  }
+  doc.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      if (sheetOpen()) {
+        setSheet(false, true);
         return;
       }
-      if (e.key !== 'Tab') return;
-      // Keep focus inside the open menu and its toggle button.
-      var items = [menuBtn].concat(Array.prototype.slice.call(nav.querySelectorAll('a')));
-      var i = items.indexOf(doc.activeElement);
-      if (e.shiftKey && i <= 0) {
+      var open = items.filter(function (it) {
+        return it.classList.contains('is-open');
+      })[0];
+      if (open && wide.matches) {
+        setItem(open, false);
+        open.querySelector('.nav-top').focus();
+      }
+      return;
+    }
+    if (e.key !== 'Tab' || !sheetOpen()) return;
+    // Keep focus inside the open sheet.
+    var focusables = Array.prototype.slice.call(nav.querySelectorAll('button, a')).filter(function (x) {
+      return x.getClientRects().length;
+    });
+    var i = focusables.indexOf(doc.activeElement);
+    if (e.shiftKey && i <= 0) {
+      e.preventDefault();
+      focusables[focusables.length - 1].focus();
+    } else if (!e.shiftKey && i === focusables.length - 1) {
+      e.preventDefault();
+      focusables[0].focus();
+    }
+  });
+
+  // ---- Hero carousel: native scroll-snap (swipe works without JS); dots, arrows and keys added here -
+  var carousel = doc.querySelector('[data-carousel]');
+  if (carousel) {
+    var track = carousel.querySelector('[data-track]');
+    var slides = Array.prototype.slice.call(carousel.querySelectorAll('[data-slide]'));
+    var dots = Array.prototype.slice.call(carousel.querySelectorAll('[data-dot]'));
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var index = 0;
+    var mark = function (n) {
+      index = n;
+      slides.forEach(function (sl, i) {
+        sl.classList.toggle('is-current', i === n);
+      });
+      dots.forEach(function (d, i) {
+        if (i === n) d.setAttribute('aria-current', 'true');
+        else d.removeAttribute('aria-current');
+      });
+    };
+    var go = function (n) {
+      var target = (n + slides.length) % slides.length;
+      track.scrollTo({ left: slides[target].offsetLeft, behavior: reduce.matches ? 'auto' : 'smooth' });
+      mark(target);
+    };
+    dots.forEach(function (d, i) {
+      d.addEventListener('click', function () {
+        go(i);
+      });
+    });
+    carousel.querySelector('[data-prev]').addEventListener('click', function () {
+      go(index - 1);
+    });
+    carousel.querySelector('[data-next]').addEventListener('click', function () {
+      go(index + 1);
+    });
+    carousel.addEventListener('keydown', function (e) {
+      var t = e.target;
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT')) return;
+      if (e.key === 'ArrowRight') {
         e.preventDefault();
-        items[items.length - 1].focus();
-      } else if (!e.shiftKey && i === items.length - 1) {
+        go(index + 1);
+      } else if (e.key === 'ArrowLeft') {
         e.preventDefault();
-        items[0].focus();
+        go(index - 1);
       }
     });
-    var wide = window.matchMedia('(min-width: 1024px)');
-    var onWide = function () {
-      if (wide.matches) setOpen(false, false);
+    var settle = null;
+    var touching = false;
+    // When scrolling stops (and no finger is down), make sure a slide is aligned: scroll-snap does this
+    // natively, this is the safety net for browsers that leave a swipe half-way.
+    var align = function () {
+      var n = Math.round(track.scrollLeft / Math.max(1, track.clientWidth));
+      if (n < 0 || n >= slides.length) return;
+      if (n !== index) mark(n);
+      if (!touching && Math.abs(track.scrollLeft - slides[n].offsetLeft) > 1) go(n);
     };
-    if (wide.addEventListener) wide.addEventListener('change', onWide);
+    track.addEventListener(
+      'touchstart',
+      function () {
+        touching = true;
+      },
+      { passive: true },
+    );
+    track.addEventListener(
+      'touchend',
+      function () {
+        touching = false;
+        clearTimeout(settle);
+        settle = setTimeout(align, 150);
+      },
+      { passive: true },
+    );
+    track.addEventListener(
+      'scroll',
+      function () {
+        clearTimeout(settle);
+        settle = setTimeout(align, 150);
+      },
+      { passive: true },
+    );
+    // Tabbing into a slide that is off screen brings it into view.
+    slides.forEach(function (sl, i) {
+      sl.addEventListener('focusin', function () {
+        if (i !== index) go(i);
+      });
+    });
+  }
+
+  // ---- "On this page" lists: highlight the section being read --------------------------------------
+  var tocLinks = Array.prototype.slice.call(doc.querySelectorAll('.toc a[href^="#"]'));
+  if (tocLinks.length && 'IntersectionObserver' in window) {
+    var byId = {};
+    tocLinks.forEach(function (a) {
+      byId[a.getAttribute('href').slice(1)] = a;
+    });
+    var spy = new window.IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (en) {
+          if (!en.isIntersecting) return;
+          tocLinks.forEach(function (a) {
+            a.classList.toggle('is-active', a === byId[en.target.id]);
+          });
+        });
+      },
+      { rootMargin: '-80px 0px -70% 0px' },
+    );
+    Object.keys(byId).forEach(function (id) {
+      var t = doc.getElementById(id);
+      if (t) spy.observe(t);
+    });
   }
 
   // ---- Tabs (quick quote) ------------------------------------------------------------------------
@@ -246,7 +414,7 @@
       text: continueLabel || 'Continue',
     });
     go.addEventListener('click', onContinue);
-    var back = el('button', { type: 'button', class: 'btn btn-quiet btn-block', text: 'Change details' });
+    var back = el('button', { type: 'button', class: 'btn btn-outline btn-block', text: 'Change details' });
     back.addEventListener('click', onChange);
     return el('div', { class: 'qq-actions' }, [go, back]);
   }

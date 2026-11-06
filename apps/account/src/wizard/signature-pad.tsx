@@ -44,7 +44,7 @@ export function SignaturePad({
       <div
         role="tablist"
         aria-label="How do you want to sign?"
-        className="segmented !max-w-none !grid-cols-3 tab:!max-w-[400px]"
+        className="segmented !max-w-none !grid-cols-3 sm:!max-w-[400px]"
       >
         {TABS.map((t) => (
           <button
@@ -54,12 +54,6 @@ export function SignaturePad({
             aria-controls={`sig-panel-${t.id}`}
             aria-selected={tab === t.id}
             type="button"
-            className={cx(
-              'min-h-[46px] cursor-pointer rounded-[10px] border-0 font-semibold',
-              tab === t.id
-                ? 'bg-white text-brand shadow-[0_1px_2px_rgb(17_17_17/0.08),0_0_0_1px_var(--color-brand)]'
-                : 'bg-transparent text-secondary',
-            )}
             onClick={() => {
               setTab(t.id);
               onChange(null);
@@ -90,7 +84,7 @@ function Surface({
   return (
     <div
       className={cx(
-        'relative overflow-hidden rounded-2xl border bg-white',
+        'relative overflow-hidden rounded-[8px] border bg-white',
         invalid ? 'border-danger' : 'border-border-strong',
         className,
       )}
@@ -127,12 +121,26 @@ function DrawPad({ onChange, invalid }: { onChange: (v: SignatureValue | null) =
     drawStrokes(ctx, drawing.current ? [...strokes.current, drawing.current] : strokes.current, LINE);
   };
 
+  // The canvas follows its container. On a resize (rotation, a wider column) the backing store is
+  // re-allocated at the current pixel ratio and the strokes are redrawn as vectors, so the ink stays
+  // crisp; when the box changes size the strokes are scaled uniformly so the whole signature stays
+  // inside and keeps its shape.
+  const size = useRef<{ w: number; h: number } | null>(null);
   useLayoutEffect(() => {
     const c = canvas.current;
     if (!c) return;
     const resize = () => {
       const r = c.getBoundingClientRect();
+      if (r.width === 0 || r.height === 0) return;
       const dpr = window.devicePixelRatio || 1;
+      const prev = size.current;
+      if (prev && (prev.w !== r.width || prev.h !== r.height) && strokes.current.length) {
+        const k = Math.min(r.width / prev.w, r.height / prev.h);
+        const scale = (s: Point[]) => s.map((p) => ({ x: p.x * k, y: p.y * k }));
+        strokes.current = strokes.current.map(scale);
+        if (drawing.current) drawing.current = scale(drawing.current);
+      }
+      size.current = { w: r.width, h: r.height };
       c.width = Math.round(r.width * dpr);
       c.height = Math.round(r.height * dpr);
       redraw();
@@ -140,7 +148,21 @@ function DrawPad({ onChange, invalid }: { onChange: (v: SignatureValue | null) =
     resize();
     const ro = new ResizeObserver(resize);
     ro.observe(c);
-    return () => ro.disconnect();
+    // Pixel ratio changes (zoom, moving to another screen) don't resize the box.
+    let mq = window.matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+    const onDpr = () => {
+      resize();
+      mq.removeEventListener('change', onDpr);
+      mq = window.matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+      mq.addEventListener('change', onDpr);
+    };
+    mq.addEventListener('change', onDpr);
+    window.addEventListener('orientationchange', resize);
+    return () => {
+      ro.disconnect();
+      mq.removeEventListener('change', onDpr);
+      window.removeEventListener('orientationchange', resize);
+    };
   }, []);
 
   const emit = () => {
@@ -169,7 +191,8 @@ function DrawPad({ onChange, invalid }: { onChange: (v: SignatureValue | null) =
       <Surface invalid={invalid}>
         <canvas
           ref={canvas}
-          className="block h-[200px] w-full cursor-crosshair touch-none select-none md:h-[220px]"
+          data-signature-canvas
+          className="block aspect-[5/2] max-h-[240px] min-h-[160px] w-full cursor-crosshair touch-none select-none"
           role="img"
           aria-label={
             count
@@ -208,7 +231,7 @@ function DrawPad({ onChange, invalid }: { onChange: (v: SignatureValue | null) =
           }}
         />
       </Surface>
-      <div className="mt-2 flex items-center justify-between gap-2">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <p className="hint">
           {tooShort
             ? 'That looks too short for a signature. Please sign in full.'
@@ -331,7 +354,7 @@ function UploadPad({
     <div>
       <div
         className={cx(
-          'checker grid min-h-[200px] place-items-center rounded-2xl border p-4',
+          'checker grid min-h-[200px] place-items-center rounded-[8px] border p-4',
           invalid ? 'border-danger' : 'border-border-strong',
         )}
       >
@@ -339,7 +362,7 @@ function UploadPad({
           <img src={preview} alt="Your signature, cropped from the photo" className="max-h-[160px] w-auto" />
         ) : (
           <div className="max-w-sm text-center">
-            <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-brand-50 text-brand">
+            <span className="icon-tile mx-auto">
               <Icon name="camera" size={24} />
             </span>
             <p className="mt-3 text-[15px] text-secondary">

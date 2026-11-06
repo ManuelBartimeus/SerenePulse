@@ -3,7 +3,7 @@ import type { Payment, StartPaymentRequest } from '@serene/proposals';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getRouteApi, Link, useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { errorMessage } from '../api/client';
+import { ApiError, errorMessage } from '../api/client';
 import {
   accountApi,
   keys,
@@ -31,7 +31,8 @@ import {
 import { Banner, Button, PageSkeleton, cx } from '../ui/components';
 import { Icon } from '../ui/icons';
 import { TextInput } from '../ui/inputs';
-import { usePageTitle } from '../ui/shell';
+import { PAGE, TitleBand, usePageTitle } from '../ui/shell';
+import { NotFoundPage } from '../pages/errors';
 import { QuoteBreakdown } from '../wizard/quote-panel';
 
 const route = getRouteApi('/app/proposals/$id/pay');
@@ -51,6 +52,7 @@ export function PayPage() {
   const [startedAt, setStartedAt] = useState(0);
 
   if (q.isPending) return <PageSkeleton />;
+  if (q.error instanceof ApiError && q.error.status === 404) return <NotFoundPage />;
   if (q.isError)
     return (
       <div className="wrap wrap-narrow py-10">
@@ -81,73 +83,84 @@ export function PayPage() {
 
   const quote = d.quote;
   return (
-    <div className="wrap py-6 md:py-10">
-      <Link to="/" className="btn btn-ghost -ml-3 text-secondary">
-        <Icon name="arrowLeft" size={18} />
-        My account
-      </Link>
-      <div className="mt-2 grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="min-w-0 max-w-[620px]">
-          <h1 className="h-display">{payment ? 'Confirm the payment' : `Pay ${formatMoney(quote.total)}`}</h1>
-          <p className="mt-2 text-secondary">
+    <>
+      <TitleBand
+        crumbs={[
+          { label: 'My account', to: '/' },
+          { label: `Proposal ${d.proposalNo}`, to: '/proposals/$id', params: { id } },
+          { label: 'Pay' },
+        ]}
+        title={payment ? 'Confirm the payment' : `Pay ${formatMoney(quote.total)}`}
+        intro={
+          <>
             {d.productName} · <span className="tnum">{d.proposalNo}</span>
-          </p>
-          <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-surface-muted px-3 py-1.5 text-[13px] font-semibold text-[#444]">
-            <Icon name="info" size={16} />
-            Test payment: no money is taken
-          </p>
-          <div className="mt-6">
-            {payment && payment.status === 'pending' ? (
-              <Pending
-                payment={payment}
-                startedAt={startedAt}
-                onUpdate={setPayment}
-                onCancel={() => setPayment(null)}
-              />
-            ) : (
-              <PayForm
-                proposalId={id}
-                amount={quote.total}
-                failed={
-                  payment?.status === 'failed'
-                    ? (payment.failureReason ?? 'The payment did not go through.')
-                    : null
-                }
-                onStarted={(p) => {
-                  setPayment(p);
-                  setStartedAt(Date.now());
-                }}
-              />
-            )}
+          </>
+        }
+      />
+      <div className={PAGE}>
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="min-w-0 max-w-[640px]">
+            <p className="inline-flex items-center gap-2 rounded-full bg-surface-muted px-3 py-1 text-[13px] leading-5 font-semibold text-[#46464c]">
+              <Icon name="info" size={16} />
+              Test payment: no money is taken
+            </p>
+            <div className="mt-6">
+              {payment && payment.status === 'pending' ? (
+                <Pending
+                  payment={payment}
+                  startedAt={startedAt}
+                  onUpdate={setPayment}
+                  onCancel={() => setPayment(null)}
+                />
+              ) : (
+                <PayForm
+                  proposalId={id}
+                  amount={quote.total}
+                  failed={
+                    payment?.status === 'failed'
+                      ? (payment.failureReason ?? 'The payment did not go through.')
+                      : null
+                  }
+                  onStarted={(p) => {
+                    setPayment(p);
+                    setStartedAt(Date.now());
+                  }}
+                />
+              )}
+            </div>
           </div>
-        </div>
-        <aside className="order-first lg:order-none">
-          <div className="card p-5 lg:sticky lg:top-24 lg:p-6">
-            <h2 className="h-section">Summary</h2>
-            {d.insuredSubject && <p className="mt-1 text-[14px] text-secondary">{d.insuredSubject}</p>}
-            <details className="group mt-3 lg:hidden">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3">
-                <span className="text-[15px] font-semibold">Total to pay</span>
-                <span className="flex items-center gap-2">
-                  <span className="tnum text-[20px] font-bold">{formatMoney(quote.total)}</span>
-                  <Icon name="chevronDown" size={18} className="transition-transform group-open:rotate-180" />
-                </span>
-              </summary>
-              <div className="pt-2">
+          <aside className="order-first lg:order-none">
+            <div className="card p-5 lg:sticky lg:top-24 lg:p-6">
+              <h2 className="h-section">Summary</h2>
+              {d.insuredSubject && <p className="mt-1 text-[14px] text-secondary">{d.insuredSubject}</p>}
+              <details className="group mt-3 lg:hidden">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3">
+                  <span className="text-[15px] font-semibold">Total to pay</span>
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="tnum text-[20px] font-bold break-all">{formatMoney(quote.total)}</span>
+                    <Icon
+                      name="chevronDown"
+                      size={18}
+                      className="transition-transform group-open:rotate-180"
+                    />
+                  </span>
+                </summary>
+                <div className="pt-2">
+                  <QuoteBreakdown quote={quote} />
+                </div>
+              </details>
+              <div className="mt-4 hidden lg:block">
                 <QuoteBreakdown quote={quote} />
               </div>
-            </details>
-            <div className="mt-4 hidden lg:block">
-              <QuoteBreakdown quote={quote} />
+              <p className="mt-4 flex items-center gap-2 text-[13px] text-secondary">
+                <Icon name="lock" size={16} />
+                Price valid until {formatDate(quote.validUntil)}
+              </p>
             </div>
-            <p className="mt-4 flex items-center gap-2 text-[13px] text-secondary">
-              <Icon name="lock" size={16} />
-              Price valid until {formatDate(quote.validUntil)}
-            </p>
-          </div>
-        </aside>
+          </aside>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -250,7 +263,7 @@ function PayForm({
             aria-describedby={errors.network ? 'pay-network-err' : undefined}
           >
             <legend className="label mb-3">Network</legend>
-            <div className="grid gap-2.5 tab:grid-cols-3" id="pay-network" tabIndex={-1}>
+            <div className="grid gap-2.5 sm:grid-cols-3" id="pay-network" tabIndex={-1}>
               {NETWORKS.map((n) => (
                 <label key={n.id} className={cx('option', errors.network && 'option-invalid')}>
                   <input
@@ -421,7 +434,7 @@ function Pending({
               <Icon name="phone" size={30} />
             </span>
           </div>
-          <h2 className="mt-5 text-[22px] leading-7 font-bold">Approve the payment on your phone</h2>
+          <h2 className="h-content mt-5">Approve the payment on your phone</h2>
           <p className="mt-2 text-secondary">
             We sent a {network} prompt to{' '}
             <span className="tnum font-semibold text-ink">{payment.maskedAccount}</span> for{' '}
@@ -440,15 +453,15 @@ function Pending({
       ) : (
         <div className="p-6 md:p-8">
           <div className="flex items-center gap-3">
-            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-brand-50 text-brand">
+            <span className="icon-tile">
               <Icon name="shield" size={26} />
             </span>
             <div>
-              <h2 className="text-[20px] leading-7 font-bold">Confirm it’s you</h2>
+              <h2 className="h-content">Confirm it’s you</h2>
               <p className="text-[14px] text-secondary">3-D Secure check by your card issuer</p>
             </div>
           </div>
-          <dl className="m-0 mt-5 grid gap-2 rounded-2xl bg-subtle p-4 text-[15px]">
+          <dl className="m-0 mt-5 grid gap-2 rounded-[8px] bg-subtle p-4 text-[15px]">
             <div className="flex justify-between gap-3">
               <dt className="text-secondary">Merchant</dt>
               <dd className="m-0 font-semibold">Serene Insurance</dd>
@@ -528,8 +541,8 @@ function Success({ payment, productName }: { payment: PaymentWithPolicy; product
   }
 
   return (
-    <div className="wrap wrap-narrow py-10 md:py-16">
-      <div className="card card-pad enter text-center">
+    <div className="wrap py-10 md:py-16">
+      <div className="card card-pad enter mx-auto max-w-[640px] text-center md:p-10">
         <svg className="mx-auto" width="88" height="88" viewBox="0 0 52 52" aria-hidden="true">
           <circle
             className="tick-circle"
@@ -559,7 +572,7 @@ function Success({ payment, productName }: { payment: PaymentWithPolicy; product
           <span className="tnum font-semibold text-ink">{payment.reference}</span>.
         </p>
         {policy.data && (
-          <dl className="m-0 mt-6 grid gap-3 rounded-2xl bg-subtle p-4 text-left text-[15px] tab:grid-cols-2">
+          <dl className="m-0 mt-6 grid gap-3 rounded-[8px] bg-subtle p-4 text-left text-[15px] sm:grid-cols-2">
             <div>
               <dt className="text-secondary">Policy number</dt>
               <dd className="tnum m-0 font-semibold break-all">{policy.data.policyNo}</dd>

@@ -20,10 +20,6 @@ const ORDER = [
 export default function downloads() {
   const groups = ORDER.map((c) => [c, PRODUCTS.filter((p) => p.category === c)]).filter(([, l]) => l.length);
   const body = h`<div class="wrap page">
-  <header class="page-head">
-    <h1>Proposal forms</h1>
-    <p class="lede">Serene’s paper proposal forms, for brokers, companies and anyone who prefers paper. Fill one in and take it to any branch, or send it through your broker. Applying online asks the same questions and saves you the trip.</p>
-  </header>
   ${groups.map(
     ([cat, list]) => h`<section class="section-block" aria-labelledby="dl-${cat}">
     <h2 id="dl-${cat}">${CATEGORY_LABELS[cat]}</h2>
@@ -36,7 +32,7 @@ export default function downloads() {
           return h`<tr>
           <th scope="row"><a href="/insurance/${p.slug}/">${p.name}</a></th>
           <td data-label="File">${f.type}, ${f.size}</td>
-          <td data-label="Download"><a class="btn btn-secondary btn-sm" href="/downloads/${p.file}" download>${icon('download')}Download<span class="sr-only"> the ${p.name} proposal form (${f.type}, ${f.size})</span></a></td>
+          <td data-label="Download"><a class="btn btn-outline btn-sm" href="/downloads/${p.file}" download>${icon('download')}Download<span class="sr-only"> the ${p.name} proposal form (${f.type}, ${f.size})</span></a></td>
         </tr>`;
         })}
       </tbody>
@@ -51,6 +47,10 @@ export default function downloads() {
     description:
       'Download Serene Insurance paper proposal forms for motor, travel, fire, burglary, accident, liability, marine, engineering and bonds.',
     crumbs: [['Proposal forms', '/downloads/']],
+    band: {
+      title: 'Proposal forms',
+      lede: h`Serene’s paper proposal forms, for brokers, companies and anyone who prefers paper. Fill one in and take it to any branch, or send it through your broker. Applying online asks the same questions and saves you the trip.`,
+    },
     body,
   };
 }

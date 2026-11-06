@@ -66,13 +66,13 @@ const CURRENCY_SYMBOL: Record<string, string> = { GHS: 'GH₵', USD: 'US$', EUR:
 export const currencySymbol = (code: string | undefined): string =>
   CURRENCY_SYMBOL[code ?? 'GHS'] ?? code ?? 'GH₵';
 
-/** 1234.5 → "GH₵ 1,234.50"; negatives get a real minus sign. */
+/** 1234.5 → "GH₵ 1,234.50" (no-break space, so the sign never wraps away from the number); negatives get a real minus sign. */
 export function formatMoney(amount: number, currency = 'GHS'): string {
   const abs = Math.abs(amount).toLocaleString('en-GB', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
-  return `${amount < 0 ? '−' : ''}${currencySymbol(currency)} ${abs}`;
+  return `${amount < 0 ? '−' : ''}${currencySymbol(currency)}\u00a0${abs}`;
 }
 
 /** Groups the integer part with commas while keeping what the user typed after the point. */

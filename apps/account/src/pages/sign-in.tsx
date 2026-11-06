@@ -6,8 +6,8 @@ import { ApiError, errorMessage } from '../api/client';
 import { accountApi, keys } from '../api/queries';
 import { formatCountdown, formatPhoneInput, isGhanaMobile, toE164 } from '../lib/format';
 import { Banner, Button } from '../ui/components';
-import { Icon, Leaf } from '../ui/icons';
-import { Logo, usePageTitle } from '../ui/shell';
+import { Icon } from '../ui/icons';
+import { PAGE, SiteFooter, SiteHeader, TitleBand, usePageTitle } from '../ui/shell';
 
 const route = getRouteApi('/sign-in');
 
@@ -18,64 +18,76 @@ export function SignInPage() {
   usePageTitle(challenge ? 'Enter your code' : 'Sign in');
 
   return (
-    <div className="flex min-h-dvh flex-1 flex-col bg-white lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
-      <aside className="relative hidden overflow-hidden bg-brand text-white lg:flex lg:flex-col lg:justify-between lg:p-14">
-        <div>
-          <div className="inline-flex rounded-2xl bg-white px-4 py-3">
-            <Logo className="h-11 w-auto" />
-          </div>
-        </div>
-        <div className="relative max-w-md">
-          <h2 className="text-[34px] leading-[42px] font-bold tracking-tight">
-            Your Serene policies, on your phone.
-          </h2>
-          <ul className="mt-8 grid gap-4 text-[17px] leading-7 text-white/90">
-            {[
-              'Get a price for motor, travel and home cover straight away',
-              'Fill in the proposal form and sign it on screen',
-              'Pay with Mobile Money or card and download your certificate',
-            ].map((t) => (
-              <li key={t} className="flex gap-3">
-                <span className="mt-1 grid h-6 w-6 flex-none place-items-center rounded-full bg-white/15">
-                  <Icon name="check" size={16} />
-                </span>
-                {t}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <p className="text-[14px] text-white/75">
-          Serene Insurance Company Limited · Licensed by the National Insurance Commission
-        </p>
-        <Leaf className="pointer-events-none absolute -right-6 bottom-16 text-accent" size={180} />
-      </aside>
-
-      <main id="main" className="flex flex-1 flex-col">
-        <div className="wrap flex h-16 items-center lg:hidden">
-          <a href="/" aria-label="Serene Insurance home">
-            <Logo className="h-9 w-auto" />
-          </a>
-        </div>
-        <div className="flex flex-1 items-start justify-center px-[var(--gutter)] pt-6 pb-12 md:items-center md:pt-0">
-          <div className="w-full max-w-[420px]">
-            {challenge ? (
-              <CodeStep
-                challenge={challenge}
-                redirect={redirect}
-                onChangeNumber={() => setChallenge(null)}
-                onResent={(c) => setChallenge({ ...c, phone: challenge.phone })}
-              />
+    <>
+      <SiteHeader />
+      <main id="main" className="flex-1">
+        <TitleBand
+          crumbs={[{ label: 'Sign in' }]}
+          title={challenge ? 'Enter your code' : 'Sign in or create an account'}
+          intro={
+            challenge ? (
+              <>
+                Enter the code we sent to{' '}
+                <span className="font-semibold whitespace-nowrap text-ink">{challenge.maskedPhone}</span>.
+              </>
             ) : (
-              <PhoneStep
-                phone={phone}
-                setPhone={setPhone}
-                onSent={(c, p) => setChallenge({ ...c, phone: p })}
-              />
-            )}
+              'Enter your mobile number. We’ll text you a 6-digit code. No password needed.'
+            )
+          }
+        />
+        <div className={PAGE}>
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:gap-20">
+            <div className="min-w-0">
+              {challenge ? (
+                <CodeStep
+                  challenge={challenge}
+                  redirect={redirect}
+                  onChangeNumber={() => setChallenge(null)}
+                  onResent={(c) => setChallenge({ ...c, phone: challenge.phone })}
+                />
+              ) : (
+                <PhoneStep
+                  phone={phone}
+                  setPhone={setPhone}
+                  onSent={(c, p) => setChallenge({ ...c, phone: p })}
+                />
+              )}
+            </div>
+            <aside aria-labelledby="why-h" className="min-w-0 lg:pt-1">
+              <h2 id="why-h" className="h-section">
+                With your Serene account you can
+              </h2>
+              <span className="accent-bar mt-3" aria-hidden="true" />
+              <ol className="steps mt-6">
+                {[
+                  [
+                    'Get a price straight away',
+                    'Motor, travel and home cover are priced as you answer. Business covers are priced by an underwriter.',
+                  ],
+                  [
+                    'Fill in the proposal form and sign on screen',
+                    'Save and come back at any time. Photos and documents are taken with your phone.',
+                  ],
+                  [
+                    'Pay and download your certificate',
+                    'Pay with Mobile Money or card. Your certificate and proposal stay in your account.',
+                  ],
+                ].map(([t, d], i) => (
+                  <li key={t}>
+                    <span className="step-num">{i + 1}</span>
+                    <div className="min-w-0">
+                      <p className="text-[16px] leading-6 font-medium">{t}</p>
+                      <p className="card-text mt-1">{d}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </aside>
           </div>
         </div>
       </main>
-    </div>
+      <SiteFooter />
+    </>
   );
 }
 
@@ -115,25 +127,21 @@ function PhoneStep({
 
   return (
     <form onSubmit={submit} noValidate className="enter">
-      <h1 className="h-display">Sign in or create an account</h1>
-      <p className="mt-3 text-[17px] leading-7 text-secondary">
-        Enter your mobile number. We’ll text you a 6-digit code. No password needed.
-      </p>
-      <div className="mt-8">
+      <div>
         <label htmlFor={id} className="label">
           Mobile number
         </label>
         <div className="input-affix mt-2">
           <span className="affix affix-start gap-2 text-ink">
-            <span aria-hidden="true" className="text-[15px]">
+            <span aria-hidden="true" className="text-[15px] font-medium">
               GH
             </span>
-            <span aria-hidden="true" className="h-5 w-px bg-border" />
+            <span aria-hidden="true" className="h-5 w-px bg-border-strong" />
           </span>
           <input
             ref={inputRef}
             id={id}
-            className="input tnum !pl-[60px] text-[18px] tracking-wide"
+            className="input tnum !min-h-12 !pl-[56px] text-[18px] tracking-wide"
             type="tel"
             inputMode="tel"
             autoComplete="tel"
@@ -162,7 +170,7 @@ function PhoneStep({
       <Button type="submit" size="lg" block className="mt-6" busy={busy} busyLabel="Sending code">
         Send code
       </Button>
-      <p className="mt-6 text-[14px] leading-5 text-secondary">
+      <p className="mt-5 text-[14px] leading-[22px] text-secondary">
         By continuing you agree to our{' '}
         <a href="/terms" className="font-semibold">
           terms
@@ -290,18 +298,13 @@ function CodeStep({
 
   return (
     <div className="enter">
-      <button type="button" className="btn btn-ghost -ml-3 text-secondary" onClick={onChangeNumber}>
+      <button type="button" className="btn btn-ghost -ml-3 -mt-2 text-secondary" onClick={onChangeNumber}>
         <Icon name="arrowLeft" size={18} />
         Change number
       </button>
-      <h1 className="h-display mt-4">Enter your code</h1>
-      <p className="mt-3 text-[17px] leading-7 text-secondary">
-        Enter the code we sent to{' '}
-        <span className="font-semibold whitespace-nowrap text-ink">{challenge.maskedPhone}</span>.
-      </p>
 
       {challenge.simulatedCode && (
-        <Banner tone="neutral" icon="info" className="mt-6">
+        <Banner tone="info" icon="info" className="mt-4">
           <span>
             <strong className="font-semibold">Test mode:</strong> SMS is not connected yet. Your code is{' '}
             <span className="font-bold tracking-wider">{challenge.simulatedCode}</span>.
@@ -310,7 +313,7 @@ function CodeStep({
       )}
 
       <form
-        className="mt-8"
+        className="mt-6"
         onSubmit={(e) => {
           e.preventDefault();
           void verify(digits.join(''));
@@ -319,7 +322,7 @@ function CodeStep({
         <fieldset className="m-0 border-0 p-0">
           <legend className="label mb-3">6-digit code</legend>
           <div
-            className="grid grid-cols-6 gap-2 sm:gap-3"
+            className="grid max-w-[400px] grid-cols-6 gap-1 min-[360px]:gap-2 sm:gap-3"
             onPaste={(e) => {
               e.preventDefault();
               fill(e.clipboardData.getData('text'));
@@ -331,7 +334,7 @@ function CodeStep({
                 ref={(el) => {
                   refs.current[i] = el;
                 }}
-                className="input tnum h-14 !px-0 text-center text-[24px] font-bold sm:h-16"
+                className="input tnum h-14 min-w-0 !px-0 text-center text-[24px] font-semibold sm:h-16"
                 type="text"
                 inputMode="numeric"
                 pattern="[0-9]*"
@@ -387,7 +390,7 @@ function CodeStep({
         </Button>
       </form>
 
-      <div className="mt-6 flex flex-wrap items-center gap-x-2 gap-y-1 text-[15px] text-secondary">
+      <div className="mt-5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[14px] text-secondary">
         <span>Didn’t get it?</span>
         {wait > 0 ? (
           <span className="tnum">Send a new code in {formatCountdown(wait)}</span>

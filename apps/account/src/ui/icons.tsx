@@ -1,4 +1,4 @@
-// Line icons, 24 px grid, 1.75 stroke. Decorative unless given a label.
+// Line icons (lucide style), 24 px grid, 2 px stroke, currentColor. Decorative unless given a label.
 import type { SVGProps } from 'react';
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number; label?: string };
@@ -153,6 +153,32 @@ const paths = {
       <path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5" />
     </>
   ),
+  menu: <path d="M4 6.5h16M4 12h16M4 17.5h16" />,
+  mail: (
+    <>
+      <rect x="3.5" y="5.5" width="17" height="13" rx="2" />
+      <path d="m4 7 8 6 8-6" />
+    </>
+  ),
+  chat: <path d="M7.5 19.5 4 20.5l1-3.4A8 8 0 1 1 7.5 19.5Z" />,
+  shieldCheck: (
+    <>
+      <path d="M12 3.5 5 6v5.5c0 4.2 2.9 7.9 7 9 4.1-1.1 7-4.8 7-9V6l-7-2.5Z" />
+      <path d="m9 12 2.2 2.2L15.5 10" />
+    </>
+  ),
+  claim: (
+    <>
+      <path d="M14 3.5H7.5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h9a2 2 0 0 0 2-2V8L14 3.5Z" />
+      <path d="M14 3.5V8h4.5M12 11v3.5M12 17.5h.01" />
+    </>
+  ),
+  mapPin: (
+    <>
+      <path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </>
+  ),
   face: (
     <>
       <circle cx="12" cy="12" r="8.5" />
@@ -171,7 +197,7 @@ export function Icon({ name, size = 20, label, ...rest }: IconProps & { name: Ic
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.75}
+      strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden={label ? undefined : true}

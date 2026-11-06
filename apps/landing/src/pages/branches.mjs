@@ -8,10 +8,6 @@ import { mapsUrl } from '../content/site.mjs';
 export default function branches() {
   const regions = REGIONS.map((r) => ({ ...r, list: BRANCHES.filter((b) => b.region === r.id) }));
   const body = h`<div class="wrap page">
-  <header class="page-head">
-    <h1>Branches</h1>
-    <p class="lede">${BRANCHES.length} branches in ${REGIONS.length} regions. Every branch can help with new cover, renewals and claims.</p>
-  </header>
 
   <form class="branch-filter js-only" role="search" aria-label="Find a branch" data-branch-filter>
     <div class="field">
@@ -65,6 +61,10 @@ export default function branches() {
     description: `Addresses, phone numbers, emails and directions for all ${BRANCHES.length} Serene Insurance branches in Greater Accra, Ashanti, Central, Western, Volta, Northern and Bono East.`,
     section: 'Branches',
     crumbs: [['Branches', '/branches/']],
+    band: {
+      title: 'Branches',
+      lede: h`${BRANCHES.length} branches in ${REGIONS.length} regions. Every branch can help with new cover, renewals and claims.`,
+    },
     body,
   };
 }

@@ -21,20 +21,13 @@ export function isRenewable(p: Pick<PolicySummary, 'status' | 'expiresOn'>, toda
   return d <= 30 && d > -90;
 }
 
-export function RenewButton({
-  policy,
-  size,
-  block,
-}: {
-  policy: PolicySummary;
-  size?: 'sm' | 'lg';
-  block?: boolean;
-}) {
+/** Starts a renewal draft for a policy and opens it at the cover step. */
+export function useRenew() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  async function renew() {
+  async function renew(policy: PolicySummary) {
     setBusy(true);
     setErr(null);
     try {
@@ -49,9 +42,31 @@ export function RenewButton({
       setBusy(false);
     }
   }
+  return { renew, busy, err };
+}
+
+export function RenewButton({
+  policy,
+  size,
+  block,
+  variant,
+}: {
+  policy: PolicySummary;
+  size?: 'sm' | 'lg';
+  block?: boolean;
+  variant?: 'primary' | 'secondary';
+}) {
+  const { renew, busy, err } = useRenew();
   return (
-    <span className="inline-flex flex-col gap-1">
-      <Button size={size} block={block} onClick={() => void renew()} busy={busy} busyLabel="Starting renewal">
+    <span className={block ? 'flex flex-col gap-1' : 'inline-flex flex-col gap-1'}>
+      <Button
+        size={size}
+        block={block}
+        variant={variant}
+        onClick={() => void renew(policy)}
+        busy={busy}
+        busyLabel="Starting renewal"
+      >
         <Icon name="refresh" size={18} />
         Renew
       </Button>

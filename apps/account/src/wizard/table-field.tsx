@@ -12,7 +12,7 @@ const cellId = (field: string, row: number, col: string) => `f-${field}-${row}-$
 
 export function TableFieldInput({ field }: { field: TableField }) {
   const { answers, set, errors } = useWizard();
-  const wide = useMedia('(min-width: 1200px)');
+  const desktop = useMedia('(min-width: 1024px)');
   const v = answers[field.id];
   const rows: readonly TableRow[] = Array.isArray(v) ? (v as TableRow[]) : [];
   const single = field.maxRows === 1;
@@ -72,6 +72,14 @@ export function TableFieldInput({ field }: { field: TableField }) {
     );
   }
 
+  // A grid only when every column fits the form column at its minimum width (no inner scrolling);
+  // otherwise one card per row, as on phones.
+  const minWidth =
+    field.columns.reduce((n, c) => n + (c.type === 'select' ? 160 : 120), 0) +
+    44 +
+    field.columns.length * 12 +
+    32;
+  const wide = desktop && minWidth <= 640;
   const gridCols = field.columns
     .map((c) => `minmax(${c.type === 'select' ? 160 : 120}px, ${c.weight ?? 1}fr)`)
     .join(' ');
@@ -79,16 +87,16 @@ export function TableFieldInput({ field }: { field: TableField }) {
   return (
     <div id={`f-${field.id}`} tabIndex={-1}>
       {rows.length === 0 && (
-        <p className="rounded-2xl border border-dashed border-border-strong px-4 py-5 text-center text-[15px] text-secondary">
+        <p className="rounded-[8px] border border-dashed border-border-strong px-4 py-5 text-center text-[15px] text-secondary">
           Nothing added yet.
         </p>
       )}
       {wide && rows.length > 0 && field.columns.length <= 6 ? (
-        <div className="overflow-x-auto rounded-2xl border border-border-subtle">
+        <div className="overflow-hidden rounded-[8px] border border-border">
           <div role="table" className="min-w-full">
             <div
               role="row"
-              className="grid gap-3 bg-subtle px-4 py-2.5 text-[13px] font-semibold text-secondary"
+              className="grid gap-3 bg-[rgb(238_238_240/0.5)] px-4 py-3 text-[12px] leading-4 font-semibold tracking-[0.025em] text-secondary uppercase"
               style={{ gridTemplateColumns: `${gridCols} 44px` }}
             >
               {field.columns.map((c) => (
@@ -103,7 +111,7 @@ export function TableFieldInput({ field }: { field: TableField }) {
               <div
                 role="row"
                 key={i}
-                className="grid items-start gap-3 border-t border-border-subtle px-4 py-3"
+                className="grid items-start gap-3 border-t border-border px-4 py-3"
                 style={{ gridTemplateColumns: `${gridCols} 44px` }}
               >
                 {field.columns.map((c) => (
@@ -134,9 +142,9 @@ export function TableFieldInput({ field }: { field: TableField }) {
       ) : (
         <ol className="m-0 grid list-none gap-3 p-0">
           {rows.map((row, i) => (
-            <li key={i} className="rounded-2xl border border-border bg-white p-4">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <p className="text-[15px] font-bold capitalize">
+            <li key={i} className="rounded-[12px] border border-border bg-white p-4">
+              <div className="mb-3 flex items-center justify-between gap-2 border-b border-border pb-2">
+                <p className="text-[16px] leading-6 font-semibold capitalize">
                   {singular} {i + 1}
                 </p>
                 <button type="button" className="btn btn-danger-ghost btn-sm -mr-2" onClick={() => remove(i)}>
@@ -163,7 +171,7 @@ export function TableFieldInput({ field }: { field: TableField }) {
         </ol>
       )}
       {canAdd && (
-        <button type="button" className="btn btn-soft mt-3 w-full tab:w-auto" onClick={add}>
+        <button type="button" className="btn btn-soft mt-3 w-full sm:w-auto" onClick={add}>
           <Icon name="plus" size={18} />
           {field.addLabel}
         </button>

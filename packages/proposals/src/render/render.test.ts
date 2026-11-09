@@ -388,13 +388,9 @@ describe('proposal documents', () => {
     expect(validateForm(def, motorAnswers, new Date('2026-11-06T00:00:00Z'))).toEqual([]);
     const model = buildProposalDocument(def, motorAnswers, meta(def, motorAnswers));
     expect(model.draft).toBe(false);
-    // Wizard help text (section descriptions) is not printed; the NIA face photo is not named.
+    // Wizard help text (section descriptions) is not printed, and neither are uploads.
     expect(model.blocks.some((b) => b.kind === 'note')).toBe(false);
-    const selfie = model.blocks.find(
-      (b) => b.kind === 'files' && b.files.some((f) => f.startsWith('id_selfie')),
-    );
-    if (selfie && selfie.kind === 'files')
-      expect(selfie.statement).toBe('Identity check: face photo provided for NIA verification');
+    expect(model.blocks.some((b) => b.kind === 'files')).toBe(false);
     expect(model.declaration.signaturePng?.length).toBeGreaterThan(0);
     expect(model.declaration.lines.flat().map((l) => l.label)).toContain('Insurance to commence on');
     expect(model.record.rows.find((r) => r.label === 'Answers SHA-256')?.value).toMatch(/^[0-9a-f]{64}$/);
@@ -433,6 +429,56 @@ describe('proposal documents', () => {
     checkDocx(docx, def.title);
     save(`${id}-proposal.docx`, docx);
   });
+
+  // User direction 2026-11-09: the identity check, vehicle documents and photos of the vehicle are
+  // not part of the form (on screen, PDF or Word); the files are the proposal's documents instead.
+  it('leaves uploads and upload-only sections off the motor form, keeping them in the signature record', async () => {
+    const def = FORMS.motor!;
+    const model = buildProposalDocument(def, motorAnswers, meta(def, motorAnswers));
+    const headings = model.blocks.flatMap((b) => (b.kind === 'heading' ? [b.title] : []));
+    for (const gone of ['Identity check', 'Vehicle documents', 'Photos of the vehicle'])
+      expect(headings).not.toContain(gone);
+    expect(model.blocks.some((b) => b.kind === 'files')).toBe(false);
+    expect(model.declaration.lines.flat().some((l) => /photo|document/i.test(l.label))).toBe(false);
+    // The electronic signature record still lists every attached file.
+    expect(model.record.files.length).toBe(meta(def, motorAnswers).files.length);
+    expect(model.record.files.length).toBeGreaterThan(0);
+    const xml = zipEntry(await renderProposalDocx(model, { logoPng }), 'word/document.xml') ?? '';
+    for (const gone of [
+      'Identity check',
+      'IDENTITY CHECK',
+      'Vehicle documents',
+      'VEHICLE DOCUMENTS',
+      'Photos of the vehicle',
+      'PHOTOS OF THE VEHICLE',
+      'A photo of your face',
+    ])
+      expect(xml).not.toContain(gone);
+    // Answers around them are still printed.
+    expect(xml).toContain(xmlEscape(String(motorAnswers.chassis_no)));
+  });
+
+  it.each(Object.values(FORMS).map((f) => [f.id, f] as const))(
+    '%s: no upload field or upload-only section is printed',
+    (_id, def) => {
+      const answers = generateAnswers(def, def.id === 'motor' ? motorBase : {});
+      const model = buildProposalDocument(def, answers, meta(def, answers));
+      expect(model.blocks.some((b) => b.kind === 'files')).toBe(false);
+      const printedHeadings = new Set(model.blocks.flatMap((b) => (b.kind === 'heading' ? [b.title] : [])));
+      for (const step of def.steps)
+        for (const section of step.sections)
+          if (section.title && section.fields.every((f) => f.type === 'file'))
+            expect(printedHeadings.has(section.title), `${def.id} › ${section.title}`).toBe(
+              // a same-named section with printable fields elsewhere may legitimately print it
+              def.steps.some((st) =>
+                st.sections.some(
+                  (x) =>
+                    x !== section && x.title === section.title && x.fields.some((f) => f.type !== 'file'),
+                ),
+              ),
+            );
+    },
+  );
 
   it('never throws on characters outside WinAnsi', async () => {
     const def = FORMS.motor!;

@@ -72,6 +72,17 @@ export const visibleSections = (step: Step, a: Answers): Section[] =>
 export const visibleFields = (section: Section, a: Answers): Field[] =>
   section.fields.filter((f) => evaluate(f.showIf, a));
 
+/**
+ * The fields that appear on the completed proposal form (staff screen, PDF and Word). Upload fields
+ * (face photo, passport page, vehicle documents, photos, schedules…) are left out, so a section made
+ * only of uploads (identity check, vehicle documents, photos of the vehicle…) disappears. The files
+ * are kept and shown with the proposal's documents, and the electronic signature record still lists
+ * every attached file.
+ */
+export function printedFields<F extends Field>(fields: readonly F[]): F[] {
+  return fields.filter((f) => f.type !== 'file');
+}
+
 /** Every field of the form in order, with the step it belongs to. */
 export function allFields(def: FormDefinition): { field: Field; step: Step; section: Section }[] {
   const out: { field: Field; step: Step; section: Section }[] = [];

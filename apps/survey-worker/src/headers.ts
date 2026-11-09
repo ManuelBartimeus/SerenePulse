@@ -25,13 +25,21 @@ export function surveyCsp(nonce: string): string {
  * Staff portal SPA (/admin). It talks to Supabase over HTTPS and WebSocket (Realtime). Radix
  * dialogs inject a <style> element (react-remove-scroll), so styles need 'unsafe-inline'; scripts
  * stay 'self' only.
+ *
+ * Images: customer face photos, proposal and claim documents and signature images are private
+ * Storage objects shown through short-lived signed URLs on the Supabase origin, so img-src allows
+ * that one origin (only this project's, never a wildcard). Before 2026-11-09 it did not, and every
+ * such image was blocked on staging and production.
+ * object-src blob: lets the certificate preview show the PDF rendered in the page.
  */
 export function portalCsp(supabaseUrl: string | undefined): string {
   let connect = "connect-src 'self'";
+  let img = "img-src 'self' data: blob:";
   if (supabaseUrl) {
     try {
       const u = new URL(supabaseUrl);
       connect += ` ${u.origin} ${u.protocol === 'https:' ? 'wss:' : 'ws:'}//${u.host}`;
+      img += ` ${u.origin}`;
     } catch {
       // invalid URL: config validation reports it on the survey paths
     }
@@ -40,10 +48,11 @@ export function portalCsp(supabaseUrl: string | undefined): string {
     "default-src 'self'",
     `script-src 'self' ${TURNSTILE}`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: blob:",
+    img,
     "font-src 'self'",
     connect,
     `frame-src ${TURNSTILE}`,
+    "object-src 'self' blob:",
     "worker-src 'self' blob:",
     ...COMMON,
   ].join('; ');

@@ -156,6 +156,8 @@ export interface ProposalFileRow {
   mime: string;
   size: number;
   original_name: string | null;
+  /** SHA-256 (hex) of the bytes as uploaded, recorded by the Worker; checked by the zip download. */
+  sha256?: string | null;
   created_at: string;
 }
 
@@ -416,7 +418,9 @@ export function useSignedUrl(path: string | null | undefined) {
   return useQuery({
     queryKey: ['sales', 'signed', path],
     enabled: !!path,
+    // Links last 5 minutes: renew them at 4 so an image on a page left open never breaks.
     staleTime: 240_000,
+    refetchInterval: 240_000,
     queryFn: () => signedUrl(supabase, path ?? ''),
   });
 }

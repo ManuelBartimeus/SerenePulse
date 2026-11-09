@@ -3,7 +3,7 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { toUserError } from '../../lib/errors';
 import { Alert, Badge, EmptyState, Skeleton } from '../../ui/controls';
 import {
@@ -379,6 +379,15 @@ export interface DocItem {
   caption?: string;
 }
 
+/**
+ * A signed Storage link that downloads instead of opening. The `download` attribute is ignored for
+ * cross-origin links (Storage is on the Supabase origin), so Storage is asked to send the file as an
+ * attachment with this name instead.
+ */
+export function downloadHref(url: string, name: string): string {
+  return `${url}${url.includes('?') ? '&' : '?'}download=${encodeURIComponent(name)}`;
+}
+
 /** Full-screen view of one image with Download and Close; arrows step through the set. */
 export function Lightbox({
   items,
@@ -417,7 +426,7 @@ export function Lightbox({
             <div className="flex shrink-0 items-center gap-1">
               {item.url && (
                 <a
-                  href={item.url}
+                  href={downloadHref(item.url, item.name)}
                   download={item.name}
                   className="grid size-11 place-items-center rounded-full hover:bg-white/10"
                   aria-label={`Download ${item.name}`}
@@ -518,7 +527,7 @@ export function DocumentGrid({ items, empty = 'No documents.' }: { items: DocIte
                 </p>
                 {it.url && (
                   <a
-                    href={it.url}
+                    href={downloadHref(it.url, it.name)}
                     download={it.name}
                     className="grid size-8 shrink-0 place-items-center rounded-full text-secondary hover:bg-white hover:text-ink"
                     aria-label={`Download ${it.caption ?? it.name}`}
@@ -542,13 +551,72 @@ export function DocumentGrid({ items, empty = 'No documents.' }: { items: DocIte
 export function saveBytes(bytes: Uint8Array | Blob, name: string, type: string) {
   const blob = bytes instanceof Blob ? bytes : new Blob([bytes as BlobPart], { type });
   const url = URL.createObjectURL(blob);
+  clickDownload(url, name);
+  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+function clickDownload(url: string, name: string) {
   const a = document.createElement('a');
   a.href = url;
   a.download = name;
+  a.rel = 'noopener';
   document.body.appendChild(a);
   a.click();
   a.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
+
+/**
+ * Downloads of files built in the page (proposal PDF/Word, documents zip). Building takes a moment,
+ * and some browsers (Safari on iPhone and iPad in particular, and some download-protection settings)
+ * silently drop a download started after the click's moment has passed. So the file is offered twice:
+ * started automatically, and kept as a real "Save" link the person can click, which every browser
+ * honours. The link stays until the next file replaces it or the page closes.
+ */
+export function useBuiltFile() {
+  const [file, setFile] = useState<{ url: string; name: string } | null>(null);
+  useEffect(() => () => void (file && URL.revokeObjectURL(file.url)), [file]);
+  return {
+    file,
+    offer(bytes: Uint8Array | Blob, name: string, type: string) {
+      const blob = bytes instanceof Blob ? bytes : new Blob([bytes as BlobPart], { type });
+      const url = URL.createObjectURL(blob);
+      setFile({ url, name });
+      clickDownload(url, name);
+    },
+    clear: () => setFile(null),
+  };
+}
+
+/** "Your file is ready" with a Save link, for when the automatic download didn't start. */
+export function BuiltFileNote({
+  file,
+  onDismiss,
+}: {
+  file: { url: string; name: string } | null;
+  onDismiss: () => void;
+}) {
+  if (!file) return null;
+  return (
+    <Alert tone="success">
+      <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span>Your file is ready. If the download didn’t start,</span>
+        <a
+          href={file.url}
+          download={file.name}
+          className="font-medium text-brand underline underline-offset-2"
+        >
+          save “{file.name}”
+        </a>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="text-[14px] text-secondary underline-offset-2 hover:underline"
+        >
+          Dismiss
+        </button>
+      </span>
+    </Alert>
+  );
 }
 
 /** "Back to …" link above a detail page. */

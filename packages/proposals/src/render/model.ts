@@ -10,7 +10,7 @@ import type {
   TableField,
   TableRow,
 } from '../schema';
-import { evaluate, visibleFields, visibleSections } from '../validate';
+import { evaluate, printedFields, visibleFields, visibleSections } from '../validate';
 import { dateTime, dayOf, fileSize, money, optionLabel, scalarText, toNumber, integer } from './format';
 
 export interface ProposalMeta {
@@ -335,14 +335,17 @@ export function buildProposalDocument(def: FormDefinition, answers: Answers, met
   const declarationFields: Field[] = [];
   for (const step of def.steps) {
     for (const section of visibleSections(step, answers)) {
-      const fields = visibleFields(section, answers);
+      // Uploads are not printed: a section of uploads only (identity check, vehicle documents,
+      // photos…) disappears, and the files themselves live with the proposal's documents.
+      const fields = printedFields(visibleFields(section, answers));
       const inSection = fields.filter((f) => f.docPlacement !== 'declaration');
       declarationFields.push(...fields.filter((f) => f.docPlacement === 'declaration'));
       if (inSection.length === 0) continue;
       pushSection(blocks, section, inSection, ctx);
     }
   }
-  for (const f of def.declaration.fields ?? []) if (evaluate(f.showIf, answers)) declarationFields.push(f);
+  for (const f of printedFields(def.declaration.fields ?? []))
+    if (evaluate(f.showIf, answers)) declarationFields.push(f);
 
   const sig = meta.signature;
   const sigBytes = signed && sig?.imagePng ? base64ToBytes(sig.imagePng) : undefined;

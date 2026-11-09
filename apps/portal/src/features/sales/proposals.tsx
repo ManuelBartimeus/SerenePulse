@@ -20,10 +20,12 @@ import {
   type ProposalFileRow,
   type ProposalRow,
 } from './api';
+import { buildAttachmentsZip, fileLabel } from './attachments';
 import { renderProposal } from './documents';
 import { useSignedUrls } from './files';
 import {
   computeQuote,
+  DEFAULT_PROPOSAL_TAB,
   formatDay,
   formatWhen,
   ghs,
@@ -51,8 +53,9 @@ import {
   Panel,
   ProposalBadge,
   QueryState,
-  saveBytes,
   SearchBox,
+  BuiltFileNote,
+  useBuiltFile,
   type Column,
   type SortState,
 } from './ui';
@@ -98,7 +101,7 @@ const COLUMNS: Column<ProposalRow>[] = [
 
 export function ProposalsPage() {
   const search = useSearch({ strict: false }) as { tab?: string };
-  const tab: ProposalTab = isProposalTab(search.tab) ? search.tab : 'review';
+  const tab: ProposalTab = isProposalTab(search.tab) ? search.tab : DEFAULT_PROPOSAL_TAB;
   const [product, setProduct] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -244,13 +247,18 @@ function ProposalDetail({ p }: { p: ProposalRow }) {
   const review = can('proposals.review');
   const identity = customer.data?.identity_status ?? null;
 
+  const built = useBuiltFile();
+
   const download = async (kind: 'pdf' | 'docx') => {
+    if (busyDoc) return;
     setBusyDoc(kind);
     setDocError(null);
+    built.clear();
     try {
       const doc = await renderProposal(kind, supabase, p, files.data ?? []);
-      saveBytes(doc.bytes, doc.name, doc.type);
+      built.offer(doc.bytes, doc.name, doc.type);
     } catch (e) {
+      console.error(`Proposal ${kind.toUpperCase()} for ${p.proposal_no} could not be created`, e);
       setDocError(e);
     } finally {
       setBusyDoc(null);
@@ -285,6 +293,7 @@ function ProposalDetail({ p }: { p: ProposalRow }) {
       />
       <div className="mb-6 flex flex-col gap-3" aria-live="polite">
         {docError ? <ErrorNote error={docError} /> : null}
+        <BuiltFileNote file={built.file} onDismiss={built.clear} />
         {customer.data && identity !== 'verified' && (
           <Alert tone="warning" title="Customer’s identity not verified yet">
             <span className="inline-flex flex-wrap items-center gap-2">
@@ -397,7 +406,7 @@ function ProposalDetail({ p }: { p: ProposalRow }) {
           {
             value: 'documents',
             label: `Documents${files.data ? ` (${files.data.length})` : ''}`,
-            content: <DocumentsTab files={files} />,
+            content: <DocumentsTab p={p} files={files} />,
           },
           { value: 'quote', label: 'Price', content: <QuoteTab p={p} /> },
           { value: 'history', label: 'History', content: <HistoryTab id={p.id} /> },
@@ -478,10 +487,61 @@ function FormTab({ p, files }: { p: ProposalRow; files: ProposalFileRow[] }) {
   );
 }
 
-function DocumentsTab({ files }: { files: ReturnType<typeof useProposalFiles> }) {
+function DocumentsTab({ p, files }: { p: ProposalRow; files: ReturnType<typeof useProposalFiles> }) {
+  const { supabase } = useSession();
   const urls = useSignedUrls((files.data ?? []).map((f) => f.storage_path));
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const [zipError, setZipError] = useState<unknown>(null);
+  const [mismatched, setMismatched] = useState<string[]>([]);
+  const zipFile = useBuiltFile();
+  const count = files.data?.length ?? 0;
+
+  const downloadAll = async () => {
+    if (progress) return;
+    setZipError(null);
+    setMismatched([]);
+    zipFile.clear();
+    setProgress({ done: 0, total: count });
+    try {
+      const zip = await buildAttachmentsZip(supabase, p, files.data ?? [], (done, total) =>
+        setProgress({ done, total }),
+      );
+      zipFile.offer(zip.bytes, zip.name, 'application/zip');
+      setMismatched(zip.mismatched);
+    } catch (e) {
+      console.error(`Documents zip for ${p.proposal_no} could not be created`, e);
+      setZipError(e);
+    } finally {
+      setProgress(null);
+    }
+  };
+
   return (
-    <Panel>
+    <Panel
+      title="Documents"
+      actions={
+        count > 0 ? (
+          <Button variant="secondary" busy={!!progress} onClick={() => void downloadAll()}>
+            <IconDownload size={18} />
+            {progress
+              ? progress.done < progress.total
+                ? `Preparing ${progress.done} of ${progress.total}…`
+                : 'Creating the zip…'
+              : `Download all documents (${count})`}
+          </Button>
+        ) : undefined
+      }
+    >
+      <div className="mb-4 flex flex-col gap-3 empty:hidden" aria-live="polite">
+        {zipError ? <ErrorNote error={zipError} /> : null}
+        <BuiltFileNote file={zipFile.file} onDismiss={zipFile.clear} />
+        {mismatched.length > 0 && (
+          <Alert tone="warning" title="Some files differ from what the customer uploaded">
+            The zip was saved, but these files don’t match the fingerprint recorded at upload:{' '}
+            {mismatched.join(', ')}. Check with IT before relying on them.
+          </Alert>
+        )}
+      </div>
       <QueryState query={files} skeleton="h-32">
         {(list) => (
           <DocumentGrid
@@ -491,7 +551,7 @@ function DocumentsTab({ files }: { files: ReturnType<typeof useProposalFiles> })
               name: f.original_name ?? f.kind,
               mime: f.mime,
               url: urls[f.storage_path],
-              caption: `${humanise(f.kind)}${f.original_name ? ` · ${f.original_name}` : ''}`,
+              caption: `${fileLabel(f, p.form_id)}${f.original_name ? ` · ${f.original_name}` : ''}`,
             }))}
           />
         )}

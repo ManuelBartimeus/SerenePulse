@@ -671,3 +671,127 @@ User feedback and what was done:
 Both `/healthz` report `8f3b07cf863a`. Checks on the live portal bundles: the new wording is
 present and the old wording is gone; the new gear path ships in the sidebar chunk and the old gear
 path is in none of the 23 chunks. `/admin/sign-in` returns 200.
+
+---
+
+## 2026-11-09 (afternoon) — Staff portal: images, proposal documents, zip download, "All" proposals
+
+User feedback, in the user's order, and what was done:
+
+1. **"The face photo and ID document photo don't show on the customer page… several pages where
+   images are supposed to show don't have images showing."** Reproduced by running the built site
+   through the site Worker locally, so the production headers applied. Every private image was blocked
+   by the staff portal's Content-Security-Policy.
+   * **Root cause:** private files (customer face photos, passport pages, proposal and claim
+     documents, proposal signatures, the certificate signature preview in Products & rates) are shown
+     through short-lived signed Storage links on the Supabase origin
+     (`https://<project>.supabase.co`). The portal CSP was `img-src 'self' data: blob:`, so the
+     browser refused all of them. It had been like this since online sales went live (2026-11-06).
+     Nobody saw it in testing because the Vite dev server sends no CSP.
+   * **Fix** (`apps/survey-worker/src/headers.ts`): `img-src` now also allows this project's own
+     Supabase origin. That is one exact origin taken from `SUPABASE_URL`, never a wildcard.
+   * **Found with it:** the certificate preview on a policy page (PDF drawn in the page and shown in
+     an `<object>` from a `blob:` link) was blocked as well, because `object-src` fell back to
+     `default-src 'self'`. It now has `object-src 'self' blob:`.
+   * **Related hardening:**
+     * Signed links last 5 minutes and were never renewed, so images on a page left open would
+       break. They now refresh every 4 minutes (`files.ts`, `useSignedUrl`).
+     * The per-file "Download" buttons used `<a download>` on a cross-origin link. Browsers ignore
+       that, so a click opened the image in place of the portal. They now ask Storage to send the
+       file as an attachment (`?download=<name>`).
+2. **Proposals page shows "All" by default** instead of "Awaiting review". "All" is now the first
+   tab (`format.ts`: `DEFAULT_PROPOSAL_TAB`). The Overview's "awaiting review" shortcut still opens
+   that tab directly (`?tab=review`).
+3. **"The PDF download is not working for the proposal."** This could not be reproduced locally on
+   the same code and real-shaped data: staff PDF and Word, and the customer's own "My proposal form",
+   all produced valid files through the production CSP. On production, every portal script chunk and
+   the logo serve correctly. Production data was not read (staging has no proposals). What was done:
+   * **Renderer checked against bad data:** the existing tests already render all 28 forms. A
+     throw-away fuzz run also gave every answer of every form odd values (empty, null, wrong types,
+     very long text, emoji, malformed dates). Result: see *Verification*.
+   * **Downloads that browsers silently drop:** the file is built after the click (the renderer and
+     signature load first). Some browsers, notably Safari on iPhone/iPad and some download-protection
+     settings, ignore a download started after the click's moment has passed. The proposal PDF/Word
+     (and the new zip) are now offered twice: started automatically, and as a **"Your file is ready…
+     save …" link** that is a real click, which every browser honours (`useBuiltFile`,
+     `BuiltFileNote` in `ui.tsx`). Failures show the error on the page and are logged to the console
+     with the proposal number.
+   * Customer app: the proposal PDF was sometimes named after the *policy* number
+     (`Serene-proposal-SE26MCO10016-E.pdf`). It now always uses the proposal number from the server.
+   * **If it still fails for the user, we need the browser and the message shown on the page** (or a
+     screenshot) to go further.
+4. **Identity check, vehicle documents and photos of the vehicle removed from the proposal form**,
+   on the staff screen and in the downloaded PDF and Word. This also covers the customer's own
+   download, which uses the same document model.
+   * **Rule** (`printedFields()` in `packages/proposals/src/validate.ts`, used by
+     `render/model.ts` and the portal's `form-view.tsx`): upload fields are not printed, and a
+     section made only of uploads disappears.
+   * A survey of all 28 forms showed the same kind of sections elsewhere: travel's Passports and
+     Trip documents, home's "Your home", the property, premises, accounts, staff-list, shipping,
+     vessel and project documents of the business forms, and the single upload lines inside
+     data sections (e.g. motor's NCD renewal notice). They are treated the same way, so the forms
+     stay consistent.
+   * Kept: answers such as a company signatory's Ghana Card number, and paper notices such as
+     Bonds' "other things to be provided". The **electronic signature record page still lists every
+     attached file** (name, size, upload time), so the signed record stays complete.
+5. **"Download all documents" on a proposal's Documents tab**: one zip of every attachment
+   (`apps/portal/src/features/sales/attachments.ts`).
+   * Files are fetched with the staff member's own session (Storage access rules apply; nothing is
+     made public), four at a time, with progress on the button ("Preparing 3 of 8…").
+   * Names are numbered in upload order and labelled with the form's question, e.g.
+     `01 A photo of your face - face.png` (unique, safe on Windows and macOS). The zip is called
+     `PRP-26-000027 documents.zip`.
+   * Every file is checked against the SHA-256 recorded when the customer uploaded it. A
+     `Contents.txt` lists each file, its type, size, upload time and whether its fingerprint matched.
+     A mismatch (which should never happen) is flagged on screen and in the list.
+   * Files are stored as they are (no recompression), so each one comes out byte-identical.
+   * If any file can't be read, nothing is saved and the error says which file. Staff never get a
+     silently incomplete set.
+   * Library: `fflate` 0.8.3, already in the lockfile, pinned exactly, loaded only when the button
+     is used.
+   * Document tiles now show the form's question too ("A photo of your face · face.png" instead of
+     "Id selfie · face.png").
+6. **"Images are not showing on the document section of the proposal page."** Same root cause and
+   fix as item 1.
+
+### Tests added
+
+* Worker: `headers.test.ts` checks the portal CSP for a production-style origin, a missing or
+  invalid URL, no wildcard, and `object-src`. The portal-shell test in `index.test.ts` now asserts
+  `img-src` and `object-src`.
+* Proposals package: the motor document has no upload blocks or upload-only headings (model and
+  Word XML) and keeps the files in the signature record. A per-form check runs on all 28 forms.
+* Portal unit: `attachments.test.ts` (names, uniqueness, unsafe characters, contents list, a real
+  zip round trip with byte and SHA-256 checks, all-or-nothing failure, empty set). The tab tests
+  now expect "All" as the default.
+* **Portal browser tests through the Worker** (`apps/portal/e2e/sales.e2e.ts`, run with
+  `PORTAL_E2E_BASE_URL`; see `playwright.config.ts`), on phone and desktop:
+  * Proposals opens on "All";
+  * the customer page's face photo loads;
+  * the proposal form has no upload sections and its signature image loads;
+  * Download PDF gives a complete PDF and shows the save link;
+  * every Documents thumbnail and the lightbox load;
+  * each download link asks for an attachment;
+  * the zip holds every file plus `Contents.txt` with all fingerprints matching;
+  * the certificate preview shows;
+  * no CSP violations anywhere.
+* **Proved against the old code:** with the old CSP put back, the customer-photo, proposal and
+  certificate tests failed (3 of 4; the "All" test does not depend on the CSP). With the fix, all
+  8 pass.
+
+### Verification (local, before deploy)
+
+* Lint, prettier and typecheck clean across the workspace.
+* Unit tests: proposals 340 (up from 311: the 28 per-form checks and the motor upload test), survey Worker 152 (up from
+  149), portal 93 (up from 85), customer app 34, metrics 30, survey engine 25, contracts 7.
+* `pnpm build` and the site assembly succeed; the bundle scan is clean (224 files). `fflate` ships as
+  its own 8.8 KB chunk, loaded only when "Download all documents" is used.
+* Portal browser tests through the Worker: 17 passed on phone and desktop (8 new sales tests and the
+  existing sign-in tests); 1 skipped by design (the sidebar-icon check runs on desktop only).
+* By eye: the proposal form now goes from question 7 straight to the Declaration, with the
+  signature image showing; the Documents tab shows all 8 thumbnails and the new button; the
+  downloaded PDF no longer contains the three sections, and its signature record still lists the
+  files.
+* A local-only staff account (`e2e-staff@serene.local.test`, System Administrator + Underwriter)
+  was created in the **local** database for these browser tests. It does not exist on staging or
+  production.

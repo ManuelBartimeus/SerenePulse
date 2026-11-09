@@ -703,6 +703,11 @@ describe('site routing (single origin)', () => {
     expect(res.headers.get('cache-control')).toBe('no-store');
     const csp = res.headers.get('content-security-policy')!;
     expect(csp).toContain("connect-src 'self' http://127.0.0.1:54321 ws://127.0.0.1:54321");
+    // Regression (2026-11-09): private photos are signed Storage URLs on the Supabase origin; without
+    // it in img-src every face photo, document and signature image was blocked.
+    expect(csp).toContain("img-src 'self' data: blob: http://127.0.0.1:54321;");
+    // The certificate preview embeds the PDF rendered in the page (blob: URL) in an <object>.
+    expect(csp).toContain("object-src 'self' blob:");
     expect(csp).not.toContain('nonce-');
     const js = await app.request('/admin/assets/index-abc.js', {}, { ...bindings, ASSETS });
     expect(js.headers.get('cache-control')).toBe('public, max-age=31536000, immutable');

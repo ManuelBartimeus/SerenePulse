@@ -79,6 +79,8 @@ export async function downloadProposal(
     logo(),
   ]);
   const meta = doc.meta ?? {};
+  // The server's proposal number wins: the page's fallback may still be the policy number.
+  const proposalNo = String(meta.proposalNo ?? fallback.proposalNo);
   const files = (doc.files ?? []).map((f) => ({
     kind: f.kind,
     name: f.name,
@@ -86,7 +88,7 @@ export async function downloadProposal(
     createdAt: f.createdAt,
   }));
   const model = buildProposalDocument(doc.form, doc.answers, {
-    proposalNo: String(meta.proposalNo ?? fallback.proposalNo),
+    proposalNo,
     productName: String(meta.productName ?? fallback.productName),
     customerNo: String(meta.customerNo ?? fallback.customerNo),
     phone: String(meta.phone ?? fallback.phone),
@@ -105,5 +107,5 @@ export async function downloadProposal(
     ...(typeof meta.answersSha256 === 'string' ? { answersSha256: meta.answersSha256 } : {}),
   });
   const bytes = await renderProposalPdf(model, { logoPng });
-  saveBytes(bytes, `Serene-proposal-${safeName(fallback.proposalNo)}.pdf`);
+  saveBytes(bytes, `Serene-proposal-${safeName(proposalNo)}.pdf`);
 }

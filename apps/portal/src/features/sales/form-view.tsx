@@ -2,7 +2,7 @@
 // and wording as the printed document (docLabel), answers written on dotted lines, tick boxes,
 // YES / NO with the answer circled, tables with the paper's columns and the signed declaration.
 // Generic: it works from any FormDefinition, so every product's form renders the same way.
-import { evaluate, visibleFields, visibleSections } from '@serene/proposals';
+import { evaluate, printedFields, visibleFields, visibleSections } from '@serene/proposals';
 import type {
   Answers,
   AnswerValue,
@@ -148,8 +148,12 @@ export function declarationFields(def: FormDefinition, answers: Answers): Field[
   const placed: Field[] = [];
   for (const step of def.steps)
     for (const section of visibleSections(step, answers))
-      for (const f of visibleFields(section, answers)) if (f.docPlacement === 'declaration') placed.push(f);
-  return [...placed, ...(def.declaration.fields ?? []).filter((f) => evaluate(f.showIf, answers))];
+      for (const f of printedFields(visibleFields(section, answers)))
+        if (f.docPlacement === 'declaration') placed.push(f);
+  return [
+    ...placed,
+    ...printedFields(def.declaration.fields ?? []).filter((f) => evaluate(f.showIf, answers)),
+  ];
 }
 
 // ---- Rendering -------------------------------------------------------------------------------
@@ -521,7 +525,11 @@ export function ProposalFormView({
       <div className="flex flex-col gap-7">
         {def.steps.flatMap((step) =>
           visibleSections(step, answers).map((section) => {
-            const fields = visibleFields(section, answers).filter((f) => f.docPlacement !== 'declaration');
+            // Uploads are not part of the printed form (they are on the Documents tab), so a section
+            // of uploads only — identity check, vehicle documents, photos — is not shown.
+            const fields = printedFields(visibleFields(section, answers)).filter(
+              (f) => f.docPlacement !== 'declaration',
+            );
             if (fields.length === 0) return null;
             return (
               <section key={`${step.id}:${section.id}`} aria-label={section.title ?? step.title}>

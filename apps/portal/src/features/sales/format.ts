@@ -67,18 +67,21 @@ export const productName = (code: string) => productByCode(code)?.name ?? code;
 
 export type ProposalTab = 'review' | 'info' | 'quoted' | 'issued' | 'declined' | 'drafts' | 'all';
 
+/** "All" comes first and is the default view of the Proposals page (user direction, 2026-11-09). */
+export const DEFAULT_PROPOSAL_TAB: ProposalTab = 'all';
+
 export const PROPOSAL_TABS: { key: ProposalTab; label: string; statuses: readonly ProposalStatus[] }[] = [
+  { key: 'all', label: 'All', statuses: [] },
   { key: 'review', label: 'Awaiting review', statuses: ['submitted', 'under_review'] },
   { key: 'info', label: 'Information requested', statuses: ['info_requested'] },
   { key: 'quoted', label: 'Price sent', statuses: ['quoted'] },
   { key: 'issued', label: 'Issued', statuses: ['paid', 'issued'] },
   { key: 'declined', label: 'Declined', statuses: ['declined'] },
   { key: 'drafts', label: 'Drafts', statuses: ['draft'] },
-  { key: 'all', label: 'All', statuses: [] },
 ];
 
 export const tabStatuses = (tab: string): readonly ProposalStatus[] =>
-  (PROPOSAL_TABS.find((t) => t.key === tab) ?? PROPOSAL_TABS[0])?.statuses ?? [];
+  PROPOSAL_TABS.find((t) => t.key === tab)?.statuses ?? [];
 
 export const isProposalTab = (v: unknown): v is ProposalTab => PROPOSAL_TABS.some((t) => t.key === v);
 

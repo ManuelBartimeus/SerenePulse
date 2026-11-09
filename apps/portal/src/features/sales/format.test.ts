@@ -10,6 +10,8 @@ import {
   proposalStatus,
   sortBy,
   tabStatuses,
+  DEFAULT_PROPOSAL_TAB,
+  PROPOSAL_TABS,
   taxesFromRates,
   DEFAULT_TAXES,
 } from './format';
@@ -32,7 +34,10 @@ describe('proposal tabs', () => {
   it('Awaiting review covers submitted and under review', () => {
     expect(tabStatuses('review')).toEqual(['submitted', 'under_review']);
     expect(tabStatuses('all')).toEqual([]);
-    expect(tabStatuses('nonsense')).toEqual(['submitted', 'under_review']);
+    // An unknown tab shows everything, like the default "All" view.
+    expect(tabStatuses('nonsense')).toEqual([]);
+    expect(DEFAULT_PROPOSAL_TAB).toBe('all');
+    expect(PROPOSAL_TABS[0]?.key).toBe('all');
   });
 });
 

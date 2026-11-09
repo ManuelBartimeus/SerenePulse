@@ -795,3 +795,38 @@ User feedback, in the user's order, and what was done:
 * A local-only staff account (`e2e-staff@serene.local.test`, System Administrator + Underwriter)
   was created in the **local** database for these browser tests. It does not exist on staging or
   production.
+
+**Deployed (commit `6ff5c4b`, 2026-11-09):** CI passed (checks, secret scan, database), then the
+automatic deploy ran on staging and production. Both `/healthz` report `6ff5c4bf7a29`. The live
+portal CSP on each environment allows images from its own Supabase project only (staging
+`sbmabysnbwdpvxybwmku`, production `vyjgjkjrpqfmkqpxefjx`) and has `object-src 'self' blob:`.
+`/`, `/admin/`, `/admin/sign-in`, `/account/` and `/customerfeedback` return 200. The served portal
+bundles contain the new "Download all documents" button and the download fallback.
+
+---
+
+## 2026-11-09 (late afternoon) — Feedback response would not open
+
+**User report:** opening a feedback response in the staff portal showed "Something went wrong on our
+side" with `record "v_contact" is not assigned yet · 55000`.
+
+* **Cause:** `public.record_detail` (the response drawer; `202611080002_analytics_engine.sql`)
+  declared `v_contact` as an untyped `record`. It was filled only when the customer had agreed to be
+  contacted, but the returned value reads its fields on every call. PL/pgSQL cannot resolve fields of
+  a record that was never assigned, so **every response without contact consent failed to open**.
+  That is most responses (32 of 36 locally; most of the ~5,200 sample responses on production).
+  Responses with consent opened normally. It had been like this since the drawer was built
+  (2026-11-05). No test opened a record successfully, so it went unnoticed.
+* **Fix:** migration `202611130012_record_detail_contact_fix.sql` redefines the function with
+  `v_contact pii.contact_requests` (the table's row type, whose fields are simply null when there
+  is no contact request). Nothing else in the function changes, and its grants stay.
+* **Same pattern elsewhere:** the five other untyped `record` variables in the migrations are each
+  assigned before every read, so they are not affected.
+* **Tests:** reproduced on the local database before the fix (no consent: error; consent: fine).
+  After it, a response without consent opens with no contact block, and one with consent still shows
+  only the masked number (`024 ••• 4567`). Three pgTAP assertions were added to
+  `020_analytics_engine.test.sql`: opens, no contact block, answers returned.
+* **Note on running pgTAP locally:** the suite assumes an empty database. On a database holding
+  sample or end-to-end data, a few window-based and bootstrap tests fail for that reason alone.
+  CI runs it on a fresh database.
+

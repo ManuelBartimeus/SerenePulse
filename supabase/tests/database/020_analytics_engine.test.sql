@@ -3,7 +3,7 @@
 -- (T-M08-001…009, T-M08-010, T-M08-020, T-M08-030, T-M08-040, T-M08-050, T-M08-100).
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(50);
+select plan(53);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures
@@ -238,6 +238,16 @@ select is((select count(*)::int from jsonb_array_elements(public.records_list('{
 select throws_ok(format('select public.record_detail(%L)',
   (select other_resp from t_ids)), 'P0002', null,
   'branch manager cannot open another branch''s record or comment');
+-- Regression (2026-11-09): opening a response WITHOUT contact consent failed with
+-- 'record "v_contact" is not assigned yet' (55000). Fixed in 202611130012_record_detail_contact_fix.
+select pg_temp.as_user('00000000-0000-0000-0000-00000000c0e1');
+select lives_ok(format('select public.record_detail(%L)', (select other_resp from t_ids)),
+  'a response without contact consent opens');
+select is(public.record_detail((select other_resp from t_ids)) ->> 'contact', null,
+  'no contact block when the customer did not consent');
+select ok(jsonb_array_length(public.record_detail((select other_resp from t_ids)) -> 'answers') > 0,
+  'the response''s answers are returned');
+select pg_temp.as_user('00000000-0000-0000-0000-00000000c0b1');
 select is((select count(*)::int from jsonb_array_elements(public.analytics_branch_ranking('{"from":"2099-01-01","to":"2099-01-31"}') -> 'rows')),
   2, 'branch manager sees the named ranking of all branches (aggregates)');
 select ok((select bool_and(not (e ? 'main_factor') and not (e ? 'factor_counts'))

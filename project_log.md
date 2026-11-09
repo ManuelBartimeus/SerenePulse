@@ -867,3 +867,8 @@ earlier today.
   * Proposals 369 tests (up from 340), portal 93, customer app 34; lint, prettier, typecheck clean;
     build and bundle scan clean; portal sales browser tests through the Worker 8/8.
 
+
+**Deployed (commit `4c6d999`, 2026-11-09):** CI passed (checks, secret scan, database), then the
+automatic deploy ran on staging and production. Both `/healthz` report `4c6d999a2d23`. The
+response-drawer fix before it (`4f8f730`) was deployed the same way, and its migration
+`202611130012` ran on both.

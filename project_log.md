@@ -830,3 +830,40 @@ side" with `record "v_contact" is not assigned yet · 55000`.
   sample or end-to-end data, a few window-based and bootstrap tests fail for that reason alone.
   CI runs it on a fresh database.
 
+---
+
+## 2026-11-09 (evening) — Proposal PDF download: real cause found and fixed
+
+**User report:** the PDF download still failed for PRP-26-000001, PRP-26-000002 and PRP-26-000003
+(production), while other proposals worked. This was the item 3 that could not be reproduced
+earlier today.
+
+* **How it was found:** with the user's approval, the three proposals were read **read-only** on
+  production (form, status, answers, signature and file details; nothing changed) and rendered
+  locally through the same document code the portal uses. All three failed in the PDF only (Word
+  was fine) with `WinAnsi cannot encode "\n"`. The copied data was deleted from the working machine
+  afterwards.
+* **Cause:** each has an answer typed on more than one line, such as an address entered as
+  "P. O. Box CE 11319," then "Tema." on a new line. Where the PDF prints an answer on a single line
+  (e.g. several short answers sharing one printed row), the line break was passed straight to the
+  PDF font. That font has no character for a line break, so the whole document failed. Any
+  proposal, of any product, with a multi-line answer in such a field was affected. The tests only
+  ever used single-line answers, and the earlier odd-values fuzz run (stopped unfinished after two
+  hours) did not include line breaks either.
+* **Fix** (`packages/proposals/src/render/format.ts`, `pdf-common.ts`):
+  * text printed on one line now joins the lines of the answer, adding a comma where the line
+    didn't already end in punctuation: "P. O. Box CE 11319, Tema.";
+  * answers that have their own wrapped area keep their separate lines, as before;
+  * Windows line endings, Unicode line separators and tabs are normalised. Before, a Windows
+    line ending would have printed as "?".
+  * The same drawing code serves the customer's own "My proposal form" download and the
+    certificate, so both are covered.
+* **Earlier hardening still applies:** the "save" link after building a file.
+* **Tests:** a new check renders every one of the 28 forms, signed and draft, as PDF and Word with
+  every text answer spread over several lines (`\n`, `\r\n`, tabs), plus unit checks of the line
+  joining.
+  * **Proved:** with the old drawing code, all 28 forms failed this test.
+  * The three production proposals now render (PDF 3, 6 and 2 pages).
+  * Proposals 369 tests (up from 340), portal 93, customer app 34; lint, prettier, typecheck clean;
+    build and bundle scan clean; portal sales browser tests through the Worker 8/8.
+

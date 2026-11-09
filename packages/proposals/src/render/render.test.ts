@@ -17,7 +17,7 @@ import {
   renderProposalPdf,
   type ProposalMeta,
 } from './index';
-import { winAnsi } from './format';
+import { oneLine, winAnsi } from './format';
 
 const logoPng = new Uint8Array(readFileSync(new URL('../../../ui/assets/serene-logo.png', import.meta.url)));
 const SAMPLES = process.env.SAMPLES_DIR;
@@ -477,6 +477,45 @@ describe('proposal documents', () => {
                 ),
               ),
             );
+    },
+  );
+
+  // Regression (2026-11-09, PRP-26-000001…3 on production): an answer typed on several lines (an
+  // address) in a field printed on one line threw "WinAnsi cannot encode \n", so the PDF failed.
+  it('joins lines of a multi-line answer printed on one line', () => {
+    expect(oneLine('P. O. Box CE 11319,\nTema.')).toBe('P. O. Box CE 11319, Tema.');
+    expect(oneLine('Line 1\nLine 2')).toBe('Line 1, Line 2');
+    expect(oneLine('  a \n\n  b  \n')).toBe('a, b');
+    expect(oneLine('no breaks')).toBe('no breaks');
+    expect(winAnsi('a\r\nb\rc\td\u2028e')).toBe('a\nb\nc d\ne');
+  });
+
+  it.each(Object.values(FORMS).map((f) => [f.id, f] as const))(
+    '%s renders when every text answer spans several lines (\n, \r\n, tabs)',
+    async (_id, def) => {
+      const base = generateAnswers(def, def.id === 'motor' ? motorBase : {});
+      const multi = (v: string, i: number) =>
+        [`${v},\nsecond line`, `${v}\r\nsecond line\r\n`, `\t${v}\n\n  third`][i % 3] ?? v;
+      let i = 0;
+      const answers: Answers = Object.fromEntries(
+        Object.entries(base).map(([k, v]) => [
+          k,
+          typeof v === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(v) && !/^[a-z0-9_-]+$/.test(v)
+            ? multi(v, i++)
+            : Array.isArray(v) && v.every((r) => r && typeof r === 'object')
+              ? (v as TableRow[]).map((r) =>
+                  Object.fromEntries(
+                    Object.entries(r).map(([c, x]) => [c, typeof x === 'string' ? multi(x, i++) : x]),
+                  ),
+                )
+              : v,
+        ]),
+      ) as Answers;
+      for (const draft of [false, true]) {
+        const model = buildProposalDocument(def, answers, meta(def, answers, draft));
+        await checkPdf(await renderProposalPdf(model, { logoPng }), def.title);
+        checkDocx(await renderProposalDocx(model, { logoPng }), def.title);
+      }
     },
   );
 

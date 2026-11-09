@@ -1,6 +1,6 @@
 // Drawing helpers shared by the proposal and certificate PDFs (pdf-lib, standard fonts).
 import { LineCapStyle, rgb, type PDFFont, type PDFPage, type RGB } from 'pdf-lib';
-import { winAnsi } from './format';
+import { oneLine, winAnsi } from './format';
 
 export const A4 = { width: 595.28, height: 841.89 } as const;
 
@@ -10,9 +10,9 @@ export const GREY: RGB = rgb(0.38, 0.38, 0.38);
 export const LIGHT: RGB = rgb(0.72, 0.72, 0.72);
 export const NAVY: RGB = rgb(0.09, 0.13, 0.42);
 
-/** Width of sanitised text. */
+/** Width of sanitised text, as one printed line. */
 export const widthOf = (font: PDFFont, text: string, size: number): number =>
-  font.widthOfTextAtSize(winAnsi(text), size);
+  font.widthOfTextAtSize(oneLine(winAnsi(text)), size);
 
 /** Word-wraps text (respecting newlines) to lines no wider than `width`; long words are split. */
 export function wrap(font: PDFFont, text: string, size: number, width: number): string[] {
@@ -58,7 +58,8 @@ export function text(
   size: number,
   color: RGB = BLACK,
 ): void {
-  const safe = winAnsi(s);
+  // Always one line: a line break reaching drawText throws ("WinAnsi cannot encode").
+  const safe = oneLine(winAnsi(s));
   if (!safe) return;
   page.drawText(safe, { x, y, font, size, color });
 }

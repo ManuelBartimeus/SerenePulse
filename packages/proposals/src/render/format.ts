@@ -251,9 +251,32 @@ function isWinAnsi(ch: string): boolean {
   return CP1252_EXTRA.includes(ch);
 }
 
-/** Makes any text safe for pdf-lib's WinAnsi standard fonts. "GH₵ 5" → "GHS 5". */
+/**
+ * One printed line: line breaks inside an answer typed on several lines (an address, say) are
+ * joined, with a comma where the line didn't already end in punctuation:
+ * "P. O. Box CE 11319,⏎Tema." → "P. O. Box CE 11319, Tema."; "Line 1⏎Line 2" → "Line 1, Line 2".
+ * pdf-lib's standard fonts have no glyph for a line break, so drawing one threw and the whole PDF
+ * failed (PRP-26-000001…3 on production, 2026-11-09).
+ */
+export function oneLine(text: string): string {
+  return text
+    .replace(/([^\s,;.:])[ \t]*\n\s*(?=\S)/g, '$1, ')
+    .replace(/\s*\n\s*/g, ' ')
+    .trim();
+}
+
+/**
+ * Makes any text safe for pdf-lib's WinAnsi standard fonts. "GH₵ 5" → "GHS 5". Line breaks are kept
+ * (as "\n") for wrap(), which prints them as separate lines; single-line drawing uses oneLine().
+ */
 export function winAnsi(text: string): string {
-  let s = text.replace(/(?:GH\s?)?[₵¢](?=\d)/g, 'GHS ').replace(/(?:GH\s?)?[₵¢]/g, 'GHS');
+  let s = text
+    // Windows / old Mac line endings and Unicode line separators become "\n"; tabs and other
+    // spacing controls become spaces.
+    .replace(/\r\n?|[\u0085\u2028\u2029]/g, '\n')
+    .replace(/[\t\v\f]/g, ' ')
+    .replace(/(?:GH\s?)?[₵¢](?=\d)/g, 'GHS ')
+    .replace(/(?:GH\s?)?[₵¢]/g, 'GHS');
   let out = '';
   for (const ch of s) {
     if (isWinAnsi(ch)) {

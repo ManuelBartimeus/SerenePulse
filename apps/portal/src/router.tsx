@@ -6,6 +6,7 @@ import {
   Outlet,
   useRouterState,
 } from '@tanstack/react-router';
+import { useRef } from 'react';
 import { useSession } from './lib/session';
 import { ForgotPasswordPage, SetPasswordPage, SignInPage } from './pages/auth';
 import { AuditPage } from './pages/audit';
@@ -33,8 +34,15 @@ function FullPageSpinner() {
 function AuthGate() {
   const { ready, session, claims } = useSession();
   const path = useRouterState({ select: (s) => s.location.pathname });
+  // The page the user asked for, captured on the first render. While the redirect runs, the router
+  // already reports /sign-in and this gate renders once more; without the ref that second render
+  // replaced next=/customers with next=/sign-in and the requested page was lost.
+  const requested = useRef(path);
   if (!ready) return <FullPageSpinner />;
-  if (!session) return <Navigate to="/sign-in" search={{ next: path }} replace />;
+  if (!session) {
+    const next = requested.current.startsWith('/sign-in') ? undefined : requested.current;
+    return <Navigate to="/sign-in" search={next ? { next } : {}} replace />;
+  }
   if (claims?.app_must_change_password) return <Navigate to="/set-password" replace />;
   return <Shell />;
 }

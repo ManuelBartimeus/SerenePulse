@@ -102,13 +102,17 @@ export function SessionProvider({
             message: body.detail ?? "We couldn't sign you in just now. Please try again in a moment.",
           };
         }
-        const { error } = await supabase.auth.setSession({
+        const { data, error } = await supabase.auth.setSession({
           access_token: body.access_token,
           refresh_token: body.refresh_token,
         });
-        return error
-          ? { ok: false, message: "We couldn't start your session. Please try again." }
-          : { ok: true };
+        if (error || !data.session)
+          return { ok: false, message: "We couldn't start your session. Please try again." };
+        // Publish the session to React now. onAuthStateChange also reports it, but only after this
+        // promise has resolved, so a caller that navigated straight away reached the signed-in area
+        // while it still looked signed out and was sent back to sign in (the "click twice" bug).
+        setSession(data.session);
+        return { ok: true };
       },
       async signOut() {
         await supabase.auth.signOut();

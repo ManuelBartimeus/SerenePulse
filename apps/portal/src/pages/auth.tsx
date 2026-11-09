@@ -1,5 +1,5 @@
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { toUserError, type UserFacingError } from '../lib/errors';
 import { useSession } from '../lib/session';
 import { AuthCard } from '../ui/auth-card';
@@ -42,18 +42,33 @@ export function passwordProblem(pw: string, email?: string): string | null {
   return null;
 }
 
+/** Where to go after signing in: only same-site paths, never the sign-in page itself. */
+export function safeNext(next: string | undefined): string {
+  if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/sign-in')) return '/';
+  return next;
+}
+
 /** S-A0 sign in: email and password only (D-23, D-44). */
 export function SignInPage() {
-  const { signIn } = useSession();
+  const { signIn, session, ready } = useSession();
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as { reason?: string; next?: string };
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const next = safeNext(search.next);
+
+  // Leave the sign-in page only once the session is visible to the rest of the app, so the
+  // signed-in area never renders as signed out (which used to need a second click). This also
+  // sends an already-signed-in user straight on.
+  useEffect(() => {
+    if (ready && session) navigate({ to: next, replace: true });
+  }, [ready, session, next, navigate]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (busy) return;
     if (!email || !password) {
       setError('Enter your email and password.');
       return;
@@ -61,12 +76,11 @@ export function SignInPage() {
     setBusy(true);
     setError(null);
     const res = await signIn(email.trim(), password);
-    setBusy(false);
     if (!res.ok) {
+      setBusy(false);
       setError(res.message);
-      return;
     }
-    navigate({ to: search.next && search.next.startsWith('/') ? search.next : '/' });
+    // On success the effect above navigates; the button stays busy until then.
   }
 
   return (

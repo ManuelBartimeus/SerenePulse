@@ -610,3 +610,51 @@ production at 390 px and 1440 px found:
 * no CSP errors. The only console entry is the customer app's expected 401 from `/api/account/me`
   when signed out, which sends the visitor to sign-in;
 * live pricing correct (taxi third party GH₵ 744).
+
+---
+
+## 2026-11-09 — Staff portal: one-click sign-in, general sign-in wording, sidebar gear icon
+
+User feedback and what was done:
+
+1. **"I have to click Sign in twice."** Root cause, in `apps/portal/src/lib/session.tsx` and
+   `pages/auth.tsx`:
+   * After the sign-in function answered, `signIn` stored the session in Supabase and returned, and
+     the page navigated at once.
+   * React learned of the session only through Supabase's `onAuthStateChange` listener, which runs
+     *after* that promise resolves. So the signed-in area rendered as signed out and sent the user
+     back to sign-in.
+   * By the second click the session was in place, so it worked.
+   * **Fix:** `signIn` now puts the returned session into React state itself, and the sign-in page
+     navigates only once the session is visible (an effect on `session`). It also sends an
+     already-signed-in visitor straight on, and stays "Signing in…" until the move happens.
+2. **A second bug found while testing:** opening a deep link while signed out (e.g.
+   `/admin/customers`) redirected to `/sign-in?next=/sign-in`, so the requested page was lost.
+   * While redirecting, the router already reports `/sign-in` and the auth gate renders once more.
+   * **Fix:** the gate keeps the page asked for from its first render (`router.tsx`).
+   * A new `safeNext()` accepts only same-site paths and never the sign-in page itself. `//host`
+     and absolute URLs are rejected.
+3. **Sign-in panel wording made general** (`ui/auth-card.tsx`): "Everything you need to serve our
+   customers." / "The Serene Insurance workspace for staff across every branch."
+4. **Administration gear icon looked oversized** (user, mid-task). The old gear path reached the
+   edges of the 24-unit icon box (about 1.3 to 22.7), while every other sidebar icon sits within
+   about 3 to 21, and its curves were slightly irregular. It is replaced by a calculated
+   symmetric 8-tooth gear inside 3.5 to 20.5, with the same 1.75 px stroke (`ui/icons.tsx`).
+
+**Tests added**
+
+* `apps/portal/src/pages/auth.test.ts` (unit): `safeNext` and the password rules.
+* **First browser tests for the staff portal:** `apps/portal/e2e/sign-in.e2e.ts`, run with
+  `pnpm --filter @serene/portal e2e` against the local stack and the real `auth-sign-in` function
+  (needs `PORTAL_E2E_EMAIL` / `PORTAL_E2E_PASSWORD`; see the config header). They cover:
+  * one click opens the portal, with exactly one sign-in request and no bounce back;
+  * a deep link returns to the requested page;
+  * a wrong password shows an error and re-enables the button;
+  * every sidebar icon draws inside the 2.5 to 21.5 frame;
+  * the new wording.
+* **Proved against the old code:** with the fixes set aside, the deep-link test failed with
+  `next=/sign-in`, and the icon test failed on the old gear (reaching 22.5). With the fixes, all pass
+  on phone and desktop (9 passed; the icon check runs on desktop only, where the sidebar is visible).
+* Portal: lint, typecheck and build clean; unit tests 85 (up from 82).
+* Not in CI yet: CI's local Supabase runs without the Edge runtime, so the portal browser tests run
+  locally.

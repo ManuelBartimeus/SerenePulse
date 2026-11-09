@@ -24,11 +24,10 @@ export function AuthCard({
         <img src={logoReversedUrl} alt="" className="relative h-12 w-auto self-start" />
         <div className="relative max-w-[460px]">
           <p className="text-[40px] font-medium leading-[46px] tracking-[-0.03em] xl:text-[46px] xl:leading-[52px]">
-            Customers, proposals, policies and feedback in one place.
+            Everything you need to serve our customers.
           </p>
           <p className="mt-5 text-[16px] leading-6 text-white/80">
-            Review and price proposals, issue certificates, handle claims, and follow up on what customers
-            tell each branch.
+            The Serene Insurance workspace for staff across every branch.
           </p>
         </div>
         <p className="relative text-[13px] leading-5 text-white/70">

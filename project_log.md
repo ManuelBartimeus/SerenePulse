@@ -658,3 +658,16 @@ User feedback and what was done:
 * Portal: lint, typecheck and build clean; unit tests 85 (up from 82).
 * Not in CI yet: CI's local Supabase runs without the Edge runtime, so the portal browser tests run
   locally.
+
+**Deployed (commit `8f3b07c`, 2026-11-09):** CI passed.
+
+* The first staging deploy stopped at the Edge Functions step: the CLI's Docker bundler crashed
+  (`failed to bundle function: exit 135`) on the unchanged `export` function, just after pulling a
+  newer Edge runtime image. Production was skipped and kept running `f269b67`.
+* The failed job was re-run unchanged and staging, then production, deployed successfully.
+* If the crash recurs, switch the deploy to server-side bundling
+  (`supabase functions deploy --use-api`), which does not use Docker on the runner.
+
+Both `/healthz` report `8f3b07cf863a`. Checks on the live portal bundles: the new wording is
+present and the old wording is gone; the new gear path ships in the sidebar chunk and the old gear
+path is in none of the 23 chunks. `/admin/sign-in` returns 200.

@@ -98,6 +98,9 @@ function header(page) {
         <button class="sheet-close" type="button" data-nav-close>${icon('close')}<span class="sr-only">Close menu</span></button>
       </div>
       <ul class="nav-list">
+        <li class="nav-item">
+          <a class="nav-top nav-home${page.path === '/' ? ' is-current' : ''}" href="/"${page.path === '/' ? raw(' aria-current="page"') : ''}>Home</a>
+        </li>
         ${NAV.map(
           (m) => h`<li class="nav-item${m.wide ? ' is-wide' : ''}" data-menu>
           <button class="nav-top${current === m.id ? ' is-current' : ''}" type="button" aria-expanded="false" aria-controls="menu-${m.id}">${m.label}${icon('chevron-down', 'ico chev')}</button>

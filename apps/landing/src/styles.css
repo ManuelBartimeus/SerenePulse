@@ -536,6 +536,13 @@ picture {
   cursor: pointer;
   transition: background var(--dur);
 }
+/* "Home" is a plain link, not a dropdown: same look as the menu buttons, no underline. */
+a.nav-top {
+  text-decoration: none;
+}
+a.nav-top:not(.is-current):hover {
+  color: var(--text);
+}
 .nav-top .chev {
   width: 16px;
   height: 16px;

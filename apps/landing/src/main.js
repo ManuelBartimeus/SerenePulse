@@ -113,7 +113,8 @@
     menuBtn.setAttribute('aria-expanded', String(open));
     if (scrim) scrim.hidden = !open;
     if (open) {
-      var current = nav.querySelector('.nav-top.is-current');
+      // Only dropdown menus expand; "Home" is a plain link and is skipped.
+      var current = nav.querySelector('[data-menu] > .nav-top.is-current');
       if (current && !current.parentNode.classList.contains('is-open')) setItem(current.parentNode, true);
       var first = nav.querySelector('.sheet-close');
       if (first) first.focus();

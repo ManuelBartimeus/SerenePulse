@@ -604,6 +604,49 @@ test.describe('menus', () => {
     await expect(nav).toBeHidden();
   });
 
+  test('Home: first item in the phone menu, goes to the home page; not an accordion', async ({ page }) => {
+    await page.goto(base + '/claims/');
+    await page.click('.menu-btn');
+    const nav = page.locator('#site-nav');
+    const home = nav.getByRole('link', { name: 'Home', exact: true });
+    await expect(home).toBeVisible();
+    await expect(home).toHaveAttribute('href', '/');
+    expect((await home.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    const tops = await nav.locator('.nav-list > li > .nav-top').allTextContents();
+    expect(tops.map((t) => t.trim())).toEqual(['Home', 'Personal', 'Business', 'Claims', 'About']);
+    await home.click();
+    await expect(page).toHaveURL(base + '/');
+    // On the home page, opening the sheet marks Home current and opens no menu.
+    await page.click('.menu-btn');
+    await expect(home).toHaveAttribute('aria-current', 'page');
+    await expect(home).not.toHaveAttribute('aria-expanded', /.*/);
+    await expect(nav.locator('.nav-item.is-open')).toHaveCount(0);
+  });
+
+  test('Home: desktop link before Personal, same height, goes home, current only on the home page', async ({
+    browser,
+  }) => {
+    for (const width of [1024, 1440]) {
+      const ctx = await browser.newContext({ viewport: { width, height: 800 } });
+      const page = await ctx.newPage();
+      await page.goto(base + '/about/');
+      const home = page.locator('.nav-list').getByRole('link', { name: 'Home', exact: true });
+      const personal = page.getByRole('button', { name: 'Personal' });
+      const [h, p] = [await home.boundingBox(), await personal.boundingBox()];
+      expect(h.x + h.width).toBeLessThanOrEqual(p.x);
+      expect(h.height).toBe(p.height);
+      expect(Math.abs(h.y - p.y)).toBeLessThan(1);
+      await expect(home).not.toHaveAttribute('aria-current', /.*/);
+      // Header stays on one row: the actions do not wrap below the menu.
+      const row = await page.locator('.header-row').boundingBox();
+      expect(row.height).toBeLessThanOrEqual(96);
+      await home.click();
+      await expect(page).toHaveURL(base + '/');
+      await expect(home).toHaveAttribute('aria-current', 'page');
+      await ctx.close();
+    }
+  });
+
   test('phone menu scrolls in landscape (844×390) and the scrim closes it', async ({ browser }) => {
     const ctx = await browser.newContext({
       viewport: { width: 844, height: 390 },

@@ -872,3 +872,37 @@ earlier today.
 automatic deploy ran on staging and production. Both `/healthz` report `4c6d999a2d23`. The
 response-drawer fix before it (`4f8f730`) was deployed the same way, and its migration
 `202611130012` ran on both.
+
+---
+
+## 2026-11-12 — Website: "Home" in the main menu
+
+**User request:** add a Home item to the website's main menu, before "Personal", that takes the
+visitor to the home page.
+
+* **What changed** (`apps/landing`):
+  * `src/lib/layout.mjs`: the header now renders **Home** as the first item of the main menu, on
+    every page (desktop bar and phone menu sheet). It is a plain link to `/`, not a dropdown: there
+    is nothing under it to choose. On the home page it is marked as the current page
+    (`aria-current="page"`, brand colour), as the other menus are on their own sections.
+  * `src/styles.css`: the link uses the same look, size and hover as the menu buttons (no underline,
+    no colour change on hover). Text only, like the other items; no icon.
+  * `src/main.js`: opening the phone menu expands the current section's accordion. It now looks
+    only at dropdown menus, so on the home page it no longer picks up the Home link (which would
+    have been given an `aria-expanded` it should not have).
+  * The logo still links home as before; the footer and breadcrumbs are unchanged.
+* **Order of the menu:** Home · Personal · Business · Claims · About.
+* **Tests** (`e2e/site.spec.mjs`, 2 new):
+  * phone (390 px): Home is the first item in the sheet, links to `/`, is at least 44 px tall, takes
+    the visitor home; on the home page it is current and no menu is opened or expanded;
+  * desktop (1024 and 1440 px): Home sits left of Personal, is the same height on the same line,
+    is not current on other pages, takes the visitor home and is current there; the header stays on
+    one row at 1024 px (the narrowest desktop width).
+  * Full website suite: 187 passed (every page at 13 screen sizes: overflow, tap targets, text size,
+    axe accessibility, console errors; the menus; the site without JavaScript). ESLint and Prettier
+    clean.
+  * By eye at 1024, 1440 and 390 px: the header fits on one line at 1024 px with room to spare.
+* **Not in this deploy:** the working copy also holds unfinished, uncommitted work on totals the
+  proposal forms add up themselves (`packages/proposals/src/compute.ts` and changes to 14 forms, the
+  customer form wizard and `docs/sales/digitising-forms.md`). It is unrelated to this change, has
+  not been reviewed as finished, and was left out of this commit. It will be logged when it ships.
